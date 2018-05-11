@@ -1,0 +1,6 @@
+before_script:
+  - pip3 install --user --upgrade flake8 pylint
+
+static_checks:
+  script:
+    - flake8 nengo_loihi && pylint nengo_loihi
