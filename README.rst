@@ -20,11 +20,20 @@ Setting up Intel server
 
     pip install -r NxSDK/requirements.txt
 
-6. Clone and install nengo_loihi
+6. Install and compile nengo_loihi on your own machine (to keep source off
+   Intel server):
 
     git clone https://gl.appliedbrainresearch.com/abr/nengo-loihi.git
     cd nengo-loihi
-    python setup.py develop
+    ./c_compile.sh <target_dir>
+
+  where <target_dir> defaults to "nengo_loihi_c" if not specified. To run on
+  the Intel server, you must compile with Python 3.5.5 with the ``with-fpectl``
+  flag unset. The easiest way I've found to do this is install Miniconda
+  and make a new conda environment with Python==3.5.5.
+
+    conda create --name py35 python=3.5.5
+    source activate py35
 
 
 Running on Intel server
@@ -32,6 +41,9 @@ Running on Intel server
 1. Activate virtualenv
 
     workon nxsdk_yourname
+
+2. Put the compiled nengo_loihi directory in the same folder as your target
+   script (must be named "nengo_loihi").
 
 2. Run your script on SLURM
 

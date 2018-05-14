@@ -2,7 +2,7 @@ from __future__ import division
 
 import numpy as np
 
-from nxsdk.arch.n2a.graph.graph import N2Board
+# from nxsdk.arch.n2a.graph.graph import N2Board
 # from nxsdk.arch.n2a.graph.inputgen import BasicSpikeGenerator
 
 from nengo_loihi.allocators import one_to_one_allocator
@@ -11,7 +11,7 @@ from nengo_loihi.loihi_api import (
 
 
 def build_board(board):
-    # from nxsdk.arch.n2a.graph.graph import N2Board
+    from nxsdk.arch.n2a.graph.graph import N2Board
 
     n_chips = board.n_chips()
     n_cores_per_chip = board.n_cores_per_chip()

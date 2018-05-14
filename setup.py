@@ -28,6 +28,26 @@ version_module = imp.load_source(
     'version', os.path.join(root, 'nengo_loihi', 'version.py'))
 testing = 'test' in sys.argv or 'pytest' in sys.argv
 
+ext_modules = []
+if 1:
+    from distutils.extension import Extension
+    from Cython.Distutils import build_ext
+
+    def allpy(path):
+        for obj in os.listdir(path):
+            objpath = os.path.join(path, obj)
+            if os.path.isdir(objpath):
+                for pypath in allpy(objpath):
+                    yield pypath
+            else:
+                if os.path.splitext(objpath)[1] == '.py':
+                    yield objpath
+
+    for pypath in allpy('nengo_loihi'):
+        modname = os.path.splitext(pypath)[0].replace(os.sep, '.')
+        ext_modules.append(Extension(modname, [pypath]))
+
+
 setup(
     name="nengo_loihi",
     version=version_module.version,
@@ -65,4 +85,6 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
+    ext_modules=ext_modules,
+    cmdclass={'build_ext': build_ext},
 )

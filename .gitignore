@@ -24,3 +24,7 @@ htmlcov
 *.dist-info/
 .vscode
 .idea
+
+*.so
+*.c
+nengo_loihi_c/
