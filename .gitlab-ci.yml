@@ -1,6 +1,11 @@
 before_script:
-  - pip3 install --user --upgrade flake8 pylint
+  - pip3 install --user --upgrade flake8 pylint pytest
+  - pip3 install --user -e .
 
 static_checks:
   script:
     - flake8 nengo_loihi && pylint nengo_loihi
+
+tests:
+  script:
+    - pytest nengo_loihi
