@@ -10,7 +10,7 @@ fi
 
 echo "TARGET_DIR = $TARGET_DIR"
 
-python setup.py build_ext --inplace
+python setup_c.py build_ext --inplace
 
 rsync -avm --exclude-from=c_compile_excludes.txt "$SOURCE_DIR/" $TARGET_DIR
 rsync -av "$SOURCE_DIR/__init__.py" $TARGET_DIR
