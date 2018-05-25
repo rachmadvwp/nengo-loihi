@@ -61,7 +61,6 @@ def test_oscillator(Simulator, seed, plt, weights):
     tau = 0.1
     alpha = 1.0
 
-
     def f(x):
         x0, x1 = x
         r = np.sqrt(x0**2 + x1**2)
@@ -71,7 +70,6 @@ def test_oscillator(Simulator, seed, plt, weights):
         r = r + tau*dr
         a = a + tau*da
         return [r*np.cos(a), r*np.sin(a)]
-
 
     with nengo.Network(seed=seed) as model:
         a = nengo.Ensemble(200, 2, label='a',
