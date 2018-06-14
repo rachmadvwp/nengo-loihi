@@ -45,16 +45,18 @@ setup(
         "nengo",
     ],
     install_requires=[
+        "click",
+        "cython",
         "nengo",
     ],
     tests_require=[
         'pytest>=3.2',
     ],
-    # entry_points={
-    #     'nengo.backends': [
-    #         'reference = nengo:Simulator'
-    #     ],
-    # },
+    entry_points={
+        'console_scripts': [
+            "loihi = nengo_loihi.__main__:main",
+        ]
+    },
     classifiers=[  # https://pypi.python.org/pypi?%3Aaction=list_classifiers
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',

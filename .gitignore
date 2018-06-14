@@ -22,9 +22,7 @@ htmlcov
 .vscode
 .idea
 
-*.so
-*.c
-nengo_loihi_c/
+build-tmp/
 
 *.analytics/
 *.logs/

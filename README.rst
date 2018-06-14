@@ -2,50 +2,139 @@
 Nengo Loihi
 ***********
 
-Setting up Intel server
------------------------
+Running on the Intel server
+===========================
 
-1. SSH into Intel server.
-2. Create your own directory if you haven't already.
-3. Create a Python virtualenv for yourself::
+``conda`` setup
+---------------
 
-      mkvirtualenv -p python_nx nxsdk_yourname
+Currently, the easiest way to run models
+on the Intel server requires Conda and Python 3.5.5.
+The following commands will install Miniconda to ``~/miniconda``
+and set up a Loihi environment::
 
-4. Install NxSDK. There is a copy in ~/ which I have made a setup.py file for.
-   We will keep this up to date as Intel releases new versions. To have control
-   over your own NxSDK, clone it to your folder::
+  wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  bash miniconda.sh -b -p "$HOME/miniconda"
+  export PATH="$HOME/miniconda/bin:$PATH"
+  conda create --name loihi python=3.5.5
+  source activate loihi
+  conda install cython mkl numpy
+  cd path/to/nengo-loihi
+  pip install -e .
 
-      git clone /nfs/ncl/git/NxSDK.git
+If you want to run models locally with the simulator,
+then you should also do::
 
-5. Install NxSDK requirements::
+  conda install matplotlib scipy
 
-      pip install -r NxSDK/requirements.txt
+Note that the ``PATH`` will only be changed
+for the current terminal session.
+To add it permanently, modify ``.bash_profile``.
 
-6. Install and compile nengo_loihi on your own machine
-   (to keep source off Intel server)::
+``ssh`` setup
+-------------
 
-      git clone https://gl.appliedbrainresearch.com/abr/nengo-loihi.git
-      cd nengo-loihi
-      ./c_compile.sh <target_dir>
+Create ``$HOME/.ssh/config`` if it does not yet exist,
+then add the following to it::
 
-   where <target_dir> defaults to "nengo_loihi_c" if not specified. To run on
-   the Intel server, you must compile with Python 3.5.5 with the ``with-fpectl``
-   flag unset. The easiest way I've found to do this is install Miniconda
-   and make a new conda environment with Python==3.5.5::
+  Host intelhost
+       User celiasmith
+       HostName ncl-abr.research.intel-research.net
+       ProxyCommand ssh celiasmith@ssh.intel-research.net -W %h:%p
 
-      conda create --name py35 python=3.5.5
-      source activate py35
+This enables you to do ``ssh intelhost`` to log into the Intel server.
 
-Running on Intel server
------------------------
+In a terminal, do the following commands::
 
-1. Activate virtualenv::
+  ssh-keygen
+  # Hit enter to go through all the prompts, no need to add a passphrase
+  ssh-copy-id intelhost
 
-      workon nxsdk_yourname
+``ssh-copy-id`` will ask you for a password.
+Once you provide it, your SSH key will be copied
+to the Intel server so that
+you can now log in without a password.
 
-2. Put the compiled nengo_loihi directory in the same folder as your target
-   script (must be named "nengo_loihi").
+Running a model
+---------------
 
-2. Run your script on SLURM::
+``nengo_loihi`` includes a ``loihi`` command.
+The easiest way to run a model on Intel's server is::
 
-      SLURM=1 python yourscript.py
+  loihi run <model.py> intelhost <your folder> <output files>
+
+For example, if you have a script called ``oscillator.py``
+which creates two figures,
+``oscillator-01.png`` and ``oscillator-02.png``,
+running::
+
+  loihi run oscillator.py intelhost my-folder oscillator-01.png oscillator-02.png
+
+will run that example and download the output figures
+to the current folder.
+
+For more commands and other help, run::
+
+  loihi --help
+
+Or::
+
+  loihi <command> --help
+
+Under the hood
+--------------
+
+The ``loihi run`` command does the following.
+
+1. Compile the files in ``nengo_loihi`` to ``.so`` object files
+   in order to keep the source code off of the Intel server.
+
+2. Upload those files to the specified ``DST`` folder.
+   You will end up with a ``DST/nengo_loihi`` folder
+   with ``.so`` files and ``__init__.py``.
+
+3. Upload the model to ``DST/$(basename MODEL)``.
+
+4. Run the model with::
+
+     cd DST
+     workon <value of --env>
+     SLURM=1 python $(basename MODEL)
+
+5. Download each ``OUTPUT`` file with ``scp``.
+
+6. If you did not pass ``--no-clean``,
+   ``MODEL`` and ``OUTPUT`` files are removed from the server.
+   The ``nengo_loihi`` files remain to make future uploads faster.
+
+Advanced
+--------
+
+Most people will not have to follow these steps.
+However, if you are modifying ``NxSDK`` files,
+or doing something else advanced,
+you may want to do the following.
+
+First, set up your own Python virtualenv on the Intel server.
+SSH into the Intel server, then::
+
+  mkvirtualenv -p python_nx <environment name>
+  mkdir <your folder>
+  cd <your folder>
+  git clone "$HOME/NxSDK"
+  pip install -r NxSDK/requirements.txt
+  pip install -e NxSDK
+
+Then, when running a file with ``loihi run``,
+provide your environment name
+with the ``--env`` flag::
+
+  loihi run oscillator.py intelhost my-folder oscillator-01.png oscillator-02.png --env nxsdk_me
+
+You can also pass in a different name for the server
+if you have already set it up under a different name.
+Or, you can pass in any host string that SSH understands::
+
+  loihi run oscillator.py me@192.168.0.1 my-folder
+
+See ``loihi --help`` or ``nengo_loihi/__main__.py`` for more details.
