@@ -1,3 +1,4 @@
+import errno
 import os
 import shutil
 import subprocess
@@ -89,10 +90,10 @@ def compile(obj):
 
 
 @main.command()
-@click.argument("host", type=str)
 @click.argument("dst", type=str)
+@click.argument("host", type=str, default="localhost")
 @click.pass_context
-def sync(ctx, host, dst):
+def sync(ctx, dst, host="localhost"):
     """Sync .so files to the DST folder on HOST."""
     ret = ctx.invoke(compile)
     if ret != 0:
@@ -100,15 +101,25 @@ def sync(ctx, host, dst):
 
     info("Syncing nengo_loihi files")
 
-    ret = subprocess.call([
-        "ssh", "-t", host, "mkdir -p {}".format(dst),
-    ])
-    if ret != 0:
-        error("ssh command failed!")
-        return ret
+    if host == "localhost":
+        try:
+            os.makedirs(dst)
+        except OSError as err:
+            if err.errno == errno.EEXIST and os.path.isdir(dst):
+                pass
+            else:
+                raise
+    else:
+        ret = subprocess.call([
+            "ssh", "-t", host, "mkdir -p {}".format(dst),
+        ])
+        if ret != 0:
+            error("ssh command failed!")
+            return ret
 
     ret = subprocess.call([
-        "rsync", "-avm", ctx.obj.loihi_dir, "{}:{}".format(host, dst)
+        "rsync", "-avm", ctx.obj.loihi_dir,
+        dst if host == "localhost" else "{}:{}".format(host, dst),
     ])
     if ret != 0:
         error("rsync command failed!")
@@ -136,7 +147,7 @@ def run(ctx, model, host, dst, outputs, env, clean):
     [OUTPUTS] : Files to download after the remote run finishes
     """
     modelbase = os.path.basename(model)
-    ret = ctx.invoke(sync, host=host, dst=dst)
+    ret = ctx.invoke(sync, dst=dst, host=host)
     if ret != 0:
         return ret
 
