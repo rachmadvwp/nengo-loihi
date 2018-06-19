@@ -41,7 +41,8 @@ setup(
         "nengo",
     ],
     tests_require=[
-        "pytest>=3.2",
+        'pytest>=3.2',
+        "matplotlib>=2.0",
     ],
     classifiers=[  # https://pypi.python.org/pypi?%3Aaction=list_classifiers
         "Intended Audience :: Science/Research",
