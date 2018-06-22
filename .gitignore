@@ -23,6 +23,7 @@ htmlcov
 .idea
 
 build-tmp/
+.pytest_cache/
 
 *.analytics/
 *.logs/
