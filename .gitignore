@@ -22,9 +22,7 @@ htmlcov
 .vscode
 .idea
 
-build-tmp/
-.pytest_cache/
-
 *.analytics/
 *.logs/
 *.plots/
+.pytest_cache/

@@ -4,18 +4,12 @@ import io
 import os
 import sys
 
-try:
-    from setuptools import find_packages, setup
-except ImportError:
-    raise ImportError(
-        "'setuptools' is required but not installed. To install it, "
-        "follow the instructions at "
-        "https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py")
+from setuptools import find_packages, setup
 
 
 def read(*filenames, **kwargs):
-    encoding = kwargs.get('encoding', 'utf-8')
-    sep = kwargs.get('sep', '\n')
+    encoding = kwargs.get("encoding", "utf-8")
+    sep = kwargs.get("sep", "\n")
     buf = []
     for filename in filenames:
         with io.open(filename, encoding=encoding) as f:
@@ -25,8 +19,7 @@ def read(*filenames, **kwargs):
 
 root = os.path.dirname(os.path.realpath(__file__))
 version_module = imp.load_source(
-    'version', os.path.join(root, 'nengo_loihi', 'version.py'))
-testing = 'test' in sys.argv or 'pytest' in sys.argv
+    "version", os.path.join(root, "nengo_loihi", "version.py"))
 
 
 setup(
@@ -36,36 +29,28 @@ setup(
     author_email="info@appliedbrainresearch.com",
     packages=find_packages(),
     scripts=[],
-    # url="https://github.com/nengo/nengo_loihi",
+    url="https://gl.appliedbrainresearch.com/abr/nengo-loihi",
     license="Free for non-commercial use",
     description="Run Nengo models on the Loihi chip",
-    long_description=read('README.rst'),
+    long_description=read("README.rst"),
     zip_safe=False,
     setup_requires=[
         "nengo",
     ],
     install_requires=[
-        "click",
-        "cython",
         "nengo",
     ],
     tests_require=[
-        'pytest>=3.2',
+        "pytest>=3.2",
     ],
-    entry_points={
-        'console_scripts': [
-            "loihi = nengo_loihi.__main__:main",
-        ]
-    },
     classifiers=[  # https://pypi.python.org/pypi?%3Aaction=list_classifiers
-        'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: Science/Research',
-        'License :: Free for non-commercial use',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        "Intended Audience :: Science/Research",
+        "License :: Free for non-commercial use",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
 )
