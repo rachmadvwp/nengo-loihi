@@ -2,6 +2,7 @@ from __future__ import division
 
 import time
 import warnings
+import os
 
 import numpy as np
 
@@ -164,7 +165,9 @@ def build_input(n2core, core, spike_input, cx_idxs):
 
     n2board = n2core.parent.parent
 
+    # TODO: this is only needed if precompute=True
     spike_gen = BasicSpikeGenerator(n2board)
+
 
     # get core/axon ids
     axon_ids = []
@@ -275,8 +278,11 @@ class LoihiSimulator(object):
             for k, n2core in enumerate(n2chip.n2Cores):
                 print("  Core %d, id=%d" % (k, n2core.id))
 
-    def run_steps(self, steps):
-        self.n2board.run(steps)
+    def run_steps(self, steps, async=False):
+        self.n2board.run(steps, async=async)
+
+    def wait_for_completion(self):
+        self.n2board.finishRun()
 
     def is_connected(self):
         return self.n2board is not None and self.n2board.nxDriver.hasStarted()
@@ -337,3 +343,22 @@ class LoihiSimulator(object):
         x = np.column_stack([p.timeSeries.data for p in n2probe])
         x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
         return self._filter_probe(cx_probe, x)
+
+    def create_io_snip(self):
+        snips_dir = os.path.join(os.path.dirname(__file__), "snips")
+        # TODO: fix hardcoded path to nxsdk
+        os.chdir("/home/terry/NxSDK")
+
+        cPath = os.path.join(snips_dir, "nengo_io.c")
+        includeDir = snips_dir
+        funcName = "nengo_io"
+        guardName = None
+        phase = "mgmt"
+        nengo_io = self.n2board.createProcess("nengo_io",cPath,includeDir,
+                                            funcName, guardName, phase)
+        self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c_1', "int", 101)
+        self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h_1', "int", 1)
+        self.nengo_io_h2c.connect(None, nengo_io)
+        self.nengo_io_c2h.connect(nengo_io, None)
+
+        self.n2board.startDriver()

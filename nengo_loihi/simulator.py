@@ -311,10 +311,20 @@ class Simulator(object):
                 self.loihi.run_steps(steps)
                 self.handle_chip2host_communications()
                 self.host_post_sim.run_steps(steps)
-            elif self.host_sim is None:
-                self.loihi.run_steps(steps)
+            elif self.host_sim is not None:
+                self.loihi.create_io_snip()
+                self.loihi.run_steps(steps, async=True)
+                for i in range(steps):
+                    self.host_sim.run_steps(1)
+                    self.handle_host2chip_communications()
+                    self.handle_chip2host_communications()
+
+                print('Waiting for completion')
+                self.loihi.nengo_io_h2c.write(1, [0])
+                self.loihi.wait_for_completion()
+                print("done")
             else:
-                raise NotImplementedError
+                self.loihi.run_steps(steps)
 
         self._n_steps += steps
         self._probe()
@@ -328,7 +338,7 @@ class Simulator(object):
                         receiver.receive(t, x)
                     del sender.queue[:]
         elif self.loihi is not None:
-            if self.precompute or self.host_sim is not None:
+            if self.precompute:
                 # go through the list of host2chip connections
                 for sender, receiver in self.host2chip_senders.items():
                     for t, x in sender.queue:
@@ -344,6 +354,30 @@ class Simulator(object):
                                         sent_count, *output_axon[j])
                         sent_count += 1
                     spike_input.sent_count = sent_count
+            elif self.host_sim is not None:
+                to_send = []
+                # go through the list of host2chip connections
+                for sender, receiver in self.host2chip_senders.items():
+                    for t, x in sender.queue:
+                        receiver.receive(t, x)
+                    del sender.queue[:]
+                    spike_input = receiver.cx_spike_input
+                    spike_gen = spike_input.spike_gen
+                    sent_count = spike_input.sent_count
+                    axon_ids = spike_input.axon_ids
+                    spikes = spike_input.spikes
+                    while sent_count < len(spikes):
+                        for j, s in enumerate(spikes[sent_count]):
+                            if s:
+                                for output_axon in axon_ids:
+                                    to_send.append(output_axon[j])
+                        sent_count += 1
+                    spike_input.sent_count = sent_count
+                #print(sent_count, to_send)
+                self.loihi.nengo_io_h2c.write(1, [len(to_send)])
+                for spike in to_send:
+                    assert spike[0] == 0
+                    self.loihi.nengo_io_h2c.write(2, spike[1:3])
 
     def handle_chip2host_communications(self):  # noqa: C901
         if self.simulator is not None:
@@ -388,15 +422,14 @@ class Simulator(object):
                             assert increment == len(x)
                         if cx_probe.weights is not None:
                             x = np.dot(x, cx_probe.weights)
-
                         for j in range(len(x)):
                             receiver.receive(
                                 self.dt * (self.chip2host_sent_steps + j + 2),
                                 x[j])
                 if increment is not None:
                     self.chip2host_sent_steps += increment
-            else:
-                raise NotImplementedError
+            elif self.host_sim is not None:
+                data = self.loihi.nengo_io_c2h.read(1)
 
     def trange(self, dt=None):
         """Create a vector of times matching probed data.
