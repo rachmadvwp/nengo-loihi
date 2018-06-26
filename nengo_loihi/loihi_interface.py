@@ -236,8 +236,12 @@ def build_probe(n2core, core, group, probe, cx_idxs):
 
     n2board = n2core.parent.parent
     r = cx_idxs[probe.slice]
-    p = n2board.monitor.probe(n2core.cxState, r, key)
-    core.board.map_probe(probe, p)
+
+    if probe.use_snip:
+        probe.snip_info = dict(coreid=n2core.id, cxs=r)
+    else:
+        p = n2board.monitor.probe(n2core.cxState, r, key)
+        core.board.map_probe(probe, p)
 
 
 class LoihiSimulator(object):
@@ -345,20 +349,52 @@ class LoihiSimulator(object):
         return self._filter_probe(cx_probe, x)
 
     def create_io_snip(self):
+        n_outputs = 1
+        probes = []
+        cores = set()
+        snip_range = {}
+        for group in self.model.cx_groups.keys():
+            for probe in group.probes:
+                if probe.use_snip:
+                    info = probe.snip_info
+                    coreid = info['coreid']
+                    cxs = info['cxs']
+                    cores.add(coreid)
+                    snip_range[probe] = slice(n_outputs-1, n_outputs+len(cxs)-1)
+                    for cx in cxs:
+                        probes.append((n_outputs, coreid, cx))
+                        n_outputs += 1
+
+        core_line = 'NeuronCore *core%d = NEURON_PTR((CoreId){.id=%d});'
+        code_cores = '\n'.join([core_line % (c, c) for c in cores])
+        probe_line = 'output[%d] = core%d->cx_state[%d].V;'
+        code_probes = '\n'.join([probe_line % p for p in probes])
+
         snips_dir = os.path.join(os.path.dirname(__file__), "snips")
         # TODO: fix hardcoded path to nxsdk
         os.chdir("/home/terry/NxSDK")
 
+        templatePath = os.path.join(snips_dir, "nengo_io.c.template")
+        with open(templatePath) as f:
+            template = f.read()
+        code = template % (n_outputs, code_cores, code_probes)
         cPath = os.path.join(snips_dir, "nengo_io.c")
+        with open(cPath, 'w') as f:
+            f.write(code)
+
         includeDir = snips_dir
         funcName = "nengo_io"
         guardName = None
         phase = "mgmt"
         nengo_io = self.n2board.createProcess("nengo_io",cPath,includeDir,
                                             funcName, guardName, phase)
-        self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c_1', "int", 101)
-        self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h_1', "int", 1)
+        self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c',
+                                                       "int", 101)
+        self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h',
+                                                       "int", n_outputs)
         self.nengo_io_h2c.connect(None, nengo_io)
         self.nengo_io_c2h.connect(nengo_io, None)
+        self.nengo_io_c2h_count = n_outputs
+        self.nengo_io_snip_range = snip_range
 
         self.n2board.startDriver()

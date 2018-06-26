@@ -16,19 +16,20 @@ Simulator = nengo_loihi.Simulator
 with nengo.Network(seed=1) as model:
     stim = nengo.Node(lambda t: 0.5)#np.sin(2*np.pi*t))
 
-    a = nengo.Ensemble(100, 1, label='b',
+    a = nengo.Ensemble(10, 1, label='b', seed=1,
                        max_rates=nengo.dists.Uniform(100, 120),
                        intercepts=nengo.dists.Uniform(-0.5, 0.5)
 			)
     nengo.Connection(stim, a, synapse=None)
 
-    out = nengo.Node(None, size_in=1)
-    nengo.Connection(a, out)
+    out = nengo.Node(None, size_in=a.n_neurons)
+    nengo.Connection(a.neurons, out, synapse=None)
 
-    p = nengo.Probe(a)
-    p2 = nengo.Probe(out, synapse=0.02)
+    #p = nengo.Probe(a)
+    p2 = nengo.Probe(out)
 
-with Simulator(model) as sim:
-    sim.run(0.1)
+with Simulator(model, precompute=True) as sim:
+    sim.run(0.03)
 
 print(sim.data[p2])
+

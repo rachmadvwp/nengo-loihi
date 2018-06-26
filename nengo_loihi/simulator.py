@@ -151,6 +151,14 @@ class Simulator(object):
             self.simulator = self.model.get_simulator(seed=seed)
         elif target == 'loihi':
             self.model.discretize()  # Make parameters fixed bit widths
+            if not precompute:
+                #for probe in self.chip2host_receivers.keys():
+                #    cx_probe = self.loihi.model.objs[probe]['out']
+                #    cx_probe.use_snip = True
+                for group in self.model.cx_groups.keys():
+                    for probe in group.probes:
+                        probe.use_snip = True
+
             self.loihi = self.model.get_loihi(seed=seed)
         else:
             raise ValueError("Unrecognized target")
@@ -217,6 +225,8 @@ class Simulator(object):
             assert probe.sample_every is None
             assert self.loihi is None or self.simulator is None
             if self.loihi is not None:
+                cx_probe = self.loihi.model.objs[probe]['out']
+                if cx_probe.use_snip: continue
                 data = self.loihi.get_probe_output(probe)
             elif self.simulator is not None:
                 data = self.simulator.get_probe_output(probe)
@@ -405,7 +415,7 @@ class Simulator(object):
             else:
                 raise NotImplementedError
         elif self.loihi is not None:
-            if self.precompute or self.host_sim is not None:
+            if self.precompute:
                 # go through the list of chip2host connections
                 increment = None
                 for probe, receiver in self.chip2host_receivers.items():
@@ -429,7 +439,26 @@ class Simulator(object):
                 if increment is not None:
                     self.chip2host_sent_steps += increment
             elif self.host_sim is not None:
-                data = self.loihi.nengo_io_c2h.read(1)
+                count = self.loihi.nengo_io_c2h_count
+                time_step = self.loihi.nengo_io_c2h.read(1)[0]
+                while time_step == 0:
+                    time_step = self.loihi.nengo_io_c2h.read(1)[0]
+                data = self.loihi.nengo_io_c2h.read(count-1)
+                data = np.array(data)
+                snip_range = self.loihi.nengo_io_snip_range
+                for probe, receiver in self.chip2host_receivers.items():
+                    cx_probe = self.loihi.model.objs[probe]['out']
+                    x = data[snip_range[cx_probe]]
+                    if cx_probe.key == 's':
+                        if isinstance(probe.target, nengo.ensemble.Neurons):
+                            x = (x == 384)
+                        else:
+                            x = (x == 128)
+                    if cx_probe.weights is not None:
+                        x = np.dot(x, cx_probe.weights)
+                    receiver.receive(self.dt*(time_step), x)
+            else:
+                raise NotImplementedError
 
     def trange(self, dt=None):
         """Create a vector of times matching probed data.
