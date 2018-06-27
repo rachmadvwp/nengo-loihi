@@ -348,6 +348,15 @@ class LoihiSimulator(object):
         return self._filter_probe(cx_probe, x)
 
     def create_io_snip(self):
+        import nxsdk
+        nxsdk_dir = os.path.dirname(nxsdk.__file__)
+        nxsdk_root_dir = os.path.join(nxsdk_dir, "..")
+
+        snips_dir = os.path.join(os.path.dirname(__file__), "snips")
+        template_path = os.path.join(snips_dir, "nengo_io.c.template")
+        c_path = os.path.join(snips_dir, "nengo_io.c")
+
+        # --- generate custom code
         n_outputs = 1
         probes = []
         cores = set()
@@ -370,24 +379,23 @@ class LoihiSimulator(object):
         probe_line = 'output[%d] = core%d->cx_state[%d].V;'
         code_probes = '\n'.join([probe_line % p for p in probes])
 
-        snips_dir = os.path.join(os.path.dirname(__file__), "snips")
-        # TODO: fix hardcoded path to nxsdk
-        os.chdir("/home/terry/NxSDK")
-
-        templatePath = os.path.join(snips_dir, "nengo_io.c.template")
-        with open(templatePath) as f:
+        # --- write c file using template
+        with open(template_path) as f:
             template = f.read()
+
         code = template % (n_outputs, code_cores, code_probes)
-        cPath = os.path.join(snips_dir, "nengo_io.c")
-        with open(cPath, 'w') as f:
+        with open(c_path, 'w') as f:
             f.write(code)
 
-        includeDir = snips_dir
-        funcName = "nengo_io"
-        guardName = None
+        # --- create SNIP process and channels
+        os.chdir(nxsdk_root_dir)
+
+        include_dir = snips_dir
+        func_name = "nengo_io"
+        guard_name = None
         phase = "mgmt"
-        nengo_io = self.n2board.createProcess("nengo_io", cPath, includeDir,
-                                              funcName, guardName, phase)
+        nengo_io = self.n2board.createProcess("nengo_io", c_path, include_dir,
+                                              func_name, guard_name, phase)
         self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c',
                                                        "int", 101)
         self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h',
