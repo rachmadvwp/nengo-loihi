@@ -259,7 +259,6 @@ class LoihiSimulator(object):
         self.build(cx_model, seed=seed)
 
     def __enter__(self):
-        self.connect()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -283,6 +282,7 @@ class LoihiSimulator(object):
                 print("  Core %d, id=%d" % (k, n2core.id))
 
     def run_steps(self, steps, async=False):
+        self.connect()
         self.n2board.run(steps, async=async)
 
     def wait_for_completion(self):
@@ -396,5 +396,3 @@ class LoihiSimulator(object):
         self.nengo_io_c2h.connect(nengo_io, None)
         self.nengo_io_c2h_count = n_outputs
         self.nengo_io_snip_range = snip_range
-
-        self.n2board.startDriver()
