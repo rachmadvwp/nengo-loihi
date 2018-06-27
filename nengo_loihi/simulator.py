@@ -156,12 +156,37 @@ class Simulator(object):
                 #  (having normal probes at the same time as snips
                 #   seems to cause problems)
                 for group in self.model.cx_groups.keys():
-                    for probe in group.probes:
-                        probe.use_snip = True
+                    for cx_probe in group.probes:
+                        cx_probe.use_snip = True
+                # create a place to store data from snip probes
+                self.snip_probes = {}
+                for probe in network.all_probes:
+                    self.snip_probes[probe] = []
+
+                # create a list of all the CxProbes and their nengo.Probes
+                self.cx_probe2probe = {}
+                for obj in self.model.objs.keys():
+                    if isinstance(obj, nengo.Probe):
+                        # actual nengo.Probes on chip objects
+                        cx_probe = self.model.objs[obj]['out']
+                        self.cx_probe2probe[cx_probe] = obj
+                for probe in self.chip2host_receivers.keys():
+                    # probes used for chip->host communication
+                    cx_probe = self.model.objs[probe]['out']
+                    self.cx_probe2probe[cx_probe] = probe
 
             self.loihi = self.model.get_loihi(seed=seed)
         else:
             raise ValueError("Unrecognized target")
+
+        self.cx_probe2probe = {}
+        for obj in self.model.objs.keys():
+            if isinstance(obj, nengo.Probe):
+                cx_probe = self.model.objs[obj]['out']
+                self.cx_probe2probe[cx_probe] = obj
+        for probe in self.chip2host_receivers.keys():
+            cx_probe = self.model.objs[probe]['out']
+            self.cx_probe2probe[cx_probe] = probe
 
         assert self.simulator or self.loihi
 
@@ -227,9 +252,11 @@ class Simulator(object):
             if self.loihi is not None:
                 cx_probe = self.loihi.model.objs[probe]['out']
                 if cx_probe.use_snip:
-                    # this probe will be taken care of by snips
-                    continue
-                data = self.loihi.get_probe_output(probe)
+                    data = self.snip_probes[probe]
+                    if probe.synapse is not None:
+                        data = probe.synapse.filt(data, dt=self.dt, y0=0)
+                else:
+                    data = self.loihi.get_probe_output(probe)
             elif self.simulator is not None:
                 data = self.simulator.get_probe_output(probe)
             # TODO: stop recomputing this all the time
@@ -446,17 +473,24 @@ class Simulator(object):
                 data = self.loihi.nengo_io_c2h.read(count-1)
                 data = np.array(data)
                 snip_range = self.loihi.nengo_io_snip_range
-                for probe, receiver in self.chip2host_receivers.items():
-                    cx_probe = self.loihi.model.objs[probe]['out']
+                for cx_probe, probe in self.cx_probe2probe.items():
                     x = data[snip_range[cx_probe]]
                     if cx_probe.key == 's':
                         if isinstance(probe.target, nengo.ensemble.Neurons):
+                            # TODO: are these magic numbers reliable?
                             x = (x == 384)
                         else:
+                            # TODO: are these magic numbers reliable?
                             x = (x == 128)
                     if cx_probe.weights is not None:
                         x = np.dot(x, cx_probe.weights)
-                    receiver.receive(self.dt*(time_step), x)
+                    receiver = self.chip2host_receivers.get(probe, None)
+                    if receiver is not None:
+                        # chip->host
+                        receiver.receive(self.dt*(time_step), x)
+                    else:
+                        # onchip probes
+                        self.snip_probes[probe].append(x)
             else:
                 raise NotImplementedError
 
