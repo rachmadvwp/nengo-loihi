@@ -247,10 +247,12 @@ class LoihiSimulator(object):
     """
     Simulator to place CxModel onto board and run it.
     """
-    def __init__(self, cx_model, seed=None):
+    def __init__(self, cx_model, seed=None,
+                 snip_max_spikes_per_step=50):
         self.n2board = None
         self._probe_filters = {}
         self._probe_filter_pos = {}
+        self.snip_max_spikes_per_step = snip_max_spikes_per_step
 
         if seed is not None:
             warnings.warn("Seed will be ignored when running on Loihi")
@@ -396,8 +398,9 @@ class LoihiSimulator(object):
         phase = "mgmt"
         nengo_io = self.n2board.createProcess("nengo_io", c_path, include_dir,
                                               func_name, guard_name, phase)
+        size = self.snip_max_spikes_per_step * 2 + 1
         self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c',
-                                                       "int", 101)
+                                                       "int", size)
         self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h',
                                                        "int", n_outputs)
         self.nengo_io_h2c.connect(None, nengo_io)

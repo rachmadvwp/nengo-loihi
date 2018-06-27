@@ -411,6 +411,13 @@ class Simulator(object):
                                     to_send.append(output_axon[j])
                         sent_count += 1
                     spike_input.sent_count = sent_count
+                max_spikes = self.loihi.snip_max_spikes_per_step
+                if len(to_send) > max_spikes:
+                    warnings.warn("Too many spikes (%d) sent in one time "
+                                  "step.  Increase the value of "
+                                  "snip_max_spikes_per_step (currently "
+                                  "set to %d)" % (len(to_send), max_spikes))
+                    del to_send[max_spikes:]
                 self.loihi.nengo_io_h2c.write(1, [len(to_send)])
                 for spike in to_send:
                     assert spike[0] == 0
