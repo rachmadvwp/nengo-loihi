@@ -283,6 +283,7 @@ class LoihiSimulator(object):
                 print("  Core %d, id=%d" % (k, n2core.id))
 
     def run_steps(self, steps, async=False):
+        # NOTE: we need to call connect() after snips are created
         self.connect()
         self.n2board.run(steps, async=async)
 
@@ -350,6 +351,9 @@ class LoihiSimulator(object):
         return self._filter_probe(cx_probe, x)
 
     def create_io_snip(self):
+        # snips must be created before connecting
+        assert not self.is_connected()
+
         import nxsdk
         nxsdk_dir = os.path.dirname(nxsdk.__file__)
         nxsdk_root_dir = os.path.join(nxsdk_dir, "..")
@@ -391,6 +395,7 @@ class LoihiSimulator(object):
 
         # --- create SNIP process and channels
         os.chdir(nxsdk_root_dir)
+        # TODO: figure out when it's safe to go back to the original directory
 
         include_dir = snips_dir
         func_name = "nengo_io"

@@ -179,15 +179,6 @@ class Simulator(object):
         else:
             raise ValueError("Unrecognized target")
 
-        self.cx_probe2probe = {}
-        for obj in self.model.objs.keys():
-            if isinstance(obj, nengo.Probe):
-                cx_probe = self.model.objs[obj]['out']
-                self.cx_probe2probe[cx_probe] = obj
-        for probe in self.chip2host_receivers.keys():
-            cx_probe = self.model.objs[probe]['out']
-            self.cx_probe2probe[cx_probe] = probe
-
         assert self.simulator or self.loihi
 
         self.closed = False
@@ -488,10 +479,12 @@ class Simulator(object):
                     x = data[snip_range[cx_probe]]
                     if cx_probe.key == 's':
                         if isinstance(probe.target, nengo.ensemble.Neurons):
-                            # TODO: are these magic numbers reliable?
+                            t_ref = probe.target.ensemble.neuron_type.tau_ref
+                            assert t_ref == 0.002
+                            # TODO: generalize this to other tau_ref values
                             x = (x == 384)
                         else:
-                            # TODO: are these magic numbers reliable?
+                            # interneurons have a refractory period of 1 step
                             x = (x == 128)
                     if cx_probe.weights is not None:
                         x = np.dot(x, cx_probe.weights)
