@@ -152,9 +152,9 @@ class Simulator(object):
         elif target == 'loihi':
             self.model.discretize()  # Make parameters fixed bit widths
             if not precompute:
-                #for probe in self.chip2host_receivers.keys():
-                #    cx_probe = self.loihi.model.objs[probe]['out']
-                #    cx_probe.use_snip = True
+                # tag all probes as being snipbased
+                #  (having normal probes at the same time as snips
+                #   seems to cause problems)
                 for group in self.model.cx_groups.keys():
                     for probe in group.probes:
                         probe.use_snip = True
@@ -226,7 +226,9 @@ class Simulator(object):
             assert self.loihi is None or self.simulator is None
             if self.loihi is not None:
                 cx_probe = self.loihi.model.objs[probe]['out']
-                if cx_probe.use_snip: continue
+                if cx_probe.use_snip:
+                    # this probe will be taken care of by snips
+                    continue
                 data = self.loihi.get_probe_output(probe)
             elif self.simulator is not None:
                 data = self.simulator.get_probe_output(probe)
@@ -372,7 +374,6 @@ class Simulator(object):
                         receiver.receive(t, x)
                     del sender.queue[:]
                     spike_input = receiver.cx_spike_input
-                    spike_gen = spike_input.spike_gen
                     sent_count = spike_input.sent_count
                     axon_ids = spike_input.axon_ids
                     spikes = spike_input.spikes
@@ -383,7 +384,6 @@ class Simulator(object):
                                     to_send.append(output_axon[j])
                         sent_count += 1
                     spike_input.sent_count = sent_count
-                #print(sent_count, to_send)
                 self.loihi.nengo_io_h2c.write(1, [len(to_send)])
                 for spike in to_send:
                     assert spike[0] == 0

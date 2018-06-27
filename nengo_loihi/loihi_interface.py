@@ -168,7 +168,6 @@ def build_input(n2core, core, spike_input, cx_idxs):
     # TODO: this is only needed if precompute=True
     spike_gen = BasicSpikeGenerator(n2board)
 
-
     # get core/axon ids
     axon_ids = []
     for axon in spike_input.axons:
@@ -360,7 +359,8 @@ class LoihiSimulator(object):
                     coreid = info['coreid']
                     cxs = info['cxs']
                     cores.add(coreid)
-                    snip_range[probe] = slice(n_outputs-1, n_outputs+len(cxs)-1)
+                    snip_range[probe] = slice(n_outputs - 1,
+                                              n_outputs + len(cxs) - 1)
                     for cx in cxs:
                         probes.append((n_outputs, coreid, cx))
                         n_outputs += 1
@@ -386,8 +386,8 @@ class LoihiSimulator(object):
         funcName = "nengo_io"
         guardName = None
         phase = "mgmt"
-        nengo_io = self.n2board.createProcess("nengo_io",cPath,includeDir,
-                                            funcName, guardName, phase)
+        nengo_io = self.n2board.createProcess("nengo_io", cPath, includeDir,
+                                              funcName, guardName, phase)
         self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c',
                                                        "int", 101)
         self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h',
