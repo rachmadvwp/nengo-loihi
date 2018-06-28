@@ -228,6 +228,7 @@ class CxGroup(object):
         self.noiseExp0 = int(np.clip(noiseExp0, 0, 23))
         self.noiseMantOffset0 = int(np.round(2*self.noiseMantOffset0))
 
+
 class CxSynapses(object):
     def __init__(self, n_axons):
         self.n_axons = n_axons

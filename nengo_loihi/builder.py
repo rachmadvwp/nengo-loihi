@@ -558,11 +558,11 @@ def build_connection(model, conn):
                 assert post_cx.target is None
                 assert conn.post_slice == slice(None)
 
-                gain = 1 # model.dt * INTER_RATE(=1000)
+                gain = 1  # model.dt * INTER_RATE(=1000)
                 dec_cx = CxGroup(2*d, label='%s' % conn, location='core')
                 dec_cx.configure_nonspiking(dt=model.dt)
                 dec_cx.configure_filter(tau_s, dt=model.dt)
-                dec_cx.bias[:] = 0 # 0.5 * gain * np.array(([1.]*d + [1.]*d))
+                dec_cx.bias[:] = 0  # 0.5 * gain * np.array(([1.]*d + [1.]*d))
                 # no noise neded for non-spiking decoding
                 # if INTER_NOISE_EXP > -30:
                 #     dec_cx.enableNoise[:] = 1
@@ -572,7 +572,7 @@ def build_connection(model, conn):
                 model.objs[conn]['decoded'] = dec_cx
 
                 dec_syn = CxSynapses(n)
-                weights2 = gain * np.vstack([weights, -weights]).T #remove 0.5
+                weights2 = gain * np.vstack([weights, -weights]).T
                 dec_syn.set_full_weights(weights2)
                 dec_cx.add_synapses(dec_syn)
                 model.objs[conn]['decoders'] = dec_syn
@@ -583,7 +583,7 @@ def build_connection(model, conn):
                 model.objs[conn]['decode_axons'] = dec_ax0
 
                 post_cx.target = dec_cx
-                dec_cx.add_probe(post_cx)            
+                dec_cx.add_probe(post_cx)
 
             else:
                 post_d = conn.post_obj.size_in
@@ -591,10 +591,12 @@ def build_connection(model, conn):
                 assert len(post_inds) == d
 
                 gain = model.dt * INTER_RATE
-                dec_cx = CxGroup(2*d*INTER_N, label='%s' % conn, location='core')
+                dec_cx = CxGroup(2 * d * INTER_N, label='%s' % conn,
+                                 location='core')
                 dec_cx.configure_relu(dt=model.dt)
                 dec_cx.configure_filter(tau_s, dt=model.dt)
-                dec_cx.bias[:] = 0.5 * gain * np.array(([1.]*d + [1.]*d)*INTER_N)
+                dec_cx.bias[:] = 0.5 * gain * np.array(([1.] * d +
+                                                        [1.] * d) * INTER_N)
                 if INTER_NOISE_EXP > -30:
                     dec_cx.enableNoise[:] = 1
                     dec_cx.noiseExp0 = INTER_NOISE_EXP
@@ -603,7 +605,8 @@ def build_connection(model, conn):
                 model.objs[conn]['decoded'] = dec_cx
 
                 dec_syn = CxSynapses(n)
-                weights2 = 0.5 * gain * np.vstack([weights, -weights]*INTER_N).T
+                weights2 = 0.5 * gain * np.vstack([weights,
+                                                   -weights] * INTER_N).T
                 dec_syn.set_full_weights(weights2)
                 dec_cx.add_synapses(dec_syn)
                 model.objs[conn]['decoders'] = dec_syn
@@ -676,7 +679,7 @@ def conn_probe(model, probe):
     # output of an object, which may not have a predefined signal)
 
     # synapse = INTER_TAU if isinstance(probe.target, Ensemble) else 0
-    synapse = 0 # Removed internal filtering
+    synapse = 0  # Removed internal filtering
 
     # get any extra arguments if this probe was created to send data
     #  to an off-chip Node via the splitter
@@ -727,9 +730,9 @@ def conn_probe(model, probe):
         w = np.diag(inter_scale * np.ones(d))
         weights = np.vstack([w, -w])
     else:
-        inter_scale = model.dt/100 #TODO why /100?
+        inter_scale = model.dt/100  # TODO why /100?
         w = np.diag(inter_scale * np.ones(d))
-        weights = np.vstack([w, -w] )
+        weights = np.vstack([w, -w])
     cx_probe = CxProbe(key='v', weights=weights, synapse=probe.synapse)
     model.objs[target]['in'] = cx_probe
     model.objs[target]['out'] = cx_probe
