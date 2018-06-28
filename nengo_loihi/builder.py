@@ -40,6 +40,9 @@ INTER_RATE = 100
 INTER_N = 10
 INTER_NOISE_EXP = -2
 
+# voltage threshold for non-spiking neurons (i.e. voltage decoders)
+VTH_NONSPIKING = 10
+
 
 class Model(CxModel):
     """The data structure for the chip/simulator.
@@ -560,7 +563,7 @@ def build_connection(model, conn):
 
                 gain = 1  # model.dt * INTER_RATE(=1000)
                 dec_cx = CxGroup(2*d, label='%s' % conn, location='core')
-                dec_cx.configure_nonspiking(dt=model.dt)
+                dec_cx.configure_nonspiking(dt=model.dt, vth=VTH_NONSPIKING)
                 dec_cx.configure_filter(tau_s, dt=model.dt)
                 dec_cx.bias[:] = 0  # 0.5 * gain * np.array(([1.]*d + [1.]*d))
                 # no noise neded for non-spiking decoding
@@ -730,7 +733,7 @@ def conn_probe(model, probe):
         w = np.diag(inter_scale * np.ones(d))
         weights = np.vstack([w, -w])
     else:
-        inter_scale = model.dt/100  # TODO why /100?
+        inter_scale = 1.0
         w = np.diag(inter_scale * np.ones(d))
         weights = np.vstack([w, -w])
     cx_probe = CxProbe(key='v', weights=weights, synapse=probe.synapse)

@@ -128,7 +128,7 @@ class CxGroup(object):
         self.decayU[:] = -np.expm1(-dt/np.asarray(tau_s))
         self.decayV[:] = 1.
         self.refractDelay[:] = 1
-        self.vth[:] = 60
+        self.vth[:] = vth
         self.vmin = 0
         self.vmax = np.inf
         self.scaleU = True
@@ -227,6 +227,10 @@ class CxGroup(object):
                 "Noise amplitude exceeds upper limit (%d > 23)" % (noiseExp0,))
         self.noiseExp0 = int(np.clip(noiseExp0, 0, 23))
         self.noiseMantOffset0 = int(np.round(2*self.noiseMantOffset0))
+
+        for p in self.probes:
+            if p.key == 'v' and p.weights is not None:
+                p.weights /= v_scale[0]
 
 
 class CxSynapses(object):
