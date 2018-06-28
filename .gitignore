@@ -26,3 +26,4 @@ htmlcov
 *.logs/
 *.plots/
 .pytest_cache/
+nengo_loihi/snip/nengo_io.c
