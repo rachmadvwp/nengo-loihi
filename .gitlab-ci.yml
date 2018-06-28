@@ -1,5 +1,5 @@
 before_script:
-  - .ci/setup.sh
+  - source .ci/setup.sh
   - source activate loihi
   - pip install --upgrade --no-deps -e .
 
