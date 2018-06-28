@@ -32,4 +32,7 @@ def test_voltage_decode(Simulator, seed, plt, dim):
     with Simulator(model, precompute=True) as sim:
         sim.run(1.)
 
+    plt.plot(sim.trange(), sim.data[p_a])
+    plt.plot(sim.trange(), sim.data[p_stim])
+
     assert np.allclose(sim.data[p_stim], sim.data[p_a], atol=0.3)
