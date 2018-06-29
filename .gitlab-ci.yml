@@ -1,12 +1,23 @@
 before_script:
-  - pip3 install --user --upgrade pip
-  - pip install --user --upgrade flake8 pylint pytest
-  - pip install --user --upgrade -e .
+  - .ci/setup.sh
+  - source activate loihi
+  - pip install --upgrade --no-deps -e .
 
 static_checks:
+  stage: test
   script:
     - flake8 nengo_loihi examples && pylint nengo_loihi examples
 
 tests:
+  stage: test
   script:
     - pytest nengo_loihi
+
+compile:
+  stage: deploy
+  only:
+    - master
+  script:
+    - source .ci/compile.sh setup
+    - source .ci/compile.sh run
+    - source .ci/compile.sh deploy
