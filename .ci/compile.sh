@@ -24,7 +24,7 @@ elif [[ "$COMMAND" == "deploy" ]]; then
     NLCOMMIT=$(git rev-parse --short HEAD)
     cd nengo-loihi-compiled
     git add -A
-    git commit -m "Compiled nengo-loihi at $NLCOMMIT"
+    git commit --allow-empty -m "Compiled nengo-loihi at $NLCOMMIT"
     git push origin master
 else
     if [[ -z "$COMMAND" ]]; then
