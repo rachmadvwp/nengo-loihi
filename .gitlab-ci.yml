@@ -12,12 +12,3 @@ tests:
   stage: test
   script:
     - pytest nengo_loihi
-
-compile:
-  stage: deploy
-  only:
-    - master
-  script:
-    - source .ci/compile.sh setup
-    - source .ci/compile.sh run
-    - source .ci/compile.sh deploy
