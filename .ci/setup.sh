@@ -12,5 +12,5 @@ conda update --quiet conda
 conda create --quiet --name loihi python=3.5.5
 source activate loihi
 conda install --quiet cython matplotlib mkl numpy scipy
-pip install flake8 nengo pylint pytest
+pip install flake8 jinja2 nengo pylint pytest
 source deactivate
