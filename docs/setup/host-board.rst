@@ -110,7 +110,7 @@ To set up the Nahuku / GHRD system:
    and connect the other end to the superhost.
 
 5. If a microSD card is present in the microSD card slot,
-   and it has not yet been set up (see `below <#sd-card-image>`__),
+   and it has not yet been set up (see `below <#creating-an-sd-card-image>`__),
    remove the microSD card from its slot.
    The card slot has a latch that is spring loaded.
    To remove the microSD card, push it into the card slot, then release.
@@ -118,7 +118,7 @@ To set up the Nahuku / GHRD system:
    it can then be removed by sliding it out of the card slot.
 
 6. If necessary, set up the microSD card as described
-   `below <#sd-card-image>`__).
+   `below <#creating-an-sd-card-image>`__).
    Then reinsert the microSD card into the microSD card slot.
    Be sure to push the card into the slot
    far enough to engage the spring-loaded latch.

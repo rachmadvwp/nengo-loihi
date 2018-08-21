@@ -33,7 +33,10 @@ Unless you are setting up a new host and board,
 you will only need to interact with
 your local machine and the superhost.
 
-.. note:: If you are setting up a new host or board,
+.. note:: If you are setting up a new superhost,
+          see the :doc:`setup/superhost` page.
+
+          If you are setting up a new host or board,
           see the :doc:`setup/host-board` page.
 
 Software

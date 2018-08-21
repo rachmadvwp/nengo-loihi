@@ -22,5 +22,8 @@ please contact the hardware distributor
 .. toctree::
    :maxdepth: 2
 
-   host-board
    superhost
+   host-board
+   nis
+   nfs
+   slurm
