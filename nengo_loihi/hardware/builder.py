@@ -87,44 +87,68 @@ def core_stdp_pre_cfgs(core):
     return profiles, profile_idxs
 
 
-def one_to_one_allocator(cx_model):
-    board = Board()
-    chip = board.new_chip()
+class Allocator(object):
+    """Allocate an abstract Loihi model to a Loihi board"""
 
-    for group in cx_model.groups:
-        core = chip.new_core()
-        core.add_group(group)
+    def model_to_board(self, cx_model):
+        """Allocate an abstract Loihi model to a Loihi board.
 
-        cx_profiles, cx_profile_idxs = core_cx_profiles(core)
-        [core.add_cx_profile(cx_profile) for cx_profile in cx_profiles]
-        core.cx_profile_idxs = cx_profile_idxs
+        Parameters
+        ----------
+        cx_model : nengo_loihi.Model
+            The abstract Loihi model to allocate
 
-        vth_profiles, vth_profile_idxs = core_vth_profiles(core)
-        [core.add_vth_profile(vth_profile) for vth_profile in vth_profiles]
-        core.vth_profile_idxs = vth_profile_idxs
+        Returns
+        -------
+        board : Board
+            The Loihi Board object that maps all abstract components
+            (neurons, axons, synapses, etc.) to physical cores.
+        """
+        raise NotImplementedError("Allocator must implement model_to_board")
 
-        for syn in group.synapses.synapses:
-            core.add_synapses(syn)
 
-        for axons in group.axons.axons:
-            core.add_axons(axons)
+class OneToOneAllocator(Allocator):
+    """Allocate each CoreGroup to one core"""
 
-        stdp_pre_cfgs, stdp_pre_cfg_idxs = core_stdp_pre_cfgs(core)
-        [core.add_stdp_pre_cfg(stdp_pre_cfg) for stdp_pre_cfg in stdp_pre_cfgs]
-        core.stdp_pre_cfg_idxs = stdp_pre_cfg_idxs
+    def model_to_board(cx_model):
+        board = Board()
+        chip = board.new_chip()
 
-        core.stdp_pre_profile_idx = None  # loihi_interface will set
-        core.stdp_profile_idx = None  # loihi_interface will set
+        for group in cx_model.groups:
+            core = chip.new_core()
+            core.add_group(group)
 
-    for input in cx_model.spike_inputs:
-        # TODO: how to allocate inputs?
-        core = chip.new_core()
-        core.add_input(input)
-        for axons in input.axons:
-            core.add_axons(axons)
+            cx_profiles, cx_profile_idxs = core_cx_profiles(core)
+            [core.add_cx_profile(cx_profile) for cx_profile in cx_profiles]
+            core.cx_profile_idxs = cx_profile_idxs
 
-    board.validate()
-    return board
+            vth_profiles, vth_profile_idxs = core_vth_profiles(core)
+            [core.add_vth_profile(vth_profile) for vth_profile in vth_profiles]
+            core.vth_profile_idxs = vth_profile_idxs
+
+            for syn in group.synapses.synapses:
+                core.add_synapses(syn)
+
+            for axons in group.axons.axons:
+                core.add_axons(axons)
+
+            stdp_pre_cfgs, stdp_pre_cfg_idxs = core_stdp_pre_cfgs(core)
+            for stdp_pre_cfg in stdp_pre_cfgs:
+                core.add_stdp_pre_cfg(stdp_pre_cfg)
+            core.stdp_pre_cfg_idxs = stdp_pre_cfg_idxs
+
+            core.stdp_pre_profile_idx = None  # loihi_interface will set
+            core.stdp_profile_idx = None  # loihi_interface will set
+
+        for input in cx_model.spike_inputs:
+            # TODO: how to allocate inputs?
+            core = chip.new_core()
+            core.add_input(input)
+            for axons in input.axons:
+                core.add_axons(axons)
+
+        board.validate()
+        return board
 
 
 class Board(object):

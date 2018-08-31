@@ -8,7 +8,7 @@ import warnings
 import jinja2
 import numpy as np
 
-from nengo_loihi.hardware.builder import build_board, one_to_one_allocator
+from nengo_loihi.hardware.builder import build_board, OneToOneAllocator
 from nengo_loihi.hardware.nxsdk_shim import nxsdk_dir
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ class LoihiSimulator(object):
         self._probe_filters = {}
         self._probe_filter_pos = {}
         self.snip_max_spikes_per_step = snip_max_spikes_per_step
+        self.allocator = OneToOneAllocator()  # one core per ensemble
 
         self.cwd = os.getcwd()
         logger.debug("cd to %s", nxsdk_dir)
@@ -44,8 +45,7 @@ class LoihiSimulator(object):
 
         # --- allocate --
         # maps CxModel to cores and chips
-        allocator = one_to_one_allocator  # one core per ensemble
-        self.board = allocator(self.model)
+        self.board = self.allocator.model_to_board(self.model)
 
         # --- build
         self.n2board = build_board(self.board)
