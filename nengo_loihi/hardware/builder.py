@@ -137,8 +137,8 @@ class OneToOneAllocator(Allocator):
                 core.add_stdp_pre_cfg(stdp_pre_cfg)
             core.stdp_pre_cfg_idxs = stdp_pre_cfg_idxs
 
-            core.stdp_pre_profile_idx = None  # loihi_interface will set
-            core.stdp_profile_idx = None  # loihi_interface will set
+            core.stdp_pre_profile_idx = None  # hardware builder will set
+            core.stdp_profile_idx = None  # hardware builder will set
 
         for input in cx_model.spike_inputs:
             # TODO: how to allocate inputs?
@@ -152,6 +152,8 @@ class OneToOneAllocator(Allocator):
 
 
 class Board(object):
+    """An entire Loihi Board, with multiple Chips"""
+
     def __init__(self, board_id=1):
         self.board_id = board_id
 
@@ -222,6 +224,8 @@ def build_board(board):
 
 
 class Chip(object):
+    """A Loihi Chip on a Board, with multiple Cores."""
+
     def __init__(self, board):
         self.board = board
 
@@ -257,6 +261,7 @@ def build_chip(n2chip, chip):
 
 
 class Core(object):
+    """A Loihi Core, implementing one or more CoreGroups"""
     def __init__(self, chip):
         self.chip = chip
         self.groups = []
