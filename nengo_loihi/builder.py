@@ -38,6 +38,10 @@ INTER_NOISE_EXP = -2
 # voltage threshold for non-spiking neurons (i.e. voltage decoders)
 VTH_NONSPIKING = 10
 
+# background ensemble noise (to help smooth tuning curves)
+ENSEMBLE_NOISE_EXP = -1  # exponent
+ENSEMBLE_NOISE_OFFSET = 0  # offset
+
 
 class Model(CxModel):
     """The data structure for the chip/simulator.
@@ -279,6 +283,12 @@ def build_ensemble(model, ens):
         model.build(ens.neuron_type, ens.neurons, group)
 
     group.configure_filter(INTER_TAU, dt=model.dt)
+
+    if ENSEMBLE_NOISE_EXP > -30:
+        group.enableNoise[:] = 1
+        group.noiseExp0 = ENSEMBLE_NOISE_EXP
+        group.noiseMantOffset0 = ENSEMBLE_NOISE_OFFSET
+        group.noiseAtDendOrVm = 1
 
     if ens.noise is not None:
         raise NotImplementedError("Ensemble noise not implemented")
