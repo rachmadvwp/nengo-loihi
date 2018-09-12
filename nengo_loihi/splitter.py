@@ -5,6 +5,7 @@ import numpy as np
 
 from nengo_loihi import loihi_cx
 from nengo_loihi.neurons import NIF
+from nengo_loihi.passthrough import convert_passthroughs, CycleException
 
 logger = logging.getLogger(__name__)
 
@@ -102,21 +103,34 @@ def split(model, inter_rate, inter_n):  # noqa: C901
     chip2host_receivers = {}
     host2chip_senders = {}
 
+    offchip = set()
+    onchip = set()
+
     for ens in model.all_ensembles:
         if is_on_chip(ens, model.config):
             logger.debug("Adding %s to chip", ens)
             chip.ensembles.append(ens)
+            onchip.add(ens)
         else:
             logger.debug("Adding %s to host", ens)
             host.ensembles.append(ens)
+            offchip.add(ens)
 
     for node in model.all_nodes:
         if is_on_chip(node, model.config):
             logger.debug("Adding %s to chip", node)
             chip.nodes.append(node)
+            onchip.add(node)
         else:
             logger.debug("Adding %s to host", node)
             host.nodes.append(node)
+            if node.output is not None:
+                offchip.add(node)
+            # Note that passthrough Nodes are not assigned to
+            #  onchip or offchip yet.  This is done after calling
+            #  convert_passthrough, as that determines where they
+            #  should go.
+
 
     for probe in model.all_probes:
         target = probe.target
@@ -124,16 +138,28 @@ def split(model, inter_rate, inter_n):  # noqa: C901
             target = target.obj
         if isinstance(target, nengo.ensemble.Neurons):
             target = target.ensemble
-        if is_on_chip(target, model.config):
-            logger.debug("Adding %s to chip", probe)
-            chip.probes.append(probe)
-        else:
+
+        if isinstance(target, nengo.Node) and target.output is None:
+            # probed passthrough nodes must be offchip
             logger.debug("Adding %s to host", probe)
             host.probes.append(probe)
+        elif target in offchip:
+            logger.debug("Adding %s to host", probe)
+            host.probes.append(probe)
+        else:
+            logger.debug("Adding %s to chip", probe)
+            chip.probes.append(probe)
+
+    remove_nodes, remove_conns, add_conns = convert_passthroughs(model, offchip)
+    for n in remove_nodes:
+        host.nodes.remove(n)
+    offchip.update(host.nodes)
 
     modulatory_nodes = {}
     modulated_conns = {}
-    for c in model.all_connections:
+    for c in model.all_connections + list(add_conns):
+        if c in remove_conns:
+            continue
         pre_onchip = is_on_chip(c.pre_obj, model.config)
         post_onchip = is_on_chip(c.post_obj, model.config)
         if pre_onchip and post_onchip:
