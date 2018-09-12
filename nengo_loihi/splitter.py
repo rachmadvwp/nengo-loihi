@@ -10,6 +10,7 @@ from nengo_loihi.loihi_cx import (
     ChipReceiveNode, ChipReceiveNeurons, HostSendNode, HostReceiveNode,
     PESModulatoryTarget)
 from nengo_loihi.neurons import NIF
+from nengo_loihi.passthrough import convert_passthroughs, CycleException
 
 logger = logging.getLogger(__name__)
 
@@ -110,13 +111,19 @@ def split(net, precompute, max_rate, inter_tau):
     place_nodes(networks)
     place_ensembles(networks)
 
+    # --- Step 1b: remove passthrough nodes
+    if remove_passthrough:
+        conns = merge_passthrough_nodes(networks)
+    else:
+        conns = networks.original.all_connections
+
     # --- Step 2: place simple connections
-    place_internetwork_connections(networks)
+    place_internetwork_connections(networks, conns)
 
     # --- Step 3: split complex connections
-    split_host_to_chip_connections(networks)
-    split_chip_to_host_connections(networks)
-    split_host_to_learning_rules(networks)
+    split_host_to_chip_connections(networks, conns)
+    split_chip_to_host_connections(networks, conns)
+    split_host_to_learning_rules(networks, conns)
 
     # --- Step 4: place precomputable parts of host
     if precompute:
@@ -142,6 +149,8 @@ def place_nodes(networks):
     # Only ChipReceiveNodes can be run on chip
     for node in networks.original.all_nodes:
         if isinstance(node, ChipReceiveNode):
+            # TODO: This if branch can never happen as ChipReceiveNodes
+            # don't exist at this point.
             networks.move(node, "chip")
         else:
             networks.move(node, "host")
@@ -176,13 +185,37 @@ def place_ensembles(networks):
             networks.move(ens, "chip")
 
 
-def place_internetwork_connections(networks):
+def merge_passthrough_nodes(networks):
+    offchip = set()
+    for obj, target in networks.moves.items():
+        if isinstance(obj, nengo.Node) and obj.output is None:
+            # this is a passthrough Node so don't force it to be offchip
+            continue
+        elif target == 'host':
+            offchip.add(obj)
+
+    remove_nodes, remove_conns, add_conns = convert_passthroughs(
+        networks.original, offchip)
+    for n in remove_nodes:
+        networks.remove(n)
+    for c in remove_conns:
+        networks.remove(c)
+
+    conns = networks.original.all_connections
+    for c in remove_conns:
+        conns.remove(c)
+    conns.extend(add_conns)
+
+    return conns
+
+
+def place_internetwork_connections(networks, conns):
     """Connections from two objects placed in the same location go there.
 
     That is, connections from two objects on the host are done on the host,
     and connections from two objects on the chip are done on the chip.
     """
-    for conn in networks.original.all_connections:
+    for conn in conns:
         pre_loc = networks.location(conn.pre_obj)
         post_loc = networks.location(conn.post_obj)
         if pre_loc == post_loc:
@@ -191,8 +224,8 @@ def place_internetwork_connections(networks):
             networks.move(conn, pre_loc)
 
 
-def split_host_to_chip_connections(networks):
-    for conn in networks.original.all_connections:
+def split_host_to_chip_connections(networks, conns):
+    for conn in conns:
         if conn in networks:
             # Already processed
             continue
@@ -291,8 +324,8 @@ def split_host_to_chip(networks, conn):
     networks.host2chip_senders[send] = receive
 
 
-def split_chip_to_host_connections(networks):
-    for conn in networks.original.all_connections:
+def split_chip_to_host_connections(networks, conns):
+    for conn in conns:
         if conn in networks:
             # Already processed
             continue
@@ -348,8 +381,8 @@ def split_chip_to_host(networks, conn):
     networks.remove(conn)
 
 
-def split_host_to_learning_rules(networks):
-    for conn in networks.original.all_connections:
+def split_host_to_learning_rules(networks, conns):
+    for conn in conns:
         if conn in networks:
             # Already processed
             continue
