@@ -381,7 +381,7 @@ class CxSynapses(object):
         return idxBits
 
     def idxs_per_synapse(self):
-        return 2 if synapses.tracing else 1
+        return 2 if self.tracing else 1
 
     def atom_bits_extra(self):
         atom_bits = self.atom_bits()
