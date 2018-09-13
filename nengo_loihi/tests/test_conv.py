@@ -8,6 +8,7 @@ import nengo
 
 import nengo_loihi
 import nengo_loihi.loihi_cx as loihi_cx
+from nengo_loihi.neurons import loihi_rates
 
 from nengo_extras.matplotlib import tile, imshow
 from nengo_extras.vision import Gabor
@@ -21,44 +22,45 @@ def test_conv2d_weights(plt, rng):
         test10 = pickle.load(f)
 
     test_x, test_y = test10[0][0].reshape(28, 28), test10[1][0]
-    test_x = 2. * test_x - 1.
-    # print(test_x.min(), test_x.max())
+    test_x = 1.999 * test_x - 0.999
 
     filters = Gabor().generate(8, (7, 7), rng=rng)
-    stride = 2
+    sti, stj = 2, 2
     tau_rc = 0.02
     tau_ref = 0.002
     tau_s = 0.005
     dt = 0.001
 
+    encode_type = nengo.SpikingRectifiedLinear()
+    encode_gain = 1./dt
+    encode_bias = 0.
     neuron_type = nengo.LIF(tau_rc=tau_rc, tau_ref=tau_ref)
-    gain = 1.
-    # bias = 0.
-    bias = 1.
+    neuron_gain = 1.
+    neuron_bias = 1.
 
     pres_time = 1.0
 
     # --- compute ideal outputs
-    ref_out = np.array([
-        scipy.signal.correlate2d(test_x, kernel, mode='valid')[
-            ::stride, ::stride]
-        for kernel in filters])
-    ref_out = neuron_type.rates(ref_out, gain, bias)
+    def conv_pm(x, kernel):
+        y0 = scipy.signal.correlate2d(x[0], kernel, mode='valid')[::sti, ::stj]
+        y1 = scipy.signal.correlate2d(x[1], kernel, mode='valid')[::sti, ::stj]
+        return [y0, -y1]
 
-    inp_radius = np.abs(test_x).max()
-    # inp_radius = np.abs(outputs).max()
+    ref_out = np.array([test_x, -test_x])
+    ref_out = loihi_rates(encode_type, ref_out, encode_gain, encode_bias, dt)
+    ref_out = ref_out / encode_gain
+    ref_out = np.array([conv_pm(ref_out, kernel) for kernel in filters])
+    ref_out = ref_out.sum(axis=1)  # sum positive and negative parts
+    ref_out = loihi_rates(neuron_type, ref_out, neuron_gain, neuron_bias, dt)
 
     # --- compute nengo_loihi outputs
-    inp_biases = np.vstack([test_x, -test_x]) / inp_radius
-    nk = 2  # number of channels (positive/negative)
+    inp_biases = np.array([test_x, -test_x])
+    nk = inp_biases.shape[0]  # number of channels
     ni, nj = test_x.shape
     nij = ni * nj
     out_size = ref_out.size
     nf, nyi, nyj = ref_out.shape
     assert out_size <= 1024
-
-    nxi = (nyi-1)*stride + 1
-    nxj = (nyj-1)*stride + 1
 
     model = loihi_cx.CxModel()
 
@@ -82,16 +84,13 @@ def test_conv2d_weights(plt, rng):
     neurons = loihi_cx.CxGroup(out_size)
     neurons.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.configure_filter(tau_s, dt=dt)
-    neurons.bias[:] = bias
+    neurons.bias[:] = neuron_bias
 
     synapses = loihi_cx.CxSynapses(ni*nj)
     kernel = np.array([filters, -filters])  # two channels, pos and neg
     kernel = np.transpose(kernel, (0, 2, 3, 1))
     input_shape = (ni, nj, nk)
-    print(kernel.shape)
-    print(input_shape)
-    print((nyi, nyj, nf))
-    synapses.set_conv2d_weights(kernel, input_shape, strides=(stride, stride))
+    synapses.set_conv2d_weights(kernel, input_shape, strides=(sti, stj))
     neurons.add_synapses(synapses)
 
     out_probe = loihi_cx.CxProbe(target=neurons, key='s')
@@ -106,28 +105,32 @@ def test_conv2d_weights(plt, rng):
     for i in range(int(pres_time / dt)):
         sim.step()
 
-    sim_inp = np.mean(sim.probe_outputs[inp_probe], axis=0)
+    sim_inp = np.sum(sim.probe_outputs[inp_probe], axis=0) / pres_time
     sim_inp.shape = (2 * 28, 28)
-    print(sim_inp.min(), sim_inp.max())
 
-    sim_out = np.mean(sim.probe_outputs[out_probe], axis=0)
+    sim_out = np.sum(sim.probe_outputs[out_probe], axis=0) / pres_time
     sim_out.shape = (nyi, nyj, nf)
     sim_out = np.transpose(sim_out, (2, 0, 1))
-    print(sim_out.max())
+
+    out_max = max(ref_out.max(), sim_out.max())
 
     # --- plot results
-    rows = 4
-    cols = 1
+    rows = 2
+    cols = 2
 
     ax = plt.subplot(rows, cols, 1)
     tile(filters, cols=8, ax=ax)
 
     ax = plt.subplot(rows, cols, 2)
-    tile(ref_out, cols=8, ax=ax)
+    tile(ref_out, vmin=0, vmax=out_max, cols=8, ax=ax)
+
+    # ax = plt.subplot(rows, cols, 3)
+    # imshow(sim_inp, vmin=0, vmax=1, ax=ax)
 
     ax = plt.subplot(rows, cols, 3)
-    imshow(sim_inp, vmin=0, vmax=1, ax=ax)
+    plt.hist(ref_out.ravel(), bins=31)
+    plt.hist(sim_out.ravel(), bins=31)
 
     ax = plt.subplot(rows, cols, 4)
     # tile(sim_out, vmin=0, vmax=1, cols=8, ax=ax)
-    tile(sim_out, vmin=0, vmax=sim_out.max(), cols=8, ax=ax)
+    tile(sim_out, vmin=0, vmax=out_max, cols=8, ax=ax)
