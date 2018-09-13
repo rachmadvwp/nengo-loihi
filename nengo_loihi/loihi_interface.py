@@ -292,40 +292,66 @@ def build_input(n2core, core, spike_input, cx_idxs):
 
 
 def build_synapses(n2core, core, group, synapses, cx_idxs):
-    syn_idxs = core.synapse_axons[synapses]
-    assert len(syn_idxs) == len(synapses.weights)
+    axon_ids = core.synapse_axons[synapses]
+    # assert len(syn_idxs) == len(synapses.weights)
 
     synapse_fmt_idx = core.synapse_fmt_idxs[synapses]
     stdp_pre_cfg_idx = core.stdp_pre_cfg_idxs[synapses]
 
+    atom_bits = synapses.atom_bits()
+    axon_bits = synapses.axon_bits()
+    atom_bits_extra = synapses.atom_bits_extra()
+
     target_cxs = set()
-    s0 = core.synapse_entries[synapses][0]
-    for a, syn_idx in enumerate(syn_idxs):
-        wa = synapses.weights[a] // synapses.synapse_fmt.scale
-        ia = synapses.indices[a]
-        assert len(wa) == len(ia)
+    synapse_map = {}
+    total_synapse_ptr = int(core.synapse_entries[synapses][0])
+    for axon_idx, axon_id in enumerate(axon_ids):
+        w_idx = synapses.axon_weight_idx(axon_idx)
+        cx_base = synapses.axon_cx_base(axon_idx)
 
-        assert np.all(wa <= 255) and np.all(wa >= -256), str(wa)
-        for k, (w, i) in enumerate(zip(wa, ia)):
-            n2core.synapses[s0 + k].configure(
-                CIdx=cx_idxs[i],
-                Wgt=w,
-                synFmtId=synapse_fmt_idx,
-                LrnEn=int(synapses.tracing),
-            )
-            target_cxs.add(cx_idxs[i])
+        if w_idx not in weight_ptrs:
+            weights, indices = synapses.get_weights_indices(a, pop_idx=p)
+            weights = weights // synapses.synapse_fmt.scale
+            assert weights.ndim == 2
+            assert weights.shape == indices.shape
+            assert np.all(weights <= 255) and np.all(weights >= -256), str(weights)
+            n_populations, n_cxs = weights.shape
 
-        n2core.synapseMap[syn_idx].synapsePtr = s0
-        n2core.synapseMap[syn_idx].synapseLen = len(wa)
-        n2core.synapseMap[syn_idx].discreteMapEntry.configure()
+            synapse_map[w_idx] = (
+                total_synapse_ptr, n_populations, n_cxs)
+
+            for p in range(n_populations):
+                for q in range(n_cxs):
+                    cx_idx = cx_idxs[indices[p, q]]
+                    n2core.synapses[total_synapse_ptr].configure(
+                        CIdx=cx_idx, Wgt=weights[p, q],
+                        synFmtId=synapse_fmt_idx,
+                        LrnEn=int(synapses.tracing),
+                    )
+                    target_cxs.add(cx_idx)
+                    total_synapse_ptr += 1
+
+        synapse_ptr, n_populations, n_cxs = synapse_map[w_idx]
+        assert n_populations <= 2**atom_bits
+        assert axon_id <= 2**axon_bits
+        n2core.synapseMap[axon_id].synapsePtr = synapse_ptr
+        n2core.synapseMap[axon_id].synapseLen = n_cxs
+        if n_populations == 1:
+            n2core.synapseMap[axon_id].discreteMapEntry.configure()
+        else:
+            n2core.synapseMap[axon_id].popSize = n_populations
+            assert cx_base % 4 == 0
+            n2core.synapseMap[axon_id].population16MapEntry.configure(
+                cxBase=cx_base//4, atomBits=atom_bits_extra)
 
         if synapses.tracing:
             assert core.stdp_pre_profile_idx is not None
             assert stdp_pre_cfg_idx is not None
-            n2core.synapseMap[syn_idx+1].singleTraceEntry.configure(
+            n2core.synapseMap[axon_id+1].singleTraceEntry.configure(
                 preProfile=core.stdp_pre_profile_idx, tcs=stdp_pre_cfg_idx)
 
-        s0 += len(wa)
+    assert total_synapse_ptr == core.synapse_entries[synapses][1], (
+        "Synapse pointer did not align with precomputed synapses length")
 
     if synapses.tracing:
         assert core.stdp_profile_idx is not None
