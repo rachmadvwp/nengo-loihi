@@ -310,7 +310,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
         cx_base = synapses.axon_cx_base(axon_idx)
 
         if weight_idx not in synapse_map:
-            weights, indices = synapses.get_weights_indices(a, pop_idx=p)
+            weights, indices = synapses.axon_weights_indices(a, pop_idx=p)
             weights = weights // synapses.synapse_fmt.scale
             assert weights.ndim == 2
             assert weights.shape == indices.shape
