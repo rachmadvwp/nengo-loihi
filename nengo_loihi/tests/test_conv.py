@@ -17,7 +17,7 @@ home_dir = os.path.dirname(nengo_loihi.__file__)
 test_dir = os.path.join(home_dir, 'tests')
 
 
-def test_conv2d_weights(plt, rng):
+def test_conv2d_weights(plt, rng, allclose):
     with open(os.path.join(test_dir, 'mnist10.pkl'), 'rb') as f:
         test10 = pickle.load(f)
 
@@ -134,3 +134,5 @@ def test_conv2d_weights(plt, rng):
     ax = plt.subplot(rows, cols, 4)
     # tile(sim_out, vmin=0, vmax=1, cols=8, ax=ax)
     tile(sim_out, vmin=0, vmax=out_max, cols=8, ax=ax)
+
+    assert allclose(sim_out, ref_out, atol=10, rtol=1e-3)
