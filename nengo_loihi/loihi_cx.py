@@ -360,7 +360,7 @@ class CxSynapses(object):
             type(self).__name__, self.label if self.label else '')
 
     def size(self):
-        return sum(len(w) for w in self.weights)
+        return sum(w.size for w in self.weights)
 
     def bits(self):
         return sum(self.synapse_fmt.bits_per_axon(len(w))
