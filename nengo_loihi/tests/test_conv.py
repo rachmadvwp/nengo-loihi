@@ -25,6 +25,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
         test10 = pickle.load(f)
 
     test_x, test_y = test10[0][0].reshape(28, 28), test10[1][0]
+    test_x = test_x[3:25, 3:25]
     test_x = 1.999 * test_x - 0.999
 
     filters = Gabor().generate(8, (7, 7), rng=rng)
@@ -69,6 +70,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     # input group
     inp = loihi_cx.CxGroup(ni * nj * nk)
+    assert inp.n <= 1024
     inp.configure_relu()
     inp.bias[:] = inp_biases.ravel()
 
@@ -85,6 +87,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     # conv group
     neurons = loihi_cx.CxGroup(out_size)
+    assert neurons.n <= 1024
     neurons.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.configure_filter(tau_s, dt=dt)
     neurons.bias[:] = neuron_bias
@@ -122,7 +125,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
         sim_out = sim.probe_outputs[out_probe]
 
     sim_inp = np.sum(sim_inp, axis=0) / pres_time
-    sim_inp.shape = (2 * 28, 28)
+    sim_inp.shape = (nk * ni, nj)
 
     sim_out = np.sum(sim_out, axis=0) / pres_time
     sim_out.shape = (nyi, nyj, nf)
