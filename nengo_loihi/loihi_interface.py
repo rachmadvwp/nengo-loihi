@@ -303,13 +303,13 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
     atom_bits_extra = synapses.atom_bits_extra()
 
     target_cxs = set()
-    synapse_map = {}
+    synapse_map = {}  # map weight_idx to (ptr, pop_size, len)
     total_synapse_ptr = int(core.synapse_entries[synapses][0])
     for axon_idx, axon_id in enumerate(axon_ids):
-        w_idx = synapses.axon_weight_idx(axon_idx)
+        weight_idx = synapses.axon_weight_idx(axon_idx)
         cx_base = synapses.axon_cx_base(axon_idx)
 
-        if w_idx not in weight_ptrs:
+        if weight_idx not in synapse_map:
             weights, indices = synapses.get_weights_indices(a, pop_idx=p)
             weights = weights // synapses.synapse_fmt.scale
             assert weights.ndim == 2
@@ -317,7 +317,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
             assert np.all(weights <= 255) and np.all(weights >= -256), str(weights)
             n_populations, n_cxs = weights.shape
 
-            synapse_map[w_idx] = (
+            synapse_map[weight_idx] = (
                 total_synapse_ptr, n_populations, n_cxs)
 
             for p in range(n_populations):
@@ -331,7 +331,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
                     target_cxs.add(cx_idx)
                     total_synapse_ptr += 1
 
-        synapse_ptr, n_populations, n_cxs = synapse_map[w_idx]
+        synapse_ptr, n_populations, n_cxs = synapse_map[weight_idx]
         assert n_populations <= 2**atom_bits
         assert axon_id <= 2**axon_bits
         n2core.synapseMap[axon_id].synapsePtr = synapse_ptr
