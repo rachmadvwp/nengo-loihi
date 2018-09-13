@@ -103,6 +103,8 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     model.add_group(neurons)
 
     # simulation
+    model.discretize()
+
     n_steps = int(pres_time / dt)
     if target == 'loihi':
         sim = model.get_loihi(seed=seed)
