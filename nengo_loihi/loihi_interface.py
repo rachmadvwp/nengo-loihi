@@ -306,6 +306,8 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
     synapse_map = {}  # map weight_idx to (ptr, pop_size, len)
     total_synapse_ptr = int(core.synapse_entries[synapses][0])
     for axon_idx, axon_id in enumerate(axon_ids):
+        assert axon_id <= 2**axon_bits
+
         weight_idx = synapses.axon_weight_idx(axon_idx)
         cx_base = synapses.axon_cx_base(axon_idx)
 
@@ -334,11 +336,16 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
 
         synapse_ptr, n_populations, n_cxs = synapse_map[weight_idx]
         assert n_populations <= 2**atom_bits
-        assert axon_id <= 2**axon_bits
+
+        if cx_base is None:
+            synapse_ptr = 0
+            n_cxs = 0
+
         n2core.synapseMap[axon_id].synapsePtr = synapse_ptr
         n2core.synapseMap[axon_id].synapseLen = n_cxs
         if n_populations == 1:
-            n2core.synapseMap[axon_id].discreteMapEntry.configure()
+            n2core.synapseMap[axon_id].discreteMapEntry.configure(
+                cxBase=cx_base)
         else:
             n2core.synapseMap[axon_id].popSize = n_populations
             assert cx_base % 4 == 0
