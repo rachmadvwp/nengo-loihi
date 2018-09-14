@@ -340,6 +340,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
         if cx_base is None:
             synapse_ptr = 0
             n_cxs = 0
+            cx_base = 0
 
         n2core.synapseMap[axon_id].synapsePtr = synapse_ptr
         n2core.synapseMap[axon_id].synapseLen = n_cxs
