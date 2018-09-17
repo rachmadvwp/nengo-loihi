@@ -312,17 +312,39 @@ def build_ensemble(model, ens):
         bias=bias)
 
 
-def build_interencoders(model, ens):
+def get_encoder_synapses(model, ens, onoff_encoded, scale=1.):
+    group = model.objs[ens]['in']
+    name = 'inter_encoders' if onoff_encoded else 'encoders'
+    name = name + ('_%r' % scale if scale != 1. else '')
+    build_fn = build_interencoders if onoff_encoded else build_encoders
+
+    if name not in group.named_synapses:
+        build_fn(name, model, ens, scale=scale)
+    return group.named_synapses[name]
+
+
+def build_encoders(name, model, ens, scale=1.):
+    """Build encoders accepting direct neuron input."""
+    group = model.objs[ens.neurons]['in']
+    scaled_encoders = model.params[ens].scaled_encoders
+
+    synapses = CxSynapses(scaled_encoders.shape[1], label="encoders")
+    scaled_encoders = scaled_encoders * scale
+    synapses.set_full_weights(scaled_encoders.T)
+    group.add_synapses(synapses, name=name)
+
+
+def build_interencoders(name, model, ens, scale=1.):
     """Build encoders accepting on/off interneuron input."""
     group = model.objs[ens.neurons]['in']
     scaled_encoders = model.params[ens].scaled_encoders
 
     synapses = CxSynapses(2*scaled_encoders.shape[1], label="inter_encoders")
-    inter_scale = 1. / (model.dt * INTER_RATE * INTER_N)
+    inter_scale = scale / (model.dt * INTER_RATE * INTER_N)
     interscaled_encoders = scaled_encoders * inter_scale
     synapses.set_full_weights(
         np.vstack([interscaled_encoders.T, -interscaled_encoders.T]))
-    group.add_synapses(synapses, name='inter_encoders')
+    group.add_synapses(synapses, name=name)
 
 
 @Builder.register(nengo.LIF)
@@ -475,9 +497,11 @@ def build_connection(model, conn):
     elif conn.synapse is not None:
         raise NotImplementedError("Cannot handle non-Lowpass synapses")
 
+    onoff_encoded = False  # if target input is encoded with on/off neurons
     needs_interneurons = False
     if isinstance(conn.pre_obj, Node):
         assert conn.pre_slice == slice(None)
+        onoff_encoded = True
 
         if np.array_equal(transform, np.array(1.)):
             # TODO: this identity transform may be avoidable
@@ -514,7 +538,6 @@ def build_connection(model, conn):
             needs_interneurons = True
     elif isinstance(conn.pre_obj, Neurons):
         assert conn.pre_slice == slice(None)
-        assert transform.ndim == 2
         weights = transform / model.dt
         neuron_type = conn.pre_obj.ensemble.neuron_type
     else:
@@ -527,6 +550,8 @@ def build_connection(model, conn):
     mid_cx = pre_cx
     mid_axon_inds = None
     if needs_interneurons and not isinstance(conn.post_obj, Neurons):
+        onoff_encoded = True
+
         # --- add interneurons
         assert weights.ndim == 2
         d, n = weights.shape
@@ -659,11 +684,20 @@ def build_connection(model, conn):
         if conn.learning_rule_type is not None:
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble):
-        if 'inter_encoders' not in post_cx.named_synapses:
-            build_interencoders(model, conn.post_obj)
+        scale = 1.
+        if isinstance(conn.pre_obj, Neurons):
+            assert weights.size == 1
+
+            # loihi encoders don't include radius, so handle scaling here
+            weights = weights / conn.post_obj.radius
+
+            scale = weights.item()
+
+        encoder_synapses = get_encoder_synapses(
+            model, conn.post_obj, onoff_encoded, scale=scale)
 
         mid_ax = CxAxons(mid_cx.n, label="encoders")
-        mid_ax.target = post_cx.named_synapses['inter_encoders']
+        mid_ax.target = encoder_synapses
         mid_ax.axon_to_synapse_map = mid_axon_inds
         mid_cx.add_axons(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax
