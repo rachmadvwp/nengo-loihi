@@ -3,6 +3,8 @@ from nengo.utils.matplotlib import rasterplot
 import numpy as np
 import pytest
 
+import nengo_loihi
+
 
 @pytest.mark.parametrize('weight_solver', [False, True])
 @pytest.mark.parametrize('target_value', [-0.75, 0.4, 1.0])
@@ -161,8 +163,11 @@ def test_ensemble_to_neurons(Simulator, seed, allclose, plt):
                     atol=5)
 
 
-def test_neurons_to_ensemble(Simulator, seed, rng, allclose, plt):
+@pytest.mark.parametrize('pre_on_chip', [True, False])
+def test_neurons_to_ensemble(pre_on_chip, Simulator, seed, rng, allclose, plt):
     with nengo.Network(seed=seed) as net:
+        nengo_loihi.add_params(net)
+
         stim = nengo.Node(lambda t: [np.sin(t * 2 * np.pi)])
 
         pre_max_rate = 100
@@ -170,10 +175,10 @@ def test_neurons_to_ensemble(Simulator, seed, rng, allclose, plt):
         pre = nengo.Ensemble(n_pre, 1,
                              max_rates=pre_max_rate * np.ones(n_pre),
                              intercepts=np.linspace(-1, 0.9, n_pre))
+        net.config[pre].on_chip = pre_on_chip
         nengo.Connection(stim, pre, synapse=None)
 
         pre_max = pre_max_rate * n_pre
-
         n_post = 51
         post_encoders = np.ones((n_post, n_pre))
         post = nengo.Ensemble(n_post, n_pre,
@@ -192,7 +197,7 @@ def test_neurons_to_ensemble(Simulator, seed, rng, allclose, plt):
     with nengo.Simulator(net) as nengosim:
         nengosim.run(1.0)
 
-    with Simulator(net) as sim:
+    with Simulator(net, precompute=False) as sim:
         sim.run(1.0)
 
     y0 = nengosim.data[p_post].sum(axis=1)
