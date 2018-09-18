@@ -455,6 +455,23 @@ def multiply(x, y):
                          % (x.ndim, y.ndim))
 
 
+def expand_to_2d(weights, pre_size, post_size):
+    if weights.ndim == 0:
+        assert pre_size == post_size
+        weights2d = weights * np.eye(pre_size)
+    elif weights.ndim == 1:
+        assert pre_size == post_size
+        assert weights.size == pre_size
+        weights2d = np.diag(weights)
+    else:
+        assert weights.ndim == 2
+        weights2d = weights
+
+    # assert weights2d.shape[0] == post_size
+    # assert weights2d.shape[1] == pre_size
+    return weights2d
+
+
 @Builder.register(Solver)
 def build_solver(model, solver, conn, rng, transform):
     return build_decoders(model, conn, rng, transform)
@@ -501,22 +518,18 @@ def build_connection(model, conn):
     needs_interneurons = False
     if isinstance(conn.pre_obj, Node):
         assert conn.pre_slice == slice(None)
-        onoff_encoded = True
+        # onoff_encoded = True
 
-        if np.array_equal(transform, np.array(1.)):
-            # TODO: this identity transform may be avoidable
-            transform = np.eye(conn.pre.size_out)
-        else:
-            assert transform.ndim == 2
-            assert transform.shape[1] == conn.pre.size_out
-
-        assert transform.shape[1] == conn.pre.size_out
         if isinstance(conn.pre_obj, splitter.ChipReceiveNeurons):
+            assert conn.pre_slice == slice(None)
             weights = transform
             neuron_type = conn.pre_obj.neuron_type
         else:
+            onoff_encoded = True
+
             # input is on-off neuron encoded, so double/flip transform
-            weights = np.column_stack([transform, -transform])
+            weights = expand_to_2d(transform, conn.pre.size_out, conn.post.size_in)
+            weights = np.column_stack([weights, -weights])
 
             # (max_rate = INTER_RATE * INTER_N) is the spike rate we
             # use to represent a value of +/- 1
@@ -552,6 +565,8 @@ def build_connection(model, conn):
         onoff_encoded = True
 
         # --- add interneurons
+        weights = expand_to_2d(weights, conn.pre.size_out, conn.post.size_in)
+
         assert weights.ndim == 2
         d, n = weights.shape
 
@@ -641,16 +656,16 @@ def build_connection(model, conn):
         assert conn.post_slice == slice(None)
         if weights is None:
             raise NotImplementedError("Need weights for connection to neurons")
-        else:
-            assert weights.ndim == 2
-            n2, n1 = weights.shape
-            assert post_cx.n == n2
 
-            syn = CxSynapses(n1, label="neuron_weights")
-            gain = model.params[conn.post_obj.ensemble].gain
-            syn.set_full_weights(weights.T * gain)
-            post_cx.add_synapses(syn)
-            model.objs[conn]['weights'] = syn
+        weights = expand_to_2d(weights, conn.pre.size_out, conn.post.size_in)
+        n2, n1 = weights.shape
+        assert post_cx.n == n2
+
+        syn = CxSynapses(n1, label="neuron_weights")
+        gain = model.params[conn.post_obj.ensemble].gain
+        syn.set_full_weights(weights.T * gain)
+        post_cx.add_synapses(syn)
+        model.objs[conn]['weights'] = syn
 
         ax = CxAxons(mid_cx.n, label="neuron_weights")
         ax.target = syn
@@ -662,7 +677,7 @@ def build_connection(model, conn):
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble) and conn.solver.weights:
         assert isinstance(post_cx, CxGroup)
-        assert weights.ndim == 2
+        weights = expand_to_2d(weights, conn.pre.size_out, conn.post.size_in)
         n2, n1 = weights.shape
         assert post_cx.n == n2
 
