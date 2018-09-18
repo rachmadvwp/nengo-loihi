@@ -512,6 +512,7 @@ def build_connection(model, conn):
 
         assert transform.shape[1] == conn.pre.size_out
         if isinstance(conn.pre_obj, splitter.ChipReceiveNeurons):
+            weights = transform
             neuron_type = conn.pre_obj.neuron_type
         else:
             # input is on-off neuron encoded, so double/flip transform
@@ -533,6 +534,7 @@ def build_connection(model, conn):
             needs_interneurons = True
     elif isinstance(conn.pre_obj, Neurons):
         assert conn.pre_slice == slice(None)
+        weights = transform
         neuron_type = conn.pre_obj.ensemble.neuron_type
     else:
         raise NotImplementedError("Connection from type %r" % (
