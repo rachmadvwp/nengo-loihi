@@ -7,6 +7,7 @@ import numpy as np
 
 import nengo
 import nengo.utils.numpy as npext
+from nengo.cache import get_default_decoder_cache
 from nengo.exceptions import (
     BuildError, ReadonlyError, SimulatorClosed, ValidationError)
 from nengo.simulator import ProbeDict as NengoProbeDict
@@ -16,8 +17,19 @@ from nengo_loihi.loihi_cx import CxSimulator
 from nengo_loihi.loihi_interface import LoihiSimulator
 from nengo_loihi.splitter import split
 import nengo_loihi.config as config
+from nengo_loihi.utils import seed_network
 
 logger = logging.getLogger(__name__)
+
+
+def get_host_model(network, dt=0.001, seeds={}, seeded={}):
+    model = nengo.builder.Model(
+        dt=float(dt),
+        label="%s, dt=%f" % (network, dt),
+        decoder_cache=get_default_decoder_cache())
+    model.seeds.update(seeds)
+    model.seeded.update(seeded)
+    return model
 
 
 class ProbeDict(NengoProbeDict):
@@ -168,6 +180,11 @@ class Simulator(object):
             nengo.rc.set("decoder_cache", "enabled", "False")
             config.add_params(network)
 
+            # ensure seeds are identical to Nengo
+            seeds, seeded = seed_network(network)
+            self.model.seeds.update(seeds)
+            self.model.seeded.update(seeded)
+
             # split the host into one, two or three networks
             self.networks = split(
                 network, precompute, max_rate, self.model.inter_tau)
@@ -182,12 +199,16 @@ class Simulator(object):
             self.host_pre = self.networks.host_pre
 
             if len(self.host_pre.all_objects) > 0:
+                host_pre_model = get_host_model(
+                    self.host_pre, dt=dt, seeds=seeds, seeded=seeded)
                 self.sims["host_pre"] = nengo.Simulator(
-                    self.host_pre, dt=self.dt, progress_bar=False)
+                    self.host_pre, dt=self.dt, model=host_pre_model, progress_bar=False)
 
             if len(self.host.all_objects) > 0:
+                host_model = get_host_model(
+                    self.host, dt=dt, seeds=seeds, seeded=seeded)
                 self.sims["host"] = nengo.Simulator(
-                    self.host, dt=self.dt, progress_bar=False)
+                    self.host, dt=self.dt, model=host_model, progress_bar=False)
             elif not precompute:
                 # If there is no host and precompute=False, then all objects
                 # must be on the chip, which is precomputable in the sense that

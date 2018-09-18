@@ -187,8 +187,9 @@ def build_network(model, network):
         return (rng.randint(npext.maxint)
                 if not hasattr(obj, 'seed') or obj.seed is None else obj.seed)
 
-    if network not in model.seeds:
+    if network not in model.seeded:
         model.seeded[network] = getattr(network, 'seed', None) is not None
+    if network not in model.seeds:
         model.seeds[network] = get_seed(network, np.random)
 
     # # Set config
@@ -202,9 +203,11 @@ def build_network(model, network):
     assert all(tp in sorted_types for tp in network.objects)
     for obj_type in sorted_types:
         for obj in network.objects[obj_type]:
-            model.seeded[obj] = (model.seeded[network]
-                                 or getattr(obj, 'seed', None) is not None)
-            model.seeds[obj] = get_seed(obj, rng)
+            if obj not in model.seeded:
+                model.seeded[obj] = (model.seeded[network]
+                                     or getattr(obj, 'seed', None) is not None)
+            if obj not in model.seeds:
+                model.seeds[obj] = get_seed(obj, rng)
 
     logger.debug("Network step 1: Building ensembles and nodes")
     for obj in network.ensembles + network.nodes:
