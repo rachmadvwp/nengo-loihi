@@ -512,7 +512,6 @@ def build_connection(model, conn):
 
         assert transform.shape[1] == conn.pre.size_out
         if isinstance(conn.pre_obj, splitter.ChipReceiveNeurons):
-            weights = transform / model.dt
             neuron_type = conn.pre_obj.neuron_type
         else:
             # input is on-off neuron encoded, so double/flip transform
@@ -520,7 +519,7 @@ def build_connection(model, conn):
 
             # (max_rate = INTER_RATE * INTER_N) is the spike rate we
             # use to represent a value of +/- 1
-            weights = weights / (INTER_RATE * INTER_N * model.dt)
+            weights = weights / (INTER_RATE * INTER_N)
     elif (isinstance(conn.pre_obj, Ensemble) and
           isinstance(conn.pre_obj.neuron_type, nengo.Direct)):
         raise NotImplementedError()
@@ -528,21 +527,19 @@ def build_connection(model, conn):
         eval_points, weights, solver_info = model.build(
             conn.solver, conn, rng, transform)
 
-        # the decoder solver assumes a spike height of 1/dt; that isn't the
-        # case on loihi, so we need to undo that scaling
-        weights = weights / model.dt
-
         neuron_type = conn.pre_obj.neuron_type
 
         if not conn.solver.weights:
             needs_interneurons = True
     elif isinstance(conn.pre_obj, Neurons):
         assert conn.pre_slice == slice(None)
-        weights = transform / model.dt
         neuron_type = conn.pre_obj.ensemble.neuron_type
     else:
         raise NotImplementedError("Connection from type %r" % (
             type(conn.pre_obj),))
+
+    # Account for nengo spike height of 1/dt
+    weights = weights / model.dt
 
     if neuron_type is not None and hasattr(neuron_type, 'amplitude'):
         weights = weights * neuron_type.amplitude
