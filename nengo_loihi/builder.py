@@ -685,7 +685,7 @@ def build_connection(model, conn):
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble):
         scale = 1.
-        if isinstance(conn.pre_obj, Neurons):
+        if isinstance(conn.pre_obj, (Neurons, splitter.ChipReceiveNeurons)):
             assert weights.size == 1
 
             # loihi encoders don't include radius, so handle scaling here
