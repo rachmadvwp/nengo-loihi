@@ -327,10 +327,13 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
                 for q in range(n_cxs):
                     cx_idx = cx_idxs[indices[p, q]]
                     n2core.synapses[total_synapse_ptr].configure(
-                        CIdx=cx_idx, Wgt=weights[p, q],
+                        CIdx=cx_idx,
+                        Wgt=weights[p, q],
                         synFmtId=synapse_fmt_idx,
                         LrnEn=int(synapses.tracing),
                     )
+                    print("Making synapse: %s %s %s %s" % (
+                        total_synapse_ptr, cx_idx, weights[p, q], synapse_fmt_idx))
                     target_cxs.add(cx_idx)
                     total_synapse_ptr += 1
 
@@ -350,11 +353,15 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
         if n_populations == 1:
             n2core.synapseMap[axon_id].discreteMapEntry.configure(
                 cxBase=cx_base)
+            print("Creating discrete synapsemap: %s %s %s %s %s" % (
+                axon_id, synapse_ptr, n_cxs, n_populations, cx_base))
         else:
             n2core.synapseMap[axon_id].popSize = n_populations
             assert cx_base % 4 == 0
             n2core.synapseMap[axon_id].population16MapEntry.configure(
                 cxBase=cx_base//4, atomBits=atom_bits_extra)
+            print("Creating pop16 synapsemap: %s %s %s %s %s %s" % (
+                axon_id, synapse_ptr, n_cxs, n_populations, cx_base, atom_bits_extra))
 
         if synapses.tracing:
             assert core.stdp_pre_profile_idx is not None
@@ -390,9 +397,14 @@ def build_axons(n2core, core, group, axons, cx_ids):
         n_populations = axons.target.axon_populations(taxon_idx)
         if n_populations == 1:
             assert atom == 0
+            print("Creating discrete axon: %s, %s, %s, %s" % (
+                cx_id, tchip_id, tcore_id, taxon_id))
             n2core.createDiscreteAxon(cx_id, tchip_id, tcore_id, taxon_id)
         else:
             srcRelCxId = 0  # TODO: what is this needed for??
+            print("Creating pop16 axon: %s, %s, %s, %s, %s, %s" % (
+                atom, srcRelCxId, cx_id, tchip_id, tcore_id, taxon_id))
+            assert 0 <= atom < n_populations
             n2core.createPop16Axon(
                 atom, srcRelCxId, cx_id, tchip_id, tcore_id, taxon_id)
 
