@@ -33,26 +33,19 @@ def setupNetwork():
         phasex = 'phase%d' % (i % 4,)
         n2Core0.cxMetaState[i//4].configure(**{phasex: 2})
 
-    # n2Core0.axonMap[0].configure(ptr=0, len=1)
-    # n2Core0.axonMap[1].configure(ptr=1, len=1)
-
-    # n2Core0.axonCfg[0].discrete.configure(coreId=n2Core1.id, axonId=0)
-    # n2Core0.axonCfg[1].discrete.configure(coreId=n2Core1.id, axonId=1)
-
-    # n2Core0.createDiscreteAxon(0, 0, n2Core1.id, 0)
+    n2Core0.createDiscreteAxon(0, 0, n2Core1.id, 0)
     n2Core0.createDiscreteAxon(1, 0, n2Core1.id, 1)
 
     # set up output synapses
     for i in range(4):
         n2Core1.cxCfg[i].configure(bias=0, biasExp=0)
 
-    # n2Core1.synapseMap[0].synapsePtr = 0
-    # n2Core1.synapseMap[0].synapseLen = 2
-    # n2Core1.synapseMap[0].discreteMapEntry.configure(cxBase=0)
+    n2Core1.synapseMap[0].synapsePtr = 0
+    n2Core1.synapseMap[0].synapseLen = 2
+    n2Core1.synapseMap[0].discreteMapEntry.configure(cxBase=0)
 
     n2Core1.synapseMap[1].synapsePtr = 0
     n2Core1.synapseMap[1].synapseLen = 2
-    # n2Core1.synapseMap[1].discreteMapEntry.configure(cxBase=0)
     n2Core1.synapseMap[1].discreteMapEntry.configure(cxBase=2)
 
     n2Core1.synapses[0].CIdx = 0
