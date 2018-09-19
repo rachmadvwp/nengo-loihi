@@ -7,6 +7,9 @@ import numpy as np
 from nxsdk.arch.n2a.graph.graph import N2Board
 
 
+n1 = 8
+
+
 def setupNetwork():
     boardId = 1
     numChips = 1
@@ -24,7 +27,7 @@ def setupNetwork():
 
     n2Core1.cxProfileCfg[0].configure(decayU=int(1/tauU*2**12))
     n2Core1.vthProfileCfg[0].staticCfg.configure(vth=40)
-    n2Core1.numUpdates.configure(numUpdates=10)
+    n2Core1.numUpdates.configure(numUpdates=1 + n1//4)
 
     # make inputs spike
     n2Core0.cxCfg[0].configure(bias=20, biasExp=6)
@@ -33,12 +36,12 @@ def setupNetwork():
     n2Core0.createDiscreteAxon(0, 0, n2Core1.id, 0)
 
     # set up output synapses
-    for i in range(4):
+    for i in range(n1):
         n2Core1.cxCfg[i].configure(bias=0, biasExp=0)
 
     n2Core1.synapseMap[0].synapsePtr = 0
     n2Core1.synapseMap[0].synapseLen = 2
-    n2Core1.synapseMap[0].discreteMapEntry.configure(cxBase=1)
+    n2Core1.synapseMap[0].discreteMapEntry.configure(cxBase=0)
 
     n2Core1.synapses[0].CIdx = 0
     n2Core1.synapses[0].Wgt = 4
@@ -66,8 +69,8 @@ def runNetwork(board, doPlot):
     uProbe0 = mon.probe(n2Core0.cxState, range(0, 1), 'u')
     vProbe0 = mon.probe(n2Core0.cxState, range(0, 1), 'v')
 
-    uProbe1 = mon.probe(n2Core1.cxState, range(0, 4), 'u')
-    vProbe1 = mon.probe(n2Core1.cxState, range(0, 4), 'v')
+    uProbe1 = mon.probe(n2Core1.cxState, range(0, n1), 'u')
+    vProbe1 = mon.probe(n2Core1.cxState, range(0, n1), 'v')
 
     numStepsPerRun = 11
     board.run(numStepsPerRun)
