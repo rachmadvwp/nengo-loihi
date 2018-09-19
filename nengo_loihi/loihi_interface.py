@@ -399,14 +399,17 @@ def build_axons(n2core, core, group, axons, cx_ids):
             assert atom == 0
             print("Creating discrete axon: %s, %s, %s, %s" % (
                 cx_id, tchip_id, tcore_id, taxon_id))
-            n2core.createDiscreteAxon(cx_id, tchip_id, tcore_id, taxon_id)
+            n2core.createDiscreteAxon(
+                srcCxId=cx_id,
+                dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id)
         else:
             srcRelCxId = 0  # TODO: what is this needed for??
             print("Creating pop16 axon: %s, %s, %s, %s, %s, %s" % (
-                atom, srcRelCxId, cx_id, tchip_id, tcore_id, taxon_id))
+                atom, cx_id, srcRelCxId, tchip_id, tcore_id, taxon_id))
             assert 0 <= atom < n_populations
             n2core.createPop16Axon(
-                atom, srcRelCxId, cx_id, tchip_id, tcore_id, taxon_id)
+                popId=atom, srcCxId=cx_id, srcRelCxId=srcRelCxId,
+                dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id)
 
 
     # tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(axons.target)
