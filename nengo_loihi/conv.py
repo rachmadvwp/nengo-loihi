@@ -11,7 +11,10 @@ from nengo.exceptions import BuildError
 from nengo.params import Default
 from nengo.synapses import Lowpass, SynapseParam
 
-import nengo_dl
+try:
+    import nengo_dl
+except ImportError:
+    nengo_dl = None
 
 import nengo_loihi
 from nengo_loihi.loihi_cx import CxGroup, CxSpikeInput, CxSynapses, CxAxons
@@ -114,42 +117,43 @@ class Conv2d(nengo.builder.Operator):
         return step_conv2d
 
 
-@nengo_dl.builder.Builder.register(Conv2d)
-class Conv2dBuilder(nengo_dl.builder.OpBuilder):
-    def __init__(self, ops, signals, config):
-        super(Conv2dBuilder, self).__init__(ops, signals, config)
+if nengo_dl is not None:
+    @nengo_dl.builder.Builder.register(Conv2d)
+    class Conv2dBuilder(nengo_dl.builder.OpBuilder):
+        def __init__(self, ops, signals, config):
+            super(Conv2dBuilder, self).__init__(ops, signals, config)
 
-        assert len(ops) == 1
-        self.W_data = signals.combine([op.W for op in ops])
-        self.X_data = signals.combine([op.X for op in ops])
-        self.Y_data = signals.combine([op.Y for op in ops])
+            assert len(ops) == 1
+            self.W_data = signals.combine([op.W for op in ops])
+            self.X_data = signals.combine([op.X for op in ops])
+            self.Y_data = signals.combine([op.Y for op in ops])
 
-        self.x_shape = ops[0].x_shape
-        self.strides = ops[0].strides
-        self.mode = ops[0].mode
+            self.x_shape = ops[0].x_shape
+            self.strides = ops[0].strides
+            self.mode = ops[0].mode
 
-    def build_step(self, signals):
-        import tensorflow as tf
-        assert self.mode == 'valid'
+        def build_step(self, signals):
+            import tensorflow as tf
+            assert self.mode == 'valid'
 
-        strides = self.strides
-        x_shape = self.x_shape
+            strides = self.strides
+            x_shape = self.x_shape
 
-        W = signals.gather(self.W_data)
-        X = signals.gather(self.X_data)
+            W = signals.gather(self.W_data)
+            X = signals.gather(self.X_data)
 
-        W = tf.transpose(W, (1, 2, 0, 3))  # (si, sj, nc, nf)
-        X = tf.transpose(X, (1, 0))  # put batch size first
-        X = tf.reshape(X, (X.shape[0],) + x_shape)
+            W = tf.transpose(W, (1, 2, 0, 3))  # (si, sj, nc, nf)
+            X = tf.transpose(X, (1, 0))  # put batch size first
+            X = tf.reshape(X, (X.shape[0],) + x_shape)
 
-        Y = tf.nn.convolution(
-            input=X,
-            filter=W,
-            strides=strides,
-            padding='VALID',
-            data_format='NHWC')
+            Y = tf.nn.convolution(
+                input=X,
+                filter=W,
+                strides=strides,
+                padding='VALID',
+                data_format='NHWC')
 
-        signals.scatter(self.Y_data, Y, mode='inc')
+            signals.scatter(self.Y_data, Y, mode='inc')
 
 
 @nengo.builder.Builder.register(Conv2dConnection)
