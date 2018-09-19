@@ -117,13 +117,13 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     n_steps = int(pres_time / dt)
     if target == 'loihi':
-        sim = model.get_loihi(seed=seed)
-        sim.run_steps(n_steps)
+        with model.get_loihi(seed=seed) as sim:
+            sim.run_steps(n_steps)
 
-        sim_inp = np.column_stack([
-            p.timeSeries.data for p in sim.board.probe_map[inp_probe]])
-        sim_out = np.column_stack([
-            p.timeSeries.data for p in sim.board.probe_map[out_probe]])
+            sim_inp = np.column_stack([
+                p.timeSeries.data for p in sim.board.probe_map[inp_probe]])
+            sim_out = np.column_stack([
+                p.timeSeries.data for p in sim.board.probe_map[out_probe]])
     else:
         sim = model.get_simulator(seed=seed)
         sim.run_steps(n_steps)
