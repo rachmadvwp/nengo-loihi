@@ -308,7 +308,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
     for axon_idx, axon_id in enumerate(axon_ids):
         assert axon_id <= 2**axon_bits
 
-        weight_idx = synapses.axon_weight_idx(axon_idx)
+        weight_idx = int(synapses.axon_weight_idx(axon_idx))
         cx_base = synapses.axon_cx_base(axon_idx)
 
         if weight_idx not in synapse_map:
@@ -338,9 +338,12 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
         assert n_populations <= 2**atom_bits
 
         if cx_base is None:
+            # this is a dummy axon with no weights, so set n_cxs to 0
             synapse_ptr = 0
             n_cxs = 0
             cx_base = 0
+        else:
+            cx_base = int(cx_base)
 
         n2core.synapseMap[axon_id].synapsePtr = synapse_ptr
         n2core.synapseMap[axon_id].synapseLen = n_cxs
@@ -381,16 +384,17 @@ def build_axons(n2core, core, group, axons, cx_ids):
     cx_idxs = np.arange(len(cx_ids))
     spikes = axons.map_cx_spikes(cx_idxs)
     for cx_id, spike in zip(cx_ids, spikes):
-        taxon_idx = spike.axon_id
+        taxon_idx = int(spike.axon_id)
         taxon_id = int(tsyn_idxs[taxon_idx])
+        atom = int(spike.atom)
         n_populations = axons.target.axon_populations(taxon_idx)
         if n_populations == 1:
-            assert spike.atom == 0
+            assert atom == 0
             n2core.createDiscreteAxon(cx_id, tchip_id, tcore_id, taxon_id)
         else:
             srcRelCxId = 0  # TODO: what is this needed for??
             n2core.createPop16Axon(
-                spike.atom, srcRelCxId, cx_id, tchip_id, tcore_id, taxon_id)
+                atom, srcRelCxId, cx_id, tchip_id, tcore_id, taxon_id)
 
 
     # tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(axons.target)
