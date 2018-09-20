@@ -690,9 +690,11 @@ class CxSimulator(object):
         # self.V[:] = self.decayV_fn(v, self.decayV, a=12) + u2
         self.v[:] = self.decayV_fn(self.v, u2)
         if np.any(self.v > V_MAX):
-            raise SimulationError("Overflow in V (max was %d)" % self.v.max())
+            self.v[self.v > V_MAX] = V_MAX
+            #raise SimulationError("Overflow in V (max was %d)" % self.v.max())
         if np.any(self.v < V_MIN):
-            raise SimulationError("Underflow in V (min was %d)" % self.v.min())
+            self.v[self.v < V_MIN] = V_MIN
+            #raise SimulationError("Underflow in V (min was %d)" % self.v.min())
 
         np.clip(self.v, self.vmin, self.vmax, out=self.v)
         self.v[self.w > 0] = 0
