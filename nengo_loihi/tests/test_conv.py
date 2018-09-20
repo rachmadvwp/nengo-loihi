@@ -41,7 +41,11 @@ def test_pop_tiny(request, plt, seed, rng, allclose):
 
     pres_time = 0.1
 
-    filters = np.array([-0.5, 2., -0.25]).reshape(1, 1, 3, 1)
+    filters = np.array([[-0.5, 2., -0.25],
+                        [-0.25, 2., -0.5],
+                        [-0.5, 3., -0.5],
+                        [-0.0, 2., -0.25]]).reshape(4, 1, 1, 3)
+    filters = np.transpose(filters, (1, 2, 3, 0))
     sti, stj = 1, 1
 
     test_x = np.array([[1, 5, 1],
