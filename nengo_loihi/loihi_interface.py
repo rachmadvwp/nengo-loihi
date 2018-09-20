@@ -419,17 +419,28 @@ def build_axons(n2core, core, group, axons, cx_ids):
             print("Creating pop16 axon: %s, %s, %s, %s, %s, %s" % (
                 atom, cx_id, srcRelCxId, tchip_id, tcore_id, taxon_id))
             assert 0 <= atom < n_populations
-            n2core.createPop16Axon(
-                popId=atom, srcCxId=cx_id, srcRelCxId=srcRelCxId,
-                dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id)
+            # n2core.createPop16Axon(
+            #     popId=atom, srcCxId=cx_id, srcRelCxId=srcRelCxId,
+            #     dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id)
+
+            from nxsdk.arch.n2a.graph.nodesets.output_axon import OutputAxon
+            n2core.axons.append(OutputAxon.pop16Axon(
+                srcCxId=cx_id, srcRelCxId=atom,
+                dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id))
+
         elif synapses.pop_type == 32:  # pop32
             srcRelCxId = 0  # TODO: what is this needed for??
             print("Creating pop32 axon: %s, %s, %s, %s, %s, %s" % (
                 atom, cx_id, srcRelCxId, tchip_id, tcore_id, taxon_id))
             assert 0 <= atom < n_populations
-            n2core.createPop32Axon(
-                popId=atom, srcCxId=cx_id, srcRelCxId=srcRelCxId,
-                dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id)
+            # n2core.createPop32Axon(
+            #     popId=atom, srcCxId=cx_id, srcRelCxId=srcRelCxId,
+            #     dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id)
+
+            from nxsdk.arch.n2a.graph.nodesets.output_axon import OutputAxon
+            n2core.axons.append(OutputAxon.pop32Axon(
+                srcCxId=cx_id, srcRelCxId=atom,
+                dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id))
         else:
             raise ValueError("Unrecognized pop_type: %d" % (synapses.pop_type))
 
