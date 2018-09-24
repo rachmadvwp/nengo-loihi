@@ -1,4 +1,5 @@
 import nengo
+import numpy as np
 import pytest
 
 import nengo_loihi
@@ -43,3 +44,53 @@ def test_probedict_fallbacks(precompute, Simulator):
     #       replaced in the splitting process
     assert conn_ab  # in sim.data
     assert conn_bc  # in sim.data
+
+
+@pytest.mark.parametrize('dt, a_on_chip',
+                         [(2e-4, True),
+                          (3e-4, False),
+                          (4e-4, True)])
+def test_dt(dt, a_on_chip, Simulator, seed, plt, allclose):
+    function = lambda x: x**2
+
+    # dt = 0.001
+    # # dt = 0.002
+    # a_on_chip = False
+    # # a_on_chip = True
+
+    # probe_synapse = nengo.Lowpass(0.01)
+    probe_synapse = nengo.Alpha(0.01)
+
+    ens_params = dict(
+        intercepts=nengo.dists.Uniform(-0.9, 0.9),
+        max_rates=nengo.dists.Uniform(100, 120))
+
+    with nengo.Network(seed=seed) as model:
+        nengo_loihi.add_params(model)
+
+        u = nengo.Node(lambda t: -np.sin(2 * np.pi * t))
+        u_p = nengo.Probe(u, synapse=probe_synapse)
+
+        a = nengo.Ensemble(100, 1, **ens_params)
+        model.config[a].on_chip = a_on_chip
+        a_p = nengo.Probe(a, synapse=probe_synapse)
+
+        b = nengo.Ensemble(101, 1, **ens_params)
+        b_p = nengo.Probe(b, synapse=probe_synapse)
+
+        nengo.Connection(u, a)
+        nengo.Connection(a, b, function=function,
+                         solver=nengo.solvers.LstsqL2(weights=True))
+
+    with Simulator(model, dt=dt, precompute=False) as sim:
+        sim.run(1.0)
+
+    x = sim.data[u_p]
+    y = function(x)
+    plt.plot(sim.trange(), x, 'k--')
+    plt.plot(sim.trange(), y, 'k--')
+    plt.plot(sim.trange(), sim.data[a_p])
+    plt.plot(sim.trange(), sim.data[b_p])
+
+    assert allclose(sim.data[a_p], x, rtol=0.1, atol=0.1)
+    assert allclose(sim.data[b_p], y, rtol=0.1, atol=0.1)

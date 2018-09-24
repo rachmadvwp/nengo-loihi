@@ -1,7 +1,9 @@
 import logging
 
-import nengo
 import numpy as np
+
+import nengo
+from nengo.exceptions import BuildError
 
 from nengo_loihi import loihi_cx
 from nengo_loihi.neurons import NIF
@@ -92,7 +94,7 @@ class ChipReceiveNeurons(ChipReceiveNode):
         super(ChipReceiveNeurons, self).__init__(dimensions, dimensions)
 
 
-def split(model, inter_rate, inter_n):  # noqa: C901
+def split(model, inter_rate, inter_n, dt):  # noqa: C901
     """Split a model into code running on the host and on-chip"""
 
     logger.info("Splitting model into host and chip parts")
@@ -181,7 +183,10 @@ def split(model, inter_rate, inter_n):  # noqa: C901
                     nengo.Connection(receive, c.post, synapse=c.synapse)
                 with host:
                     max_rate = inter_rate * inter_n
-                    assert max_rate <= 1000
+                    if max_rate > (1. / dt):
+                        raise BuildError(
+                            "Simulator `dt` must be <= %s (got %s)" % (
+                                1. / max_rate, dt))
 
                     logger.debug("Creating NIF ensemble for %s", c)
                     ens = nengo.Ensemble(
