@@ -52,13 +52,6 @@ def test_probedict_fallbacks(precompute, Simulator):
                           (4e-4, True)])
 def test_dt(dt, a_on_chip, Simulator, seed, plt, allclose):
     function = lambda x: x**2
-
-    # dt = 0.001
-    # # dt = 0.002
-    # a_on_chip = False
-    # # a_on_chip = True
-
-    # probe_synapse = nengo.Lowpass(0.01)
     probe_synapse = nengo.Alpha(0.01)
 
     ens_params = dict(
