@@ -9,7 +9,7 @@ from nengo.exceptions import ReadonlyError, SimulatorClosed, ValidationError
 from nengo.simulator import ProbeDict as NengoProbeDict
 from nengo.utils.compat import ResourceWarning
 
-from nengo_loihi.builder import Model, INTER_RATE, INTER_N
+from nengo_loihi.builder import Model
 from nengo_loihi.loihi_cx import CxGroup
 import nengo_loihi.config as config
 import nengo_loihi.splitter as splitter
@@ -159,7 +159,7 @@ class Simulator(object):
             if precompute:
                 # split the host into two networks, to allow precomputing
                 host, chip, h2c, c2h_params, c2h = splitter.split(
-                    network, INTER_RATE, INTER_N, dt)
+                    network, self.model)
                 host_pre = splitter.split_pre_from_host(host)
                 network = chip
                 self.chip2host_receivers = c2h
@@ -172,7 +172,7 @@ class Simulator(object):
             else:
                 # we need online communication
                 host, chip, h2c, c2h_params, c2h = splitter.split(
-                    network, INTER_RATE, INTER_N, dt)
+                    network, self.model)
                 network = chip
                 self.chip2host_receivers = c2h
                 self.host2chip_senders = h2c
