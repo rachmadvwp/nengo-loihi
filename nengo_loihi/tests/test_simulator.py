@@ -49,7 +49,8 @@ def test_probedict_fallbacks(precompute, Simulator):
 @pytest.mark.parametrize('dt, a_on_chip',
                          [(2e-4, True),
                           (3e-4, False),
-                          (4e-4, True)])
+                          (4e-4, True),
+                          (2e-3, True)])
 def test_dt(dt, a_on_chip, Simulator, seed, plt, allclose):
     function = lambda x: x**2
     probe_synapse = nengo.Alpha(0.01)
@@ -75,7 +76,11 @@ def test_dt(dt, a_on_chip, Simulator, seed, plt, allclose):
         nengo.Connection(a, b, function=function,
                          solver=nengo.solvers.LstsqL2(weights=True))
 
-    with Simulator(model, dt=dt, precompute=False) as sim:
+    loihi_model = nengo_loihi.builder.Model(dt=dt)
+    if dt > 1. / (loihi_model.inter_rate * loihi_model.inter_n):
+        loihi_model.inter_rate = 1. / (dt * loihi_model.inter_n)
+
+    with Simulator(model, model=loihi_model, precompute=False) as sim:
         sim.run(1.0)
 
     x = sim.data[u_p]
