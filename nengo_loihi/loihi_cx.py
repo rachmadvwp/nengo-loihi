@@ -512,9 +512,11 @@ class CxSynapses(object):
         self.synapse_fmt.set(**kwargs)
 
     def validate(self):
-        assert np.all(self.axon_cx_bases < 256), "CxBase cannot be > 256"
+        if self.axon_cx_bases is not None:
+            assert np.all(self.axon_cx_bases < 256), "CxBase cannot be > 256"
         if self.pop_type == 16:
-            assert np.all(self.axon_cx_bases % 4 == 0)
+            if self.axon_cx_bases is not None:
+                assert np.all(self.axon_cx_bases % 4 == 0)
 
 
 class Spike(object):
