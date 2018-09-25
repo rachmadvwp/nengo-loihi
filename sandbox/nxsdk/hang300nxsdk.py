@@ -1,30 +1,26 @@
 from nxsdk.arch.n2a.graph.graph import N2Board
 from nxsdk.arch.n2a.graph.inputgen import BasicSpikeGenerator
 
-#n = 301
-n = 300
-#n = 299
+n_synapses = 300
+n_cx = 350
 
 boardId = 1
 numChips = 1
 numCoresPerChip = [1]
-numSynapsesPerCore = [[2*n]]
+numSynapsesPerCore = [[n_synapses]]
 board = N2Board(boardId,numChips,numCoresPerChip,numSynapsesPerCore)
 core = board.n2Chips[0].n2Cores[0]
 
-for i in range(n):
+for i in range(n_cx):
     core.cxCfg[i].configure(
         bias=0, biasExp=0, vthProfile=0, cxProfile=0)
 
-s0 = 0
-for a in range(2):
-    for i in range(n):
-        core.synapses[s0 + i].configure(CIdx=0, Wgt=0, synFmtId=1)
+for i in range(n_synapses):
+    core.synapses[i].configure(CIdx=i % n_cx, Wgt=0, synFmtId=1)
 
-    core.synapseMap[a].synapsePtr = s0
-    core.synapseMap[a].synapseLen = n
-    core.synapseMap[a].discreteMapEntry.configure()
-    s0 += n
+core.synapseMap[0].synapsePtr = 0
+core.synapseMap[0].synapseLen = n_synapses
+core.synapseMap[0].discreteMapEntry.configure()
 
 core.synapseFmt[1].wgtBits = 7
 core.synapseFmt[1].numSynapses = 63
