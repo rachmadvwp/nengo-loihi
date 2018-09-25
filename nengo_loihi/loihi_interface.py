@@ -423,11 +423,6 @@ class LoihiSimulator(object):
         # --- build
         self.n2board = build_board(self.board)
 
-        from nengo_loihi.utils import DebugN2Board
-        debug = DebugN2Board(self.n2board)
-        print()
-        print(debug)
-
     def print_cores(self):
         for j, n2chip in enumerate(self.n2board.n2Chips):
             print("Chip %d, id=%d" % (j, n2chip.id))
