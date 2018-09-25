@@ -11,6 +11,9 @@ numSynapsesPerCore = [[n_synapses]]
 board = N2Board(boardId,numChips,numCoresPerChip,numSynapsesPerCore)
 core = board.n2Chips[0].n2Cores[0]
 
+core.cxProfileCfg[0].configure(decayU=0, decayV=0)
+core.vthProfileCfg[0].staticCfg.configure(vth=40)
+
 for i in range(n_cx):
     core.cxCfg[i].configure(
         bias=0, biasExp=0, vthProfile=0, cxProfile=0)
