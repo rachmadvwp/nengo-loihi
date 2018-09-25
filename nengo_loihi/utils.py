@@ -6,12 +6,9 @@ class DebugN2Board(object):
         self.n2board = n2board
 
     @classmethod
-    def _indent(lines):
-        if len(lines) > 0:
-            lines[0].insert(0, '- ')
-        for line in lines[1:]:
-            line.insert(0, '  ')
-        return lines
+    def _indent(cls, lines):
+        return [('- ' if i == 0 else '  ') + line
+                for i, line in enumerate(lines)]
 
     @classmethod
     def board_str(cls, board):
@@ -38,7 +35,7 @@ class DebugN2Board(object):
     @classmethod
     def core_str(cls, core):
         out_lines = []
-        out_lines.append("N2Core(id=%s)" % chip.id)
+        out_lines.append("N2Core(id=%s)" % core.id)
         return '\n'.join(out_lines)
 
     def __str__(self):
