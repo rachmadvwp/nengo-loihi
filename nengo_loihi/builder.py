@@ -92,7 +92,7 @@ class Model(CxModel):
         # and maybe we don't want double filtering if connection has a filter
 
         # firing rate of inter neurons
-        self.inter_rate = 100
+        self._inter_rate = None
 
         # number of inter neurons
         self.inter_n = 10
@@ -105,6 +105,15 @@ class Model(CxModel):
 
         # limit for clipping intercepts, to avoid neurons with high gains
         self.intercept_limit = 0.95
+
+    @property
+    def inter_rate(self):
+        return (1. / (self.dt * self.inter_n) if self._inter_rate is None else
+                self._inter_rate)
+
+    @inter_rate.setter
+    def inter_rate(self, inter_rate):
+        self._inter_rate = inter_rate
 
     @property
     def inter_scale(self):
