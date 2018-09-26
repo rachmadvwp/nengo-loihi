@@ -123,11 +123,18 @@ def allclose(request):
 
 @pytest.fixture
 def assert_allclose(request):
-    def _assert_allclose(a, b, rtol=1e-5, atol=1e-8, equal_nan=False):
+    def _assert_allclose(a, b, rtol=1e-5, atol=1e-8, xtol=0, equal_nan=False):
         rmse = npext.rmse(a, b)
         if not np.any(np.isnan(rmse)):
             request.node.user_properties.append(("rmse", rmse))
+
         close = np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+        for i in range(1, xtol+1):
+            close[i:] |= np.isclose(a[i:], b[:-i], rtol=rtol, atol=atol,
+                                    equal_nan=equal_nan)
+            close[:-i] |= np.isclose(a[:-i], b[i:], rtol=rtol, atol=atol,
+                                     equal_nan=equal_nan)
+
         far = ~close
         diffs = []
         for k, ind in enumerate(zip(*far.nonzero())):
