@@ -183,7 +183,8 @@ def split(model, loihi_model):  # noqa: C901
                     nengo.Connection(receive, c.post, synapse=c.synapse)
                 with host:
                     max_rate = loihi_model.inter_rate * loihi_model.inter_n
-                    if max_rate > (1. / loihi_model.dt):
+                    rtol = 1e-8  # allow for floating point inaccuracies
+                    if max_rate > (1. / loihi_model.dt) * (1 + rtol):
                         raise BuildError(
                             "Simulator `dt` must be <= %s (got %s)" % (
                                 1. / max_rate, loihi_model.dt))
