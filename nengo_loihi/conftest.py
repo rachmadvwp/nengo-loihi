@@ -118,8 +118,8 @@ def allclose(request):
         atol : float
             Absolute tolerance between a and b
         xtol : int
-            Also allow signals to be right or left shifted by xtol indices
-            along the first axis
+            Also allow signals to be right or left shifted by up to xtol
+            indices along the first axis
         equal_nan : bool
             If True, nan's will be considered equal to nan's.
         print_fail : bool
@@ -159,6 +159,11 @@ def allclose(request):
             close[:-i] |= np.isclose(a[:-i], b[i:], rtol=rtol, atol=atol,
                                      equal_nan=equal_nan)
 
+            # we assume that the beginning and end of the array are
+            # close (since we're comparing to entries outside the bounds of
+            # the other array)
+            close[[i - 1, -i]] = True
+
         result = np.all(close)
 
         if print_fail and not result:
@@ -170,4 +175,5 @@ def allclose(request):
                     break
             print("allclose first 5 failures:\n  %s" % ("\n  ".join(diffs)))
         return result
+
     return _allclose
