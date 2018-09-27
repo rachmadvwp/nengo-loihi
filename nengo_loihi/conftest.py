@@ -105,7 +105,7 @@ def allclose(request):
     def _allclose(a, b, rtol=1e-5, atol=1e-8, xtol=0, equal_nan=False,
                   print_fail=True):
         """
-        Check for bounded equality of two arrays (mimicing np.allclose).
+        Check for bounded equality of two arrays (mimicking np.allclose).
 
         Parameters
         ----------
