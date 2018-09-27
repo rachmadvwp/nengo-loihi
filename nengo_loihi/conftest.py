@@ -100,55 +100,74 @@ def seed(request):
     return function_seed(request.function, mod=TestConfig.test_seed)
 
 
-def _isclose(a, b, rtol=1e-5, atol=1e-8, xtol=0, equal_nan=False,
-             request=None):
-    def safe_rms(x):
-        x = np.asarray(x)
-        return npext.rms(x) if x.size > 0 else np.nan
-
-    rmse = safe_rms(a - b)
-    if not np.any(np.isnan(rmse)):
-        request.node.user_properties.append(("rmse", rmse))
-
-        ab_rms = safe_rms(a) + safe_rms(b)
-        rmse_relative = (2 * rmse / ab_rms) if ab_rms > 0 else np.nan
-        if not np.any(np.isnan(rmse_relative)):
-            request.node.user_properties.append(
-                ("rmse_relative", rmse_relative))
-
-    close = np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
-
-    # if xtol > 0, check that number of adjacent positions. If they are close,
-    # then we condider things close.
-    for i in range(1, xtol+1):
-        close[i:] |= np.isclose(a[i:], b[:-i], rtol=rtol, atol=atol,
-                                equal_nan=equal_nan)
-        close[:-i] |= np.isclose(a[:-i], b[i:], rtol=rtol, atol=atol,
-                                 equal_nan=equal_nan)
-
-    return close
-
-
 @pytest.fixture
 def allclose(request):
-    def _allclose(a, b, rtol=1e-5, atol=1e-8, xtol=0, equal_nan=False):
-        close = _isclose(a, b, rtol=rtol, atol=atol, xtol=xtol,
-                         equal_nan=equal_nan, request=request)
-        return np.all(close)
+    def _allclose(a, b, rtol=1e-5, atol=1e-8, xtol=0, equal_nan=False,
+                  print_fail=True):
+        """
+        Check for bounded equality of two arrays (mimicing np.allclose).
+
+        Parameters
+        ----------
+        a : np.ndarray
+            First array to be compared
+        b : np.ndarray
+            Second array to be compared
+        rtol : float
+            Relative tolerance between a and b (relative to b)
+        atol : float
+            Absolute tolerance between a and b
+        xtol : int
+            Also allow signals to be right or left shifted by xtol indices
+            along the first axis
+        equal_nan : bool
+            If True, nan's will be considered equal to nan's.
+        print_fail : bool
+            If True, print out the first 5 entries failing the allclose check
+            along the first axis.
+
+        Returns
+        -------
+        bool
+            True if the two arrays are considered close, else False.
+        """
+
+        a = np.atleast_1d(a)
+        b = np.atleast_1d(b)
+
+        def safe_rms(x):
+            x = np.asarray(x)
+            return npext.rms(x) if x.size > 0 else np.nan
+
+        rmse = safe_rms(a - b)
+        if not np.any(np.isnan(rmse)):
+            request.node.user_properties.append(("rmse", rmse))
+
+            ab_rms = safe_rms(a) + safe_rms(b)
+            rmse_relative = (2 * rmse / ab_rms) if ab_rms > 0 else np.nan
+            if not np.any(np.isnan(rmse_relative)):
+                request.node.user_properties.append(
+                    ("rmse_relative", rmse_relative))
+
+        close = np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+
+        # if xtol > 0, check that number of adjacent positions. If they are
+        # close, then we condider things close.
+        for i in range(1, xtol + 1):
+            close[i:] |= np.isclose(a[i:], b[:-i], rtol=rtol, atol=atol,
+                                    equal_nan=equal_nan)
+            close[:-i] |= np.isclose(a[:-i], b[i:], rtol=rtol, atol=atol,
+                                     equal_nan=equal_nan)
+
+        result = np.all(close)
+
+        if print_fail and not result:
+            far = ~close
+            diffs = []
+            for k, ind in enumerate(zip(*far.nonzero())):
+                diffs.append("%s: %s %s" % (ind, a[ind], b[ind]))
+                if k > 5:
+                    break
+            print("allclose first 5 failures:\n  %s" % ("\n  ".join(diffs)))
+        return result
     return _allclose
-
-
-@pytest.fixture
-def assert_allclose(request):
-    def _assert_allclose(a, b, rtol=1e-5, atol=1e-8, xtol=0, equal_nan=False):
-        close = _isclose(a, b, rtol=rtol, atol=atol, xtol=xtol,
-                         equal_nan=equal_nan, request=request)
-        far = ~close
-        diffs = []
-        for k, ind in enumerate(zip(*far.nonzero())):
-            diffs.append("%s: %s %s" % (ind, a[ind], b[ind]))
-            if k > 5:
-                break
-
-        assert np.all(close), ", ".join(diffs)
-    return _assert_allclose

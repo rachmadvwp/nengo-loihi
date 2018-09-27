@@ -12,7 +12,7 @@ from nengo_loihi.neurons import loihi_rates
     nengo.SpikingRectifiedLinear(),
     nengo.SpikingRectifiedLinear(amplitude=0.23),
 ])
-def test_loihi_rates(dt, neuron_type, Simulator, plt, assert_allclose):
+def test_loihi_rates(dt, neuron_type, Simulator, plt, allclose):
     n = 256
     x = np.linspace(-0.1, 1, n)
 
@@ -40,4 +40,4 @@ def test_loihi_rates(dt, neuron_type, Simulator, plt, assert_allclose):
     plt.plot(x, est_rates, "g", label="measured")
     plt.legend(loc='best')
 
-    assert_allclose(est_rates, ref_rates, atol=1, rtol=0, xtol=1)
+    assert allclose(est_rates, ref_rates, atol=1, rtol=0, xtol=1)
