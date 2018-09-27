@@ -137,6 +137,9 @@ class ImageShape(object):
         return [ImageSlice(self, channel_slice=slice(i, i+nc_per_split))
                 for i in range(0, self.channels, nc_per_split)]
 
+    def __repr__(self):
+        return str(self.shape())
+
 
 class ImageSlice(ImageShape):
     def __init__(self, full_shape, row_slice=slice(None),
@@ -227,6 +230,13 @@ class Conv2D(Distribution):
         self.output_shape = ImageShape(
             nyi, nyj, nf, channels_last=output_channels_last)
 
+        self._paramdict = {
+            "n_filters": n_filters,
+            "input_shape": self.input_shape.shape(),
+            "kernel_size": self.kernel_size,
+            "strides": self.strides
+        }
+
     @classmethod
     def from_kernel(cls, kernel, input_shape, **kwargs):
         nc, si, sj, nf = kernel.shape
@@ -255,8 +265,17 @@ class Conv2D(Distribution):
 
     def sample(self, n, d=None, rng=np.random):
         shape = self.kernel_shape
-        x = get_samples(self.kernel, shape[0], d=np.prod(shape[1:]), rng=rng)
-        return np.reshape(x, shape)
+        if isinstance(self.kernel, Distribution):
+            kernel = []
+            # we sample this way so that any variancescaling distribution based
+            # on n/d is scaled appropriately
+            for _ in range(np.prod(self.kernel_size)):
+                kernel.append(get_samples(
+                    self.kernel, shape[0], d=self.n_filters, rng=rng))
+            kernel = np.reshape(kernel, shape)
+        else:
+            kernel = np.array(self.kernel)
+        return kernel
 
 
 class Conv2DInc(nengo.builder.Operator):
