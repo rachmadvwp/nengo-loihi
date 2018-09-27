@@ -629,7 +629,7 @@ def build_connection(model, conn):
 
         # use tau_s for filter into interneurons, and INTER_TAU for filter out
         dec_cx.configure_filter(tau_s, dt=model.dt)
-        post_tau = INTER_TAU
+        post_tau = model.inter_tau
 
         dec_syn.set_full_weights(weights2)
         dec_cx.add_synapses(dec_syn)
