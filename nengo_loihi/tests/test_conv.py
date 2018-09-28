@@ -482,6 +482,7 @@ def test_backends(Simulator, seed, rng):
     assert np.allclose(p0, p1, atol=2)
 
 
+@pytest.mark.xfail  # Pop spikes not yet sent to board
 @pytest.mark.parametrize('channels_last', [True, False])
 def test_conv_input(channels_last, Simulator, plt, allclose):
     input_shape = ImageShape(4, 4, 1, channels_last=channels_last)
