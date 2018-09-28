@@ -31,7 +31,8 @@ except ImportError:
 import nengo_loihi.loihi_cx as loihi_cx
 from nengo_loihi.allocators import one_to_one_allocator
 from nengo_loihi.loihi_api import (
-    CX_PROFILES_MAX, VTH_PROFILES_MAX, SpikeInput, bias_to_manexp)
+    CX_PROFILES_MAX, VTH_PROFILES_MAX, SpikeInput, bias_to_manexp,
+    scale_pes_errors)
 from nengo_loihi.loihi_cx import CxGroup
 
 logger = logging.getLogger(__name__)
@@ -463,6 +464,7 @@ class LoihiSimulator(object):
     def build(self, cx_model, seed=None):
         cx_model.validate()
         self.model = cx_model
+        self.pes_error_scale = getattr(cx_model, 'pes_error_scale', 1.)
 
         if self.use_snips:
             # tag all probes as being snip-based,
@@ -598,8 +600,6 @@ class LoihiSimulator(object):
 
         loihi_errors = []
         for synapses, t, e in errors:
-            x = (100 * e).astype(int)
-            x = np.clip(x, -100, 100, out=x)
             cx_group = synapses.group
             coreid = None
             for core in self.board.chips[0].cores:
@@ -613,7 +613,8 @@ class LoihiSimulator(object):
                     break
 
             assert coreid is not None
-            loihi_errors.append([coreid, len(x)] + x.tolist())
+            e = scale_pes_errors(e, scale=self.pes_error_scale)
+            loihi_errors.append([coreid, len(e)] + e.tolist())
 
         if self.use_snips:
             return self._host2chip_snips(loihi_spikes, loihi_errors)
