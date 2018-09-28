@@ -186,12 +186,14 @@ class Conv2D(Distribution):
     def __init__(self, n_filters, input_shape, kernel_size=3, strides=1,
                  mode="valid", correlate=True, output_channels_last=None,
                  kernel=nengo_dl.dists.Glorot()):
+        if not isinstance(input_shape, ImageShape):
+            in_channels_last = (output_channels_last
+                                if output_channels_last is not None else True)
+            input_shape = ImageShape.from_shape(
+                input_shape, channels_last=in_channels_last)
+
         self.n_filters = n_filters
-        self.input_shape = (
-            input_shape if isinstance(input_shape, ImageShape)
-            else ImageShape.from_shape(
-                input_shape,
-                channels_last=output_channels_last if output_channels_last is not None else True))
+        self.input_shape = input_shape
         self.kernel_size = kernel_size if is_iterable(kernel_size) else (
             kernel_size, kernel_size)
         self.strides = strides if is_iterable(strides) else (strides, strides)
