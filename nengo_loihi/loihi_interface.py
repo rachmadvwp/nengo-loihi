@@ -260,9 +260,6 @@ def build_group(n2core, core, group, cx_idxs, ax_range):
 def build_input(n2core, core, spike_input, cx_idxs):
     assert len(spike_input.axons) > 0
 
-    for axon in spike_input.axons:
-        build_axons(n2core, core, spike_input, axon, cx_idxs)
-
     for probe in spike_input.probes:
         build_probe(n2core, core, spike_input, probe, cx_idxs)
 
@@ -275,6 +272,8 @@ def build_input(n2core, core, spike_input, cx_idxs):
     # get core/axon ids
     axon_ids = []
     for axon in spike_input.axons:
+        assert (axon.pop_type == 0 or axon.cx_atoms is None or
+                np.all(axon.cx_atoms == 0)), "Cannot send pop spikes to board"
         tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(axon.target)
         tchip = n2board.n2Chips[tchip_idx]
         tcore = tchip.n2Cores[tcore_idx]
@@ -417,7 +416,8 @@ def build_axons(n2core, core, group, axons, cx_ids):
             #     dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id))
 
             # workaround until axon compiler supports pop16
-            assert len(core.groups) == 1 and group is core.groups[0]
+            assert len(core.groups) == 0 or (len(core.groups) == 1 and
+                                             group is core.groups[0])
             assert len(group.probes) == 0
 
             key = (synapses.pop_type, tcore_id, taxon_id)
@@ -435,7 +435,8 @@ def build_axons(n2core, core, group, axons, cx_ids):
             #     dstChipId=tchip_id, dstCoreId=tcore_id, dstSynMapId=taxon_id))
 
             # workaround until axon compiler supports pop32
-            assert len(core.groups) == 1 and group is core.groups[0]
+            assert len(core.groups) == 0 or (len(core.groups) == 1 and
+                                             group is core.groups[0])
             assert len(group.probes) == 0
 
             key = (synapses.pop_type, tcore_id, taxon_id)
