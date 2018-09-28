@@ -23,6 +23,12 @@ Release history
 ==================
 
 
+**Changed**
+
+- PES learning in nengo-loihi more closely matches learning in core Nengo.
+  (`#139 <https://github.com/nengo/nengo-loihi/pull/139>`__)
+- Learning in the emulator more closely matches learning on hardware.
+  (`#139 <https://github.com/nengo/nengo-loihi/pull/139>`__)
 
 0.4.0 (December 6, 2018)
 ========================
