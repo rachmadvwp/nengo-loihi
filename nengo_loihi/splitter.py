@@ -161,6 +161,29 @@ def split(model, inter_rate, inter_n, dt):  # noqa: C901
                     nengo.Connection(c.pre, send, synapse=None)
                 host2chip_senders[send] = receive
 
+            elif (isinstance(c.pre_obj, nengo.Ensemble)
+                  and isinstance(c.solver, nengo.solvers.NoSolver)):
+                # send spikes over and do the rest of the connection on-chip
+                assert not isinstance(c.post, nengo.connection.LearningRule)
+                n_neurons = c.size_out
+                with chip:
+                    logger.debug("Creating ChipReceiveNeurons for %s", c)
+                    receive = ChipReceiveNeurons(
+                        n_neurons, neuron_type=c.pre_obj.neuron_type)
+                    nengo.Connection(
+                        receive, c.post,
+                        transform=c.transform,
+                        synapse=None)
+                with host:
+                    logger.debug("Creating HostSendNode for %s", c)
+                    send = HostSendNode(n_neurons)
+                    nengo.Connection(
+                        c.pre, send,
+                        synapse=c.synapse,
+                        function=lambda x, dims=c.size_out: np.zeros(dims),
+                        solver=c.solver)
+                host2chip_senders[send] = receive
+
             elif isinstance(c.post, nengo.connection.LearningRule):
                 dim = c.size_out
                 with host:
