@@ -203,7 +203,7 @@ checkpoint_base = './checkpoints/mnist_convnet'
 
 amp = 0.01
 
-rate_reg = 1e-2
+rate_reg = 1e-1
 max_rate = 100
 rate_target = max_rate * amp  # must be in amplitude scaled units
 
@@ -235,12 +235,18 @@ layer_dicts = [
     # dict(layer_func=TfConv2d('layer3', 128, kernel_size=3, strides=2), neuron_type=neuron_type),
     # dict(layer_func=TfConv2d('layer4', 256, kernel_size=3, strides=2), neuron_type=neuron_type),
     # dict(layer_func=TfDense('layer_out', 10)),
+    # dict(layer_func=TfConv2d('layer1', 1, kernel_size=1, initializer=tf.constant_initializer(1)),
+    #      neuron_type=nengo.RectifiedLinear(amplitude=amp), on_chip=False, no_min_rate=True),
+    # # ^ Has to be one channel input for now since we can't send pop spikes to chip
+    # dict(layer_func=TfConv2d('layer2', 32, kernel_size=3, strides=2), neuron_type=neuron_type),
+    # dict(layer_func=TfConv2d('layer3', 64, kernel_size=3, strides=2), neuron_type=neuron_type),
+    # dict(layer_func=TfConv2d('layer4', 128, kernel_size=3, strides=2), neuron_type=neuron_type),
+    # dict(layer_func=TfDense('layer_out', 10)),
     dict(layer_func=TfConv2d('layer1', 1, kernel_size=1, initializer=tf.constant_initializer(1)),
          neuron_type=nengo.RectifiedLinear(amplitude=amp), on_chip=False, no_min_rate=True),
     # ^ Has to be one channel input for now since we can't send pop spikes to chip
-    dict(layer_func=TfConv2d('layer2', 32, kernel_size=3, strides=2), neuron_type=neuron_type),
-    dict(layer_func=TfConv2d('layer3', 64, kernel_size=3, strides=2), neuron_type=neuron_type),
-    dict(layer_func=TfConv2d('layer4', 128, kernel_size=3, strides=2), neuron_type=neuron_type),
+    dict(layer_func=TfConv2d('layer2', 16, kernel_size=3, strides=2), neuron_type=neuron_type),
+    dict(layer_func=TfConv2d('layer3', 32, kernel_size=3, strides=2), neuron_type=neuron_type),
     dict(layer_func=TfDense('layer_out', 10)),
     # dict(layer_func=TfConv2d('layer1', 1, kernel_size=1, initializer=tf.constant_initializer(1)),
     #      neuron_type=nengo.RectifiedLinear(amplitude=amp), on_chip=False, no_min_rate=True),
