@@ -130,8 +130,6 @@ class TfDense(object):
 
 def crossentropy(outputs, targets):
     """Cross-entropy loss function (for training)."""
-    # return tf.nn.softmax_cross_entropy_with_logits_v2(
-    #     logits=outputs, labels=targets)
     return tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(
         logits=outputs, labels=targets))
 
