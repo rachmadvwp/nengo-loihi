@@ -273,6 +273,9 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     out_probe = loihi_cx.CxProbe(target=neurons, key='s')
     neurons.add_probe(out_probe)
 
+    volt_probe = loihi_cx.CxProbe(target=neurons, key='v')
+    neurons.add_probe(volt_probe)
+
     inp_ax.target = synapses
     model.add_group(neurons)
 
@@ -295,6 +298,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
         # sim_inp = sim.probe_outputs[inp_probe]
         sim_out = sim.probe_outputs[out_probe]
+        sim_volt = np.array(sim.probe_outputs[volt_probe])
 
     # sim_inp = np.sum(sim_inp, axis=0) / pres_time
     # sim_inp.shape = (nk * ni, nj)
@@ -307,6 +311,9 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
         sim_out.shape = (nf, nyi, nyj)
 
     out_max = max(ref_out.max(), sim_out.max())
+
+    print()
+    print(sim_volt[:, 20].astype(int))
 
     # --- plot results
     rows = 2
