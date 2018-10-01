@@ -432,8 +432,8 @@ with nengo.Network() as nengo_net:
                 out_p = nengo.Probe(y, synapse=nengo.Alpha(0.01))
             else:
                 min_range = -10
-                max_range = 0
-                max_rate = 300.
+                max_range = 2
+                max_rate = 100.
                 gain = max_rate / (max_range - min_range)
                 bias = -gain * min_range
                 y = nengo.Ensemble(output_shape.size, 1, label=func.name,
@@ -442,7 +442,7 @@ with nengo.Network() as nengo_net:
                                    bias=nengo.dists.Choice([bias]))
                 yy.append(y.neurons)
                 yslices.append(ImageSlice(output_shape))
-                out_p = nengo.Probe(y.neurons, synapse=nengo.Alpha(0.01))
+                out_p = nengo.Probe(y.neurons, synapse=nengo.Alpha(0.02))
 
         assert len(yy) == len(yslices)
 
