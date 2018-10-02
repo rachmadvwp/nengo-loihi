@@ -1,4 +1,5 @@
 from collections import defaultdict
+from functools import partial
 import pickle
 
 import matplotlib.pyplot as plt
@@ -73,7 +74,6 @@ with nengo.Network(seed=0) as net:
     #
     #     return layer, conv
 
-
     nengo_loihi.add_params(net)
     nengo_dl.configure_settings(trainable=None)
     net.config[nengo.Ensemble].neuron_type = nengo.RectifiedLinear()
@@ -84,17 +84,31 @@ with nengo.Network(seed=0) as net:
     input = nengo.Node(np.zeros(32 * 32 * 3))
 
     layer, conv = conv_layer(
-        input, 6, nengo_loihi.conv.ImageShape.from_shape((3, 32, 32),
-                                                         channels_last=False),
+        input, 3, nengo_loihi.conv.ImageShape(32, 32, 3, channels_last=False),
         kernel_size=1)
     # net.config[layer.ensemble].on_chip = False
-
     layer, conv = conv_layer(layer, 64, conv.output_shape, strides=2)
+    # layer, conv = conv_layer(layer, 64, conv.output_shape)
     for _ in range(3):
         layer, conv = conv_layer(layer, 96, conv.output_shape)
     layer, conv = conv_layer(layer, 96, conv.output_shape, kernel_size=1)
     layer, conv = conv_layer(layer, 10, conv.output_shape, kernel_size=1,
                              activation=None)
+
+    # layer, conv = conv_layer(
+    #     input, 96, nengo_loihi.conv.ImageShape(32, 32, 3, channels_last=False))
+    # layer, conv = conv_layer(layer, 96, conv.output_shape)
+    # layer, conv = conv_layer(layer, 96, conv.output_shape, strides=2,
+    #                          activation=None)
+    # # dropout
+    # layer, conv = conv_layer(layer, 192, conv.output_shape)
+    # layer, conv = conv_layer(layer, 192, conv.output_shape)
+    # layer, conv = conv_layer(layer, 192, conv.output_shape, strides=2,
+    #                          activation=None)
+    # # dropout
+    # layer, conv = conv_layer(layer, 192, conv.output_shape)
+    # layer, conv = conv_layer(layer, 192, conv.output_shape, kernel_size=1)
+    # layer, conv = conv_layer(layer, 10, conv.output_shape, kernel_size=1)
 
     # sum across rows/cols (average pooling)
     transform = np.zeros((10,) + conv.output_shape.shape())
@@ -115,18 +129,29 @@ def class_err(outputs, targets):
                 tf.float32))
 
 
-def objective(outputs, targets):
-    return tf.nn.softmax_cross_entropy_with_logits_v2(
-        labels=targets, logits=outputs)
+def objective(outputs, targets, weight_reg=None):
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
+        labels=targets, logits=outputs))
+
+    if weight_reg is not None:
+        loss += weight_reg * tf.reduce_sum(
+            [tf.nn.l2_loss(v) for v in tf.trainable_variables()])
+
+    return loss
 
 
-with nengo_dl.Simulator(net, minibatch_size=64, seed=0) as sim:
+with nengo_dl.Simulator(net, minibatch_size=128, seed=0) as sim:
     print("pre err", sim.loss(
         {input: test_data["data"]}, {output: test_data["labels"]}, class_err))
 
-    sim.train({input: train_data["data"]}, {output: train_data["labels"]},
-              tf.train.RMSPropOptimizer(1e-3), objective=objective,
-              n_epochs=10, summaries=["loss"])
+    sim.train(
+        {input: train_data["data"]}, {output: train_data["labels"]},
+        # tf.train.RMSPropOptimizer(1e-3),
+        tf.train.MomentumOptimizer(0.01, momentum=0.9, use_nesterov=True),
+        objective=partial(objective, weight_reg=1e-6),
+        n_epochs=100, summaries=["loss"])
 
     print("post err", sim.loss(
         {input: test_data["data"]}, {output: test_data["labels"]}, class_err))
+
+    sim.save_params("./checkpoints")
