@@ -19,10 +19,9 @@ BIAS_MAN_MAX = 2**12 - 1
 BIAS_EXP_MAX = 2**3 - 1
 BIAS_MAX = BIAS_MAN_MAX * 2**BIAS_EXP_MAX
 
-U_MAX = 2**23 - 1
-U_MIN = -2**23
-V_MAX = 2**23 - 1
-V_MIN = -2**23
+Q_BIT = 21  # number of bits for synapse accumulator
+U_BIT = 23  # number of bits for cx input (u)
+# V_BIT = 24  # number of bits for cx voltage (v)
 
 
 def overflow_signed(x, bits=7, out=None, return_hits=False):

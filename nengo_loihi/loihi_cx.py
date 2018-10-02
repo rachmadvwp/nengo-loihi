@@ -14,8 +14,7 @@ from nengo_loihi.loihi_api import (
     overflow_signed,
     SynapseFmt,
     tracing_mag_int_frac,
-    U_MAX, U_MIN,
-    V_MAX, V_MIN,
+    Q_BIT, U_BIT,
     VTH_MAX,
     vth_to_manexp,
 )
@@ -687,23 +686,24 @@ class CxSimulator(object):
 
         noise = self.noiseGen()
         q0[self.noiseTarget == 0] += noise[self.noiseTarget == 0]
-
-        _, o = overflow_signed(q0, bits=21, out=q0, return_hits=True)
+        _, o = overflow_signed(q0, bits=Q_BIT, out=q0, return_hits=True)
         if np.any(o):
             self.error("Overflow in q")
 
         self.u[:] = self.decayU_fn(self.u[:], q0)
-        _, o = overflow_signed(self.u, bits=23, out=self.u, return_hits=True)
+        _, o = overflow_signed(self.u, bits=U_BIT, out=self.u,
+                               return_hits=True)
         if np.any(o):
             self.error("Overflow in U")
         u2 = self.u + self.bias
         u2[self.noiseTarget == 1] += noise[self.noiseTarget == 1]
-        _, o = overflow_signed(u2, bits=23, out=u2, return_hits=True)
+        _, o = overflow_signed(u2, bits=U_BIT, out=u2, return_hits=True)
         if np.any(o):
             self.error("Overflow in u2")
 
         self.v[:] = self.decayV_fn(self.v, u2)
-        # _, o = overflow_signed(self.v, bits=24, out=self.v, return_hits=True)
+        # _, o = overflow_signed(self.v, bits=V_BIT, out=self.v,
+        #                        return_hits=True)
         # if np.any(o):
         #     self.error("Overflow in V")
 
