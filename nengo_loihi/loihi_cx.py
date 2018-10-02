@@ -703,9 +703,9 @@ class CxSimulator(object):
             self.error("Overflow in u2")
 
         self.v[:] = self.decayV_fn(self.v, u2)
-        _, o = overflow_signed(self.v, bits=24, out=self.v, return_hits=True)
-        if np.any(o):
-            self.error("Overflow in V")
+        # _, o = overflow_signed(self.v, bits=24, out=self.v, return_hits=True)
+        # if np.any(o):
+        #     self.error("Overflow in V")
 
         np.clip(self.v, self.vmin, self.vmax, out=self.v)
         self.v[self.w > 0] = 0
