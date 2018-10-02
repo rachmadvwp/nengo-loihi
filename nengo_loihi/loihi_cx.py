@@ -11,6 +11,7 @@ from nengo.utils.compat import is_iterable, range
 from nengo_loihi.loihi_api import (
     BIAS_MAX,
     bias_to_manexp,
+    overflow_signed,
     SynapseFmt,
     tracing_mag_int_frac,
     U_MAX, U_MIN,
@@ -687,23 +688,24 @@ class CxSimulator(object):
         noise = self.noiseGen()
         q0[self.noiseTarget == 0] += noise[self.noiseTarget == 0]
 
-        # self.U[:] = self.decayU_fn(self.U, self.decayU, a=12, b=1)
-        self.u[:] = self.decayU_fn(self.u[:], q0)
-        u2 = self.u[:] + self.bias
-        u2[self.noiseTarget == 1] += noise[self.noiseTarget == 1]
-        if np.any(u2 > U_MAX):
-            self.error("Overflow in U (max was %d)" % u2.max())
-        if np.any(u2 < U_MIN):
-            self.error("Underflow in U (min was %d)" % u2.min())
-        u2 = np.clip(u2, a_min=U_MIN, a_max=U_MAX, out=u2)
+        _, o = overflow_signed(q0, bits=21, out=q0, return_hits=True)
+        if np.any(o):
+            self.error("Overflow in q")
 
-        # self.V[:] = self.decayV_fn(v, self.decayV, a=12) + u2
+        self.u[:] = self.decayU_fn(self.u[:], q0)
+        _, o = overflow_signed(self.u, bits=23, out=self.u, return_hits=True)
+        if np.any(o):
+            self.error("Overflow in U")
+        u2 = self.u + self.bias
+        u2[self.noiseTarget == 1] += noise[self.noiseTarget == 1]
+        _, o = overflow_signed(u2, bits=23, out=u2, return_hits=True)
+        if np.any(o):
+            self.error("Overflow in u2")
+
         self.v[:] = self.decayV_fn(self.v, u2)
-        if np.any(self.v > V_MAX):
-            self.error("Overflow in V (max was %d)" % self.v.max())
-        if np.any(self.v < V_MIN):
-            self.error("Underflow in V (min was %d)" % self.v.min())
-        self.v = np.clip(self.v, a_min=V_MIN, a_max=V_MAX, out=self.v)
+        _, o = overflow_signed(self.v, bits=24, out=self.v, return_hits=True)
+        if np.any(o):
+            self.error("Overflow in V")
 
         np.clip(self.v, self.vmin, self.vmax, out=self.v)
         self.v[self.w > 0] = 0

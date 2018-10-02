@@ -25,6 +25,51 @@ V_MAX = 2**23 - 1
 V_MIN = -2**23
 
 
+def overflow_signed(x, bits=7, out=None, return_hits=False):
+    """Compute overflow on an array of signed integers.
+
+    For example, the chip uses 23 bits plus sign to represent U and V. We can
+    store them as 32-bit integers, and use this function to compute how they
+    would overflow if we only had 23 bits plus sign.
+
+    Parameters
+    ----------
+    x : array
+        Integer values for which to compute values after overflow.
+    bits : int
+        Number of bits, not including sign, to compute overflow for.
+    out : array (default: None)
+        Output array to put computed overflow values in.
+    return_hits : bool (default: False)
+        Whether to return a boolean array indicating which values overflowed.
+
+    Returns
+    -------
+    y : array
+        Values of x overflowed as would happen with limited bit representation.
+    o : array (if `return_hits`)
+        Boolean array indicating which values of `x` actually overflowed.
+    """
+    if out is None:
+        out = np.array(x)
+
+    smask = 2**bits
+    xmask = smask - 1
+
+    omask = ~(smask - 1)
+    overflowed = (out & omask) != 0
+
+    sign = out & smask
+    signbase = ~(sign - 1)  # if sign bit, turn all bits left of sign bit on
+    out &= xmask
+    out += signbase
+
+    if return_hits:
+        return out, overflowed
+    else:
+        return out
+
+
 def vth_to_manexp(vth):
     exp = VTH_EXP * np.ones(vth.shape, dtype=np.int32)
     man = np.round(vth / 2**exp).astype(np.int32)
