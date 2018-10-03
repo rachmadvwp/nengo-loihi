@@ -711,11 +711,12 @@ class CxSimulator(object):
             axons_in_spikes.clear()
 
         # --- inputs pass spikes to synapses
-        for input in self.inputs:
-            for axons in input.axons:
-                cx_idxs = input.spikes[self.t].nonzero()[0]
-                spikes = axons.map_cx_spikes(cx_idxs)
-                self.axons_in[axons.target].extend(spikes)
+        if self.t >= 1:  # input spikes take one time-step to arrive
+            for input in self.inputs:
+                for axons in input.axons:
+                    cx_idxs = input.spikes[self.t - 1].nonzero()[0]
+                    spikes = axons.map_cx_spikes(cx_idxs)
+                    self.axons_in[axons.target].extend(spikes)
 
         # --- axons pass spikes to synapses
         for group in self.groups:
