@@ -2,6 +2,7 @@ from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 
+from nengo_loihi.loihi_api import VTH_MAX
 from nengo_loihi.loihi_cx import (
     CxAxons, CxGroup, CxModel, CxProbe, CxSimulator, CxSpikeInput, CxSynapses)
 
@@ -61,16 +62,11 @@ def test_strict_mode():
 def test_uv_overflow(n_axons, Simulator, plt, allclose):
     # TODO: Currently this is not testing the V overflow, since it is higher
     #  and I haven't been able to figure out a way to make it overflow.
-
-    from nengo_loihi.loihi_api import VTH_MAX
-
-    # n_axons controls number of input spikes and thus amount of overflow
-    CxSimulator.strict = False
-
     nt = 15
 
     model = CxModel()
 
+    # n_axons controls number of input spikes and thus amount of overflow
     input_spikes = np.ones((nt, n_axons), dtype=bool)
     input = CxSpikeInput(input_spikes)
 
@@ -100,9 +96,13 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
 
     group.vth[:] = VTH_MAX  # must set after `discretize`
 
+    assert CxSimulator.strict  # Tests should be run in strict mode
+    CxSimulator.strict = False
     emu = model.get_simulator()
     with pytest.warns(UserWarning):
         emu.run_steps(nt)
+    CxSimulator.strict = True  # change back to True for subsequent tests
+
     emu_u = np.array(emu.probe_outputs[probe_u])
     emu_v = np.array(emu.probe_outputs[probe_v])
     emu_s = np.array(emu.probe_outputs[probe_s])
