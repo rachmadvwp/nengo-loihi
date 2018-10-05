@@ -290,6 +290,64 @@ class Core(object):
         return self.synapseFmts[self.synapse_fmt_idxs[synapses]]
 
 
+class SpikeInput(object):
+    class LoihiAxon(object):
+        __slots__ = ['chip_id', 'core_id', 'axon_id', 'atom']
+
+        def __init__(self, chip_id, core_id, axon_id, atom=0):
+            self.chip_id = chip_id
+            self.core_id = core_id
+            self.axon_id = axon_id
+            self.atom = atom
+
+    class LoihiSpike(object):
+        __slots__ = ['time', 'axon']
+
+        def __init__(self, time, axon):
+            self.time = time
+            self.axon = axon
+
+    def __init__(self, cx_spike_input, core):
+        self.cx_spike_input = cx_spike_input
+        self.core = core
+
+        self.axon_map = {}  # maps cx_spike_input idx to axon in self.axons
+        self.sent_count = 0
+
+    def set_axons(self, n2board):
+        assert len(self.axon_map) == 0
+        cx_idxs = np.arange(self.cx_spike_input.n)
+        for axons in self.cx_spike_input.axons:
+            assert (axons.pop_type == 0 or axons.cx_atoms is None or
+                    np.all(axons.cx_atoms == 0)), "Cannot send pop spikes to board"
+            tchip_idx, tcore_idx, tsyn_ids = self.core.board.find_synapses(
+                axons.target)
+            tchip = n2board.n2Chips[tchip_idx]
+            tcore = tchip.n2Cores[tcore_idx]
+            spikes = axons.map_cx_spikes(cx_idxs)
+            for cx_idx, spike in zip(cx_idxs, spikes):
+                if spike is not None:
+                    taxon_idx = int(spike.axon_id)
+                    taxon_id = int(tsyn_ids[taxon_idx])
+                    self.axon_map.setdefault(cx_idx, []).append(self.LoihiAxon(
+                        chip_id=tchip.id, core_id=tcore.id, axon_id=taxon_id))
+
+    def collect_spikes(self, time_idx):
+        spikes = []
+        for idx in self.cx_spike_input.get_spike_idxs(time_idx):
+            for axon in self.axon_map[idx]:
+                spikes.append(self.LoihiSpike(time=time_idx, axon=axon))
+
+        return spikes
+
+    def collect_all_spikes(self):
+        spikes = []
+        for time_idx in self.cx_spike_input.get_spike_times():
+            spikes.extend(self.collect_spikes(time_idx))
+
+        return spikes
+
+
 class Profile(object):
     def __eq__(self, obj):
         return isinstance(obj, type(self)) and all(

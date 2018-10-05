@@ -69,8 +69,7 @@ class ChipReceiveNode(nengo.Node):
 
     def __init__(self, dimensions, size_out):
         self.raw_dimensions = dimensions
-        self.cx_spike_input = loihi_cx.CxSpikeInput(
-            np.zeros((0, dimensions), dtype=bool))
+        self.cx_spike_input = None  # set by builder
         self.last_time = None
         super(ChipReceiveNode, self).__init__(self.update,
                                               size_in=0, size_out=size_out)
@@ -80,10 +79,18 @@ class ChipReceiveNode(nengo.Node):
 
     def receive(self, t, x):
         assert self.last_time is None or t > self.last_time
-        # TODO: make this stacking efficient
-        self.cx_spike_input.spikes = np.vstack([self.cx_spike_input.spikes,
-                                                [x > 0]])
+        self.cx_spike_input.add_spikes(t, x > 0, real_time=True)
         self.last_time = t
+
+    def clear(self):
+        self.cx_spike_input.clear_spikes()
+
+    def collect_loihi_spikes(self):
+        return self.cx_spike_input.collect_loihi_spikes()
+
+    def set_cx_spike_input(self, cx_spike_input):
+        assert self.cx_spike_input is None
+        self.cx_spike_input = cx_spike_input
 
 
 class ChipReceiveNeurons(ChipReceiveNode):

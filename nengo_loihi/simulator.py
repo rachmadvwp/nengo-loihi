@@ -456,32 +456,24 @@ class Simulator(object):
                             for i, w in enumerate(dec_syn.weights):
                                 w += delta_w[i].astype('int32')
                     else:
+                        receiver.clear()
                         for t, x in sender.queue:
                             receiver.receive(t, x)
                     del sender.queue[:]
         elif self.loihi is not None:
             if self.precompute:
                 # go through the list of host2chip connections
-                items = []
+                spikes = []
                 for sender, receiver in self.host2chip_senders.items():
+                    receiver.clear()
                     for t, x in sender.queue:
                         receiver.receive(t, x)
                     del sender.queue[:]
-                    spike_input = receiver.cx_spike_input
-                    sent_count = spike_input.sent_count
-                    while sent_count < len(spike_input.spikes):
-                        for j, s in enumerate(spike_input.spikes[sent_count]):
-                            if s:
-                                for output_axon in spike_input.axon_ids:
-                                    items.append(
-                                        (sent_count,) + output_axon[j])
-                        sent_count += 1
-                    spike_input.sent_count = sent_count
-                if len(items) > 0:
-                    for info in sorted(items):
-                        spike_input.spike_gen.addSpike(*info)
+                    spikes.extend(receiver.collect_loihi_spikes())
+
+                self.loihi.add_spikes_to_spikegen(spikes)
             elif self.host_sim is not None:
-                to_send = []
+                spikes = []
                 errors = []
                 # go through the list of host2chip connections
                 for sender, receiver in self.host2chip_senders.items():
@@ -505,36 +497,13 @@ class Simulator(object):
                         del sender.queue[:]
 
                     else:
+                        receiver.clear()
                         for t, x in sender.queue:
                             receiver.receive(t, x)
                         del sender.queue[:]
-                        spike_input = receiver.cx_spike_input
-                        sent_count = spike_input.sent_count
-                        axon_ids = spike_input.axon_ids
-                        spikes = spike_input.spikes
-                        while sent_count < len(spikes):
-                            for j, s in enumerate(spikes[sent_count]):
-                                if s:
-                                    for output_axon in axon_ids:
-                                        to_send.append(output_axon[j])
-                            sent_count += 1
-                        spike_input.sent_count = sent_count
+                        spikes.extend(receiver.collect_loihi_spikes())
 
-                max_spikes = self.loihi.snip_max_spikes_per_step
-                if len(to_send) > max_spikes:
-                    warnings.warn("Too many spikes (%d) sent in one time "
-                                  "step.  Increase the value of "
-                                  "snip_max_spikes_per_step (currently "
-                                  "set to %d)" % (len(to_send), max_spikes))
-                    del to_send[max_spikes:]
-
-                msg = [len(to_send)]
-                for spike in to_send:
-                    assert spike[0] == 0
-                    msg.extend(spike[1:3])
-                for error in errors:
-                    msg.extend(error)
-                self.loihi.nengo_io_h2c.write(len(msg), msg)
+                self.loihi.send_spikes_errors(spikes, errors)
 
     def handle_chip2host_communications(self):  # noqa: C901
         if self.simulator is not None:

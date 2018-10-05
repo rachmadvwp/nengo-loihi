@@ -531,12 +531,11 @@ class CxAxons(object):
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
         self.label = label
-        self.group = None
+        self.group = None  # parent group of these axons (set when adding)
 
-        self.target = None
-        self.cx_to_axon_map = None
-        self.cx_atoms = None
-        self.axon_to_synapse_map = None
+        self.target = None  # target object for axons
+        self.cx_to_axon_map = None  # maps cx to target's input axon id
+        self.cx_atoms = None  # maps cx to atom
 
     def __str__(self):
         return "%s(%s)" % (
@@ -559,10 +558,8 @@ class CxAxons(object):
         return self.slots_per_axon() * self.n_axons
 
     def map_cx_axons(self, cx_idxs):
-        axon_idxs = (self.cx_to_axon_map[cx_idxs]
-                     if self.cx_to_axon_map is not None else cx_idxs)
-        axon_ids = (self.axon_to_synapse_map[axon_idxs]
-                    if self.axon_to_synapse_map is not None else axon_idxs)
+        axon_ids = (self.cx_to_axon_map[cx_idxs]
+                    if self.cx_to_axon_map is not None else cx_idxs)
         return axon_ids
 
     def map_cx_atoms(self, cx_idxs):
@@ -573,7 +570,7 @@ class CxAxons(object):
     def map_cx_spikes(self, cx_idxs):
         axon_ids = self.map_cx_axons(cx_idxs)
         atoms = self.map_cx_atoms(cx_idxs)
-        return [Spike(axon_id, atom=atom)
+        return [Spike(axon_id, atom=atom) if axon_id >= 0 else None
                 for axon_id, atom in zip(axon_ids, atoms)]
 
     def validate(self):
@@ -604,17 +601,18 @@ class CxProbe(object):
 
 
 class CxSpikeInput(object):
-    def __init__(self, spikes):
-        assert spikes.ndim == 2
-        self.spikes = spikes
+    def __init__(self, n, dt):
+        self.n = n
+        self.dt = dt
+        self.spikes = {}  # map sim timestep index to bool array of spikes
         self.axons = []
         self.probes = []
 
-    @property
-    def n(self):
-        return self.spikes.shape[1]
+        self.loihi_input = None  # loihi_api.SpikeInput, sends spikes to board
 
     def add_axons(self, axons):
+        assert axons.group is None
+        axons.group = self
         self.axons.append(axons)
 
     def add_probe(self, probe):
@@ -622,6 +620,34 @@ class CxSpikeInput(object):
             probe.target = self
         assert probe.target is self
         self.probes.append(probe)
+
+    def add_spikes(self, t, spikes, real_time=False):
+        ti = round(t / self.dt) if real_time else t
+        assert isinstance(ti, int)
+        assert ti not in self.spikes
+        assert spikes.size == self.n
+        self.spikes[ti] = spikes
+
+    def clear_spikes(self):
+        self.spikes.clear()
+
+    def get_spike_times(self):
+        return sorted(self.spikes)
+
+    def get_spike_idxs(self, ti):
+        assert ti in self.spikes
+        spikes = self.spikes.get(ti, None)
+        return spikes.nonzero()[0] if spikes is not None else []
+
+    def set_loihi_input(self, loihi_input):
+        assert self.loihi_input is None
+        self.loihi_input = loihi_input
+
+    def clear_loihi_input(self):
+        self.loihi_input = None
+
+    def collect_loihi_spikes(self):
+        return self.loihi_input.collect_all_spikes()
 
 
 class CxModel(object):
@@ -815,6 +841,7 @@ class CxSimulator(object):
 
     def step(self):  # noqa: C901
         """Advance the simulation by 1 step (``dt`` seconds)."""
+        self.t += 1
 
         # --- connections
         self.q[:-1] = self.q[1:]  # advance delays
@@ -827,15 +854,15 @@ class CxSimulator(object):
         # --- inputs pass spikes to synapses
         if self.t >= 1:  # input spikes take one time-step to arrive
             for input in self.inputs:
+                cx_idxs = input.get_spike_idxs(self.t - 1)
                 for axons in input.axons:
-                    cx_idxs = input.spikes[self.t - 1].nonzero()[0]
                     spikes = axons.map_cx_spikes(cx_idxs)
                     self.axons_in[axons.target].extend(spikes)
 
         # --- axons pass spikes to synapses
         for group in self.groups:
+            cx_idxs = self.s[self.group_cxs[group]].nonzero()[0]
             for axons in group.axons:
-                cx_idxs = self.s[self.group_cxs[axons.group]].nonzero()[0]
                 spikes = axons.map_cx_spikes(cx_idxs)
                 self.axons_in[axons.target].extend(spikes)
 
@@ -922,8 +949,6 @@ class CxSimulator(object):
                 assert hasattr(self, probe.key)
                 x = getattr(self, probe.key)[x_slice][p_slice].copy()
                 self.probe_outputs[probe].append(x)
-
-        self.t += 1
 
     def run_steps(self, steps):
         """Simulate for the given number of ``dt`` steps.

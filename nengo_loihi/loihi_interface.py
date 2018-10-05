@@ -28,9 +28,10 @@ except ImportError:
     nxsdk = N2Board = BasicSpikeGenerator = TraceCfgGen = N2SpikeProbe = (
         no_nxsdk)
 
+import nengo_loihi.loihi_cx as loihi_cx
 from nengo_loihi.allocators import one_to_one_allocator
 from nengo_loihi.loihi_api import (
-    CX_PROFILES_MAX, VTH_PROFILES_MAX, bias_to_manexp)
+    CX_PROFILES_MAX, VTH_PROFILES_MAX, SpikeInput, bias_to_manexp)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ def build_board(board):
 
     n2board = N2Board(
         board.board_id, n_chips, n_cores_per_chip, n_synapses_per_core)
+
+    # add our own attribute for storing our spike generator
+    n2board.global_spike_generator = BasicSpikeGenerator(n2board)
 
     assert len(board.chips) == len(n2board.n2Chips)
     for chip, n2chip in zip(board.chips, n2board.n2Chips):
@@ -271,31 +275,17 @@ def build_input(n2core, core, spike_input, cx_idxs):
 
     n2board = n2core.parent.parent
 
-    if not hasattr(n2core, 'master_spike_gen'):
-        # TODO: this is only needed if precompute=True
-        n2core.master_spike_gen = BasicSpikeGenerator(n2board)
+    assert isinstance(spike_input, loihi_cx.CxSpikeInput)
+    loihi_input = SpikeInput(spike_input, core)
+    loihi_input.set_axons(n2board)
+    spike_input.set_loihi_input(loihi_input)
 
-    # get core/axon ids
-    axon_ids = []
-    for axon in spike_input.axons:
-        assert (axon.pop_type == 0 or axon.cx_atoms is None or
-                np.all(axon.cx_atoms == 0)), "Cannot send pop spikes to board"
-        tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(axon.target)
-        tchip = n2board.n2Chips[tchip_idx]
-        tcore = tchip.n2Cores[tcore_idx]
-        axon_ids.append([(tchip.id, tcore.id, tsyn_idx)
-                         for tsyn_idx in tsyn_idxs])
-
-    spike_input.spike_gen = n2core.master_spike_gen
-    spike_input.axon_ids = axon_ids
-
-    for i, spiked in enumerate(spike_input.spikes):
-        for j, s in enumerate(spiked):
-            if s:
-                for output_axon in axon_ids:
-                    n2core.master_spike_gen.addSpike(i, *output_axon[j])
-
-    spike_input.sent_count = len(spike_input.spikes)
+    # add any pre-existing spikes to spikegen
+    spikes = loihi_input.collect_all_spikes()
+    for spike in spikes:
+        n2board.global_spike_generator.addSpike(
+            time=spike.time, chipId=spike.chip_id,
+            coreId=spike.core_id, axonId=spike.axon_id)
 
 
 def build_synapses(n2core, core, group, synapses, cx_idxs):
@@ -625,6 +615,10 @@ class LoihiSimulator(object):
             os.chdir(self.cwd)
             self.cwd = None
 
+        # clear inputs so we can safely start a new simulator if desired
+        for input in self.model.cx_inputs:
+            input.clear_loihi_input()
+
     def _filter_probe(self, cx_probe, data):
         dt = self.model.dt
         i = self._probe_filter_pos.get(cx_probe, 0)
@@ -746,3 +740,29 @@ class LoihiSimulator(object):
         self.nengo_io_c2h.connect(nengo_io, None)
         self.nengo_io_c2h_count = n_outputs
         self.nengo_io_snip_range = snip_range
+
+    def add_spikes_to_spikegen(self, spikes):
+        # sort all spikes because spikegen needs them in temporal order
+        spikes = sorted(spikes, key=lambda s: s.time)
+        for spike in spikes:
+            assert spike.axon.atom == 0, "Spikegen does not support atom"
+            self.n2board.global_spike_generator.addSpike(
+                time=spike.time, chipId=spike.axon.chip_id,
+                coreId=spike.axon.core_id, axonId=spike.axon.axon_id)
+
+    def send_spikes_errors(self, spikes, errors):
+        max_spikes = self.snip_max_spikes_per_step
+        if len(spikes) > max_spikes:
+            warnings.warn("Too many spikes (%d) sent in one time "
+                          "step.  Increase the value of "
+                          "snip_max_spikes_per_step (currently "
+                          "set to %d)" % (len(spikes), max_spikes))
+            del spikes[max_spikes:]
+
+        msg = [len(spikes)]
+        for spike in spikes:
+            assert spike.chip_id == 0
+            msg.extend((spike.core_id, spike.axon_id))
+        for error in errors:
+            msg.extend(error)
+        self.nengo_io_h2c.write(len(msg), msg)
