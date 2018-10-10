@@ -65,13 +65,14 @@ def test_population_input(request, allclose):
 
     model = CxModel()
 
+    spikes = np.array([[1, 0, 0],
+                       [0, 0, 0],
+                       [0, 1, 0],
+                       [0, 0, 0],
+                       [0, 0, 1],
+                       [0, 0, 0]], dtype=bool)
+
     input = CxSpikeInput(n_inputs, dt)
-    input.add_spikes(1, [1, 0, 0])
-    input.add_spikes(2, [0, 0, 0])
-    input.add_spikes(3, [0, 1, 0])
-    input.add_spikes(4, [0, 0, 0])
-    input.add_spikes(5, [0, 0, 1])
-    input.add_spikes(6, [0, 0, 0])
     model.add_input(input)
 
     input_axons = CxAxons(n_axons)
@@ -102,15 +103,22 @@ def test_population_input(request, allclose):
 
     if target == 'loihi':
         with model.get_loihi() as sim:
-            sim.run_steps(6)
+            sim.create_io_snip()
+            for spike in spikes:
+                sim.send_spikes_errors(spike, [])
+            sim.run_steps(len(spikes))
+
+            # sim.run_steps(6)
             y = np.column_stack([
                 p.timeSeries.data for p in sim.board.probe_map[probe]])
     else:
         sim = model.get_simulator()
-        sim.run_steps(6)
+        for ti, spike in enumerate(spikes):
+            input.add_spikes(ti + 1, spike)
+        sim.run_steps(len(spikes))
         y = np.array(sim.probe_outputs[probe])
 
     vth = group.vth[0]
     assert (group.vth == vth).all()
     z = y / vth
-    assert allclose(z[[0, 2, 4]], weights[0], atol=4e-2, rtol=0)
+    assert allclose(z[[1, 3, 5]], weights[0], atol=4e-2, rtol=0)
