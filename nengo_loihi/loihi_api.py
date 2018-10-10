@@ -292,9 +292,11 @@ class Core(object):
 
 class SpikeInput(object):
     class LoihiAxon(object):
-        __slots__ = ['chip_id', 'core_id', 'axon_id', 'atom']
+        __slots__ = ['axon_type', 'chip_id', 'core_id', 'axon_id', 'atom']
 
-        def __init__(self, chip_id, core_id, axon_id, atom=0):
+        def __init__(self, axon_type, chip_id, core_id, axon_id, atom=0):
+            assert axon_type in (0, 16, 32)
+            self.axon_type = axon_type
             self.chip_id = chip_id
             self.core_id = core_id
             self.axon_id = axon_id
@@ -318,8 +320,8 @@ class SpikeInput(object):
         assert len(self.axon_map) == 0
         cx_idxs = np.arange(self.cx_spike_input.n)
         for axons in self.cx_spike_input.axons:
-            assert (axons.pop_type == 0 or axons.cx_atoms is None or
-                    np.all(axons.cx_atoms == 0)), "Cannot send pop spikes to board"
+            axon_type = axons.pop_type
+            assert axon_type in (0, 32), "Only discrete and pop32 supported"
             tchip_idx, tcore_idx, tsyn_ids = self.core.board.find_synapses(
                 axons.target)
             tchip = n2board.n2Chips[tchip_idx]
@@ -330,7 +332,8 @@ class SpikeInput(object):
                     taxon_idx = int(spike.axon_id)
                     taxon_id = int(tsyn_ids[taxon_idx])
                     self.axon_map.setdefault(cx_idx, []).append(self.LoihiAxon(
-                        chip_id=tchip.id, core_id=tcore.id, axon_id=taxon_id))
+                        axon_type=axon_type, chip_id=tchip.id,
+                        core_id=tcore.id, axon_id=taxon_id, atom=spike.atom))
 
     def collect_spikes(self, time_idx):
         spikes = []
