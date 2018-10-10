@@ -526,6 +526,10 @@ class Spike(object):
         self.axon_id = axon_id
         self.atom = atom
 
+    def __repr__(self):
+        return "%s(axon_id=%d, atom=%d)" % (
+            type(self).__name__, self.axon_id, self.atom)
+
 
 class CxAxons(object):
     def __init__(self, n_axons, label=None):
@@ -623,6 +627,7 @@ class CxSpikeInput(object):
 
     def add_spikes(self, t, spikes, real_time=False):
         ti = round(t / self.dt) if real_time else t
+        spikes = np.asarray(spikes, dtype=bool)
         assert isinstance(ti, int)
         assert ti not in self.spikes
         assert spikes.size == self.n
