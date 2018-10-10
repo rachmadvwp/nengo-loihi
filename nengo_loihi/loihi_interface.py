@@ -504,6 +504,36 @@ def build_probe(n2core, core, group, probe, cx_idxs):
         core.board.map_probe(probe, p)
 
 
+class SpikePacker(object):
+    """Packs spikes for sending to chip"""
+    # class SpikeStructure(ctypes.Structure):
+    #     _fields_ = (
+    #         ('core_id', ctypes.c_uint32, 10),
+    #         ('core_id', ctypes.c_uint32, 10),
+    #         ('core_id', ctypes.c_uint32, 10),
+    #         )
+
+    @classmethod
+    def size(cls):
+        size = len(cls.pack(None))
+        # assert size == 2  # must match nengo_io.c.template
+        assert size == 4  # must match nengo_io.c.template
+        return size
+
+    @classmethod
+    def pack(cls, spike):
+        chip_id = int(spike.axon.chip_id if spike is not None else 0)
+        core_id = int(spike.axon.core_id if spike is not None else 0)
+        axon_id = int(spike.axon.axon_id if spike is not None else 0)
+        axon_type = int(spike.axon.axon_type if spike is not None else 0)
+        atom = int(spike.axon.atom if spike is not None else 0)
+        assert chip_id == 0, "Multiple chips not supported"
+        # assert 0 <= core_id < 1024
+        # assert 0 <= axon_id < 4096
+
+        return (axon_type, core_id, axon_id, atom)
+
+
 class LoihiSimulator(object):
     """Simulator to place a Model onto a Loihi board and run it.
 
@@ -690,6 +720,7 @@ class LoihiSimulator(object):
         # sort all spikes because spikegen needs them in temporal order
         loihi_spikes = sorted(loihi_spikes, key=lambda s: s.time)
         for spike in loihi_spikes:
+            assert spike.axon.axon_type == 0, "Spikegen cannot send pop spikes"
             assert spike.axon.atom == 0, "Spikegen does not support atom"
             self.n2board.global_spike_generator.addSpike(
                 time=spike.time, chipId=spike.axon.chip_id,
@@ -708,7 +739,7 @@ class LoihiSimulator(object):
         assert len(loihi_spikes) <= self.snip_max_spikes_per_step
         for spike in loihi_spikes:
             assert spike.axon.chip_id == 0
-            msg.extend((spike.axon.core_id, spike.axon.axon_id))
+            msg.extend(SpikePacker.pack(spike))
         assert len(loihi_errors) == self.nengo_io_h2c_errors
         for error in loihi_errors:
             msg.extend(error)
@@ -898,11 +929,13 @@ class LoihiSimulator(object):
             phase="preLearnMgmt",
         )
 
-        size = self.snip_max_spikes_per_step * 2 + 1 + total_error_len
-        logger.debug("Creating nengo_io_h2c channel")
+        size = (1  # first int stores number of spikes
+                + self.snip_max_spikes_per_step*SpikePacker.size()
+                + total_error_len)
+        logger.debug("Creating nengo_io_h2c channel (%d)" % size)
         self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c',
                                                        "int", size)
-        logger.debug("Creating nengo_io_c2h channel")
+        logger.debug("Creating nengo_io_c2h channel (%d)" % n_outputs)
         self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h',
                                                        "int", n_outputs)
         self.nengo_io_h2c.connect(None, nengo_io)
