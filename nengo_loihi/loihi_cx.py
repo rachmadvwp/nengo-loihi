@@ -852,7 +852,7 @@ class CxSimulator(object):
             axons_in_spikes.clear()
 
         # --- inputs pass spikes to synapses
-        if self.t >= 1:  # input spikes take one time-step to arrive
+        if self.t >= 2:  # input spikes take one time-step to arrive
             for input in self.inputs:
                 cx_idxs = input.get_spike_idxs(self.t - 1)
                 for axons in input.axons:
