@@ -162,3 +162,71 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
 
     assert allclose(emu_u, sim_u)
     assert allclose(emu_v, sim_v)
+
+
+def test_population_input(request, allclose):
+    target = request.config.getoption("--target")
+    dt = 0.001
+
+    n_inputs = 3
+    n_axons = 1
+    n_cx = 2
+
+    steps = 6
+    spike_times_inds = [(1, [0]),
+                        (3, [1]),
+                        (5, [2])]
+
+    model = CxModel()
+
+    input = CxSpikeInput(n_inputs)
+    model.add_input(input)
+    spikes = [(input, ti, inds) for ti, inds in spike_times_inds]
+
+    input_axons = CxAxons(n_axons)
+    axon_map = np.zeros(n_inputs, dtype=int)
+    atoms = np.arange(n_inputs)
+    input_axons.set_axon_map(axon_map, atoms)
+    input.add_axons(input_axons)
+
+    group = CxGroup(n_cx)
+    group.configure_lif(tau_rc=0., tau_ref=0., dt=dt)
+    group.configure_filter(0, dt=dt)
+    model.add_group(group)
+
+    synapses = CxSynapses(n_axons)
+    weights = 0.1 * np.array([[[1, 2], [2, 3], [4, 5]]], dtype=float)
+    indices = np.array([[[0, 1], [0, 1], [0, 1]]], dtype=int)
+    axon_to_weight_map = np.zeros(n_axons, dtype=int)
+    cx_bases = np.zeros(n_axons, dtype=int)
+    synapses.set_population_weights(
+        weights, indices, axon_to_weight_map, cx_bases, pop_type=32)
+    group.add_synapses(synapses)
+    input_axons.target = synapses
+
+    probe = CxProbe(target=group, key='v')
+    group.add_probe(probe)
+
+    model.discretize()
+
+    if target == 'loihi':
+        with LoihiSimulator(model, use_snips=True) as sim:
+            sim.run_steps(steps, blocking=False)
+            for ti in range(1, steps+1):
+                spikes_i = [spike for spike in spikes if spike[1] == ti]
+                sim.host2chip(spikes_i, [])
+                sim.chip2host()
+
+            y = sim.get_probe_output(probe)
+    else:
+        for inp, ti, inds in spikes:
+            inp.add_spikes(ti, inds)
+
+        with CxSimulator(model) as sim:
+            sim.run_steps(steps)
+            y = sim.get_probe_output(probe)
+
+    vth = group.vth[0]
+    assert (group.vth == vth).all()
+    z = y / vth
+    assert allclose(z[[1, 3, 5]], weights[0], atol=4e-2, rtol=0)
