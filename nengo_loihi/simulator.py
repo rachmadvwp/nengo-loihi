@@ -144,7 +144,7 @@ class Simulator(object):
     unsupported = []
 
     def __init__(self, network, dt=0.001, seed=None, model=None,  # noqa: C901
-                 precompute=False, target=None):
+                 precompute=False, target=None, remove_passthrough=False):
         self.closed = True  # Start closed in case constructor raises exception
 
         if model is None:
@@ -170,7 +170,8 @@ class Simulator(object):
 
             # split the host into one, two or three networks
             self.networks = split(
-                network, precompute, max_rate, self.model.inter_tau)
+                network, precompute, max_rate, self.model.inter_tau,
+                remove_passthrough=remove_passthrough)
             network = self.networks.chip
 
             self.model.chip2host_params = self.networks.chip2host_params

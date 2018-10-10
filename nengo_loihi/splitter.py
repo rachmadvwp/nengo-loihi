@@ -103,7 +103,7 @@ class SplitNetworks(object):
         self.removes.append(obj)
 
 
-def split(net, precompute, max_rate, inter_tau):
+def split(net, precompute, max_rate, inter_tau, remove_passthrough=False):
     logger.info("Splitting model into host and chip parts")
     networks = SplitNetworks(net, max_rate=max_rate, inter_tau=inter_tau)
 
