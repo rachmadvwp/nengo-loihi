@@ -104,9 +104,12 @@ def test_population_input(request, allclose):
     if target == 'loihi':
         with model.get_loihi() as sim:
             sim.create_io_snip()
-            for spike in spikes:
-                sim.send_spikes_errors(spike, [])
-            sim.run_steps(len(spikes))
+            sim.run_steps(len(spikes), blocking=False)
+            for ti, spike in enumerate(spikes):
+                input.clear_spikes()
+                input.add_spikes(ti + 1, spike)
+                loihi_spikes = input.collect_loihi_spikes()
+                sim.send_spikes_errors(loihi_spikes, [])
 
             # sim.run_steps(6)
             y = np.column_stack([
