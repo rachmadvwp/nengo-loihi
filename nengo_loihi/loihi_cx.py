@@ -554,6 +554,7 @@ class CxSimulator(object):
 
         self._probe_filters = {}
         self._probe_filter_pos = {}
+        self.closed = False
 
     @classmethod
     def error(cls, msg):
@@ -842,3 +843,6 @@ class CxSimulator(object):
         x = np.asarray(self.probe_outputs[cx_probe], dtype=np.float32)
         x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
         return self._filter_probe(cx_probe, x)
+
+    def close(self):
+        self.closed = True

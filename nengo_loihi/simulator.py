@@ -305,6 +305,17 @@ class Simulator(object):
         `.Simulator.step`, and `.Simulator.reset` on a closed simulator raises
         a ``SimulatorClosed`` exception.
         """
+
+        if self.loihi is not None:
+            self.loihi.close()
+        if self.simulator is not None:
+            self.simulator.close()
+        if self.precompute:
+            self.host_pre_sim.close()
+            self.host_post_sim.close()
+        else:
+            self.host_sim.close()
+
         self.closed = True
 
     def _probe(self):
