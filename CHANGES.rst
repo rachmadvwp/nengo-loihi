@@ -27,6 +27,12 @@ Release history
 - An error is now raised if
   a learning rule is applied to a non-decoded connection.
 
+**Fixed**
+
+ - Closing ``nengo_loihi.Simulator`` will now close all the inner
+   sub-simulators as well
+   (`#102 <https://github.com/nengo/nengo-loihi/issues/102>`_)
+
 0.3.0 (September 28, 2018)
 ==========================
 
