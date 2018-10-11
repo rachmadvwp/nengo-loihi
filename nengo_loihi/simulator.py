@@ -144,7 +144,7 @@ class Simulator(object):
     unsupported = []
 
     def __init__(self, network, dt=0.001, seed=None, model=None,  # noqa: C901
-                 precompute=False, target=None):
+                 precompute=False, target=None, loihi_args=None):
         self.closed = True  # Start closed in case constructor raises exception
 
         if model is None:
@@ -227,8 +227,10 @@ class Simulator(object):
         if target in ("simreal", "sim"):
             self.sims["emulator"] = CxSimulator(self.model, seed=seed)
         elif target == 'loihi':
+            loihi_args = {} if loihi_args is None else loihi_args
             self.sims["loihi"] = LoihiSimulator(
-                self.model, use_snips=not self.precompute, seed=seed)
+                self.model, use_snips=not self.precompute, seed=seed,
+                **loihi_args)
         else:
             raise ValidationError("Must be 'simreal', 'sim', or 'loihi'",
                                   attr="target")
