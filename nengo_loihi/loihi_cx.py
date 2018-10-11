@@ -492,9 +492,9 @@ class CxModel(object):
         for group in self.cx_groups:
             group.discretize()
 
-    def get_loihi(self, seed=None):
+    def get_loihi(self, seed=None, **kwargs):
         from nengo_loihi.loihi_interface import LoihiSimulator
-        return LoihiSimulator(self, seed=seed)
+        return LoihiSimulator(self, seed=seed, **kwargs)
 
     def get_simulator(self, seed=None):
         return CxSimulator(self, seed=seed)

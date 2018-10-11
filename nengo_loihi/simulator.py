@@ -142,7 +142,7 @@ class Simulator(object):
     unsupported = []
 
     def __init__(self, network, dt=0.001, seed=None, model=None,  # noqa: C901
-                 precompute=False, target=None):
+                 precompute=False, target=None, loihi_args=None):
         self.closed = True  # Start closed in case constructor raises exception
 
         if model is None:
@@ -250,7 +250,8 @@ class Simulator(object):
                     cx_probe = self.model.objs[probe]['out']
                     self.cx_probe2probe[cx_probe] = probe
 
-            self.loihi = self.model.get_loihi(seed=seed)
+            loihi_args = {} if loihi_args is None else loihi_args
+            self.loihi = self.model.get_loihi(seed=seed, **loihi_args)
         else:
             raise ValidationError("Must be 'simreal', 'sim', or 'loihi'",
                                   attr="target")
