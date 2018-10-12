@@ -273,8 +273,6 @@ class Simulator(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.loihi is not None:
-            self.loihi.__exit__(exc_type, exc_value, traceback)
         self.close()
 
     @property
