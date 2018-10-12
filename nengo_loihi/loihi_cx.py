@@ -550,11 +550,12 @@ class CxSimulator(object):
     strict = False
 
     def __init__(self, model, seed=None):
+        self.closed = False
+
         self.build(model, seed=seed)
 
         self._probe_filters = {}
         self._probe_filter_pos = {}
-        self.closed = False
 
     @classmethod
     def error(cls, msg):
