@@ -51,19 +51,22 @@ def overflow_signed(x, bits=7, out=None, return_hits=False):
     """
     if out is None:
         out = np.array(x)
+    else:
+        assert isinstance(out, np.ndarray)
+        out[:] = x
 
-    smask = 2**bits  # mask for the sign bit == `bits`
+    assert np.issubdtype(out.dtype, np.integer)
+
+    x1 = np.array(1, dtype=out.dtype)
+    smask = np.left_shift(x1, bits)  # mask for the sign bit (2**bits)
     xmask = smask - 1  # mask for all bits <= `bits`
 
-    # find whether we've overflowed by seeing if the overflow bits are
-    # non-zero. `abs` to ignore the actual sign bit (left most bit)
-    omask = ~(smask - 1)  # mask for all bits > `bits`, our overflow bits
-    overflowed = (np.abs(out) & omask) != 0
+    # find whether we've overflowed
+    overflowed = (out < -smask) | (out >= smask)
 
-    sign = out & smask  # sign bit indicates if overflow is in negative area
-    signbase = ~(sign - 1)  # if sign bit, turn all bits left of sign bit on
-    out &= xmask  # strip out bits > `bits`, to get the amount we've overflowed
-    out += signbase  # add smallest negative number representable with `bits`
+    zmask = out & smask  # if `out` has negative sign bit, == 2**bits
+    out &= xmask  # mask out all bits > `bits`
+    out -= zmask  # subtract 2**bits if negative sign bit
 
     if return_hits:
         return out, overflowed
