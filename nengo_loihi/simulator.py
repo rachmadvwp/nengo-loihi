@@ -268,8 +268,6 @@ class Simulator(object):
                 "freed." % self.model, ResourceWarning)
 
     def __enter__(self):
-        if self.loihi is not None:
-            self.loihi.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
