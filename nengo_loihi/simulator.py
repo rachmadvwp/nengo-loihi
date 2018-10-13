@@ -144,7 +144,7 @@ class Simulator(object):
     unsupported = []
 
     def __init__(self, network, dt=0.001, seed=None, model=None,  # noqa: C901
-                 precompute=False, target=None, remove_passthrough=False):
+                 precompute=False, target=None, remove_passthrough=True):
         self.closed = True  # Start closed in case constructor raises exception
 
         if model is None:
