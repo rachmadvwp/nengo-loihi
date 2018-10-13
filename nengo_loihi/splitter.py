@@ -10,16 +10,16 @@ from nengo_loihi.loihi_cx import (
     ChipReceiveNode, ChipReceiveNeurons, HostSendNode, HostReceiveNode,
     PESModulatoryTarget)
 from nengo_loihi.neurons import NIF
-from nengo_loihi.passthrough import convert_passthroughs, CycleException
+from nengo_loihi.passthrough import ClusterException, convert_passthroughs
 
 logger = logging.getLogger(__name__)
 
 
 def base_obj(obj):
+    if isinstance(obj, nengo.base.ObjView):
+        obj = obj.obj
     if isinstance(obj, nengo.ensemble.Neurons):
         return obj.ensemble
-    elif isinstance(obj, nengo.base.ObjView):
-        return obj.obj
     elif isinstance(obj, nengo.connection.LearningRule):
         return obj.connection
     return obj

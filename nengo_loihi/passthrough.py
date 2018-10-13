@@ -1,5 +1,5 @@
 import nengo
-from nengo.exceptions import BuildError
+from nengo.exceptions import BuildError, NengoException
 import numpy as np
 
 
@@ -14,7 +14,7 @@ def base_obj(obj):
     return obj
 
 
-class CycleException(Exception):
+class ClusterException(NengoException):
     pass
 
 
@@ -108,13 +108,18 @@ class Cluster(object):
             yield slice(None), np.array(1.0), None, obj
 
         for c in outputs[obj]:
-            if c in self.conns_out:
-                # this is an output from the Cluster, so stop iterating
-                yield c.pre_slice, c.transform, c.synapse, c.post
+            if c.learning_rule_type is not None:
+                raise ClusterException("no learning allowed")
+            elif isinstance(c.post_obj, nengo.connection.LearningRule):
+                raise ClusterException("no error signals allowed")
             elif c.post_obj in previous:
                 # cycles of passthrough Nodes are possible in Nengo, but
                 # cannot be compiled away
-                raise CycleException('no loops allowed')
+                raise ClusterException("no loops allowed")
+
+            if c in self.conns_out:
+                # this is an output from the Cluster, so stop iterating
+                yield c.pre_slice, c.transform, c.synapse, c.post
             else:
                 # this Connection goes to another passthrough Node in this
                 # Cluster, so iterate into that Node and continue
@@ -250,8 +255,8 @@ def convert_passthroughs(network, offchip):
             if (onchip_input and onchip_output) or no_input or no_output:
                 try:
                     new_conns = list(cluster.generate_conns())
-                except CycleException:
-                    # this Cluster has cycles in it, so don't remove it
+                except ClusterException:
+                    # this Cluster has an issue, so don't remove it
                     continue
 
                 removed_passthroughs.update(cluster.objs - cluster.probed_objs)
