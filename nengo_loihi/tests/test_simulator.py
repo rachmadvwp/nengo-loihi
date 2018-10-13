@@ -23,7 +23,7 @@ def test_cx_model_validate_notempty(Simulator):
 def test_probedict_fallbacks(precompute, Simulator):
     with nengo.Network() as net:
         nengo_loihi.add_params(net)
-        node_a = nengo.Node(size_in=1)
+        node_a = nengo.Node(0)
         with nengo.Network():
             ens_b = nengo.Ensemble(10, 1)
             conn_ab = nengo.Connection(node_a, ens_b)

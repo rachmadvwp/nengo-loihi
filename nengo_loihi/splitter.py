@@ -101,6 +101,10 @@ class SplitNetworks(object):
         obj = base_obj(obj)
         logger.debug("Removing %s", obj)
         self.removes.append(obj)
+        if obj in self.adds:
+            del self.adds[obj]
+        elif obj in self.moves:
+            del self.moves[obj]
 
 
 def split(net, precompute, max_rate, inter_tau, remove_passthrough=False):
