@@ -235,7 +235,9 @@ class CxGroup(object):
             target[:] = new
 
         # --- discretize decayU and decayV
-        discretize(self.decayU, self.decayU * (2**12 - 1))
+        # subtract 1 from decayU here because it gets added back by the chip
+        decayU = self.decayU * (2**12 - 1) - 1
+        discretize(self.decayU, np.clip(decayU, 0, 2**12 - 1))
         discretize(self.decayV, self.decayV * (2**12 - 1))
         u_infactor = (1. / decay_magnitude(self.decayU, x0=2**21, offset=1)
                       if self.scaleU else np.ones(self.decayU.shape))
