@@ -56,6 +56,40 @@ def tracing_mag_int_frac(synapses):
     return mag_int, mag_frac
 
 
+def decay_int(x, decay, bits=12, offset=0, out=None):
+    if out is None:
+        out = np.zeros_like(x)
+    r = (2**bits - offset - np.asarray(decay)).astype(np.int64)
+    np.right_shift(np.abs(x) * r, bits, out=out)
+    return np.sign(x) * out
+
+
+def decay_magnitude(decay, x0=2**21, bits=12, offset=0):
+    """Estimate the sum of the series of rounded integer decays of `x0`.
+
+    This can be used to estimate the total input current or voltage (summed
+    over time) caused by an input of magnitude `x0`.
+
+    Specifically, we estimate the sum of the series
+        x_i = floor(r * x_{i-1})
+    where ``r = (2**a - b - decay)``.
+
+    To simulate the effects of rounding in decay, we subtract an expected loss
+    due to rounding (`q`) at each iteration. Our estimated series is therefore:
+        y_i = r * y_{i-1} - q
+            = r^i * x_0 - sum_k^{i-1} q * r^k
+    """
+    q = 0.494  # expected loss per time step (found by empirical simulations)
+    r = (2**bits - offset - np.asarray(decay)) / 2**bits  # decay ratio
+    n = -np.log1p(x0 * (1 - r) / q) / np.log(r)  # solve y_n = 0 for n
+
+    # principal_sum = (1./x0) sum_i^n x0 * r^i
+    # loss_sum = (1./x0) sum_i^n sum_k^{i-1} q * r^k
+    principal_sum = (1 - r**(n + 1)) / (1 - r)
+    loss_sum = q / ((1 - r) * x0) * (n + 1 - (1 - r**(n+1))/(1 - r))
+    return principal_sum - loss_sum
+
+
 def shift(x, s, **kwargs):
     if s < 0:
         return np.right_shift(x, -s, **kwargs)
