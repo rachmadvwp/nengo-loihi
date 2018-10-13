@@ -11,6 +11,8 @@ from nengo.utils.compat import is_iterable, range
 from nengo_loihi.loihi_api import (
     BIAS_MAX,
     bias_to_manexp,
+    decay_int,
+    decay_magnitude,
     overflow_signed,
     SynapseFmt,
     tracing_mag_int_frac,
@@ -242,12 +244,12 @@ class CxGroup(object):
             target[:] = new
 
         # --- discretize decayU and decayV
-        u_infactor = (
-            self.decayU.copy() if self.scaleU else np.ones_like(self.decayU))
-        v_infactor = (
-            self.decayV.copy() if self.scaleV else np.ones_like(self.decayV))
         discretize(self.decayU, self.decayU * (2**12 - 1))
         discretize(self.decayV, self.decayV * (2**12 - 1))
+        u_infactor = (1. / decay_magnitude(self.decayU, x0=2**21, offset=1)
+                      if self.scaleU else np.ones(self.decayU.shape))
+        v_infactor = (1. / decay_magnitude(self.decayV, x0=2**21)
+                      if self.scaleV else np.ones(self.decayV.shape))
         self.scaleU = False
         self.scaleV = False
 
@@ -579,27 +581,21 @@ class CxSimulator(object):
             group.decayV if group.scaleV else np.ones_like(group.decayV)
             for group in self.groups])
 
-        def decay_float(x, u, d, s):
-            return (1 - d)*x + s*u
-
-        def decay_int(x, u, d, s, a=12, b=0):
-            r = (2**a - b - np.asarray(d)).astype(np.int64)
-            x = np.sign(x) * np.right_shift(np.abs(x) * r, a)  # round to zero
-            return x + u  # no scaling on u
-
         if group_dtype == np.int32:
             assert (self.scaleU == 1).all()
             assert (self.scaleV == 1).all()
-            self.decayU_fn = lambda x, u: decay_int(
-                x, u, d=self.decayU, s=self.scaleU, b=1)
-            self.decayV_fn = lambda x, u: decay_int(
-                x, u, d=self.decayV, s=self.scaleV)
+            self.decayU_fn = (
+                lambda x, u: decay_int(x, self.decayU, offset=1) + u)
+            self.decayV_fn = lambda x, u: decay_int(x, self.decayV) + u
 
             def overflow(x, bits, name=None):
                 _, o = overflow_signed(x, bits=bits, out=x)
                 if np.any(o):
                     self.error("Overflow" + (" in %s" % name if name else ""))
         elif group_dtype == np.float32:
+            def decay_float(x, u, d, s):
+                return (1 - d)*x + s*u
+
             self.decayU_fn = lambda x, u: decay_float(
                 x, u, d=self.decayU, s=self.scaleU)
             self.decayV_fn = lambda x, u: decay_float(
