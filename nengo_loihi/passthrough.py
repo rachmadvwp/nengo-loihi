@@ -8,11 +8,10 @@ def is_passthrough(obj):
 
 
 def base_obj(obj):
-    """Returns the Ensemble or Node underlying a connection obj"""
+    """Returns the Ensemble or Node underlying an object"""
     if isinstance(obj, nengo.ensemble.Neurons):
         return obj.ensemble
-    else:
-        return obj
+    return obj
 
 
 class CycleException(Exception):
@@ -23,18 +22,18 @@ class Cluster(object):
     """A collection of passthrough Nodes directly connected to each other.
 
     When removing passthrough Nodes, we often have large chains of Nodes that
-    should be removed together.  That is, we tend to have a directed graph,
+    should be removed together. That is, we tend to have a directed graph,
     starting with inputs coming from Ensembles and non-passthrough Nodes, and
-    ending in Ensembles and non-passthrough Nodes.  This Cluster object
+    ending in Ensembles and non-passthrough Nodes. This Cluster object
     represents this collection of passthrough Nodes and allows us to remove
     them all at once.
     """
     def __init__(self, obj):
-        self.objs = set([obj])      # the Nodes in the cluster
-        self.conns_in = set()       # Connections into the cluster
-        self.conns_out = set()      # Connections out of the cluster
-        self.conns_mid = set()      # Connections within the cluster
-        self.probed_objs = set()    # Nodes that have Probes on them
+        self.objs = set([obj])  # the Nodes in the cluster
+        self.conns_in = set()  # Connections into the cluster
+        self.conns_out = set()  # Connections out of the cluster
+        self.conns_mid = set()  # Connections within the cluster
+        self.probed_objs = set()  # Nodes that have Probes on them
 
     def merge_with(self, other):
         """Combine this Cluster with another Cluster"""
@@ -48,38 +47,32 @@ class Cluster(object):
                          node, slice2, trans2, size2):
         """Return an equivalent transform to the two provided transforms.
 
-        This is for finding a transform that converts this:
+        This is for finding a transform that converts this::
 
-        ```
-        a = nengo.Node(size1)
-        b = nengo.Node(size2)
-        nengo.Connection(a, node[slice1], transform=trans1)
-        nengo.Connection(node[slice2], b, transform=trans2)
-        ```
+            a = nengo.Node(size1)
+            b = nengo.Node(size2)
+            nengo.Connection(a, node[slice1], transform=trans1)
+            nengo.Connection(node[slice2], b, transform=trans2)
 
-        Into this:
+        Into this::
 
-        ```
-        a = nengo.Node(size1)
-        b = nengo.Node(size2)
-        nengo.Connection(a, b, transform=t)
-        ```
+            a = nengo.Node(size1)
+            b = nengo.Node(size2)
+            nengo.Connection(a, b, transform=t)
+
         """
+        if trans1.ndim == 0:  # scalar
+            trans1 = np.eye(size1) * trans1
+        elif trans1.ndim != 2:
+            raise BuildError("Unhandled transform shape: %s" % (trans1.shape,))
 
-        if len(trans1.shape) == 0:
-            trans1 = np.eye(size1)*trans1   # scalar
-        elif len(trans1.shape) != 2:
-            raise BuildError('Unhandled transform shape: %s' % trans1.shape)
+        if trans2.ndim == 0:  # scalar
+            trans2 = np.eye(size2) * trans2
+        elif trans2.ndim != 2:
+            raise BuildError("Unhandled transform shape: %s" % (trans2.shape,))
 
-        if len(trans2.shape) == 0:
-            trans2 = np.eye(size2)*trans2   # scalar
-        elif len(trans2.shape) != 2:
-            raise BuildError('Unhandled transform shape: %s' % trans2.shape)
-
-        mid_t = np.eye(node.size_in)
-        mid_t = mid_t[slice2, slice1]
-        t = np.dot(trans2, np.dot(mid_t, trans1))
-        return t
+        mid_t = np.eye(node.size_in)[slice2, slice1]
+        return np.dot(trans2, np.dot(mid_t, trans1))
 
     def merge_synapses(self, syn1, syn2):
         """Return an equivalent synapse for the two provided synapses."""
@@ -90,19 +83,21 @@ class Cluster(object):
         else:
             return syn1.combine(syn2)
 
-    def generate_from(self, obj, outputs, previous=[]):
+    def generate_from(self, obj, outputs, previous=None):
         """Generates all direct Connections from obj out of the Cluster.
 
         This is a recursive process, starting at this obj (a Node within the
         Cluster) and iterating to find all outputs and all probed Nodes
-        within the Cluster.  The transform and synapse values needed are
+        within the Cluster. The transform and synapse values needed are
         computed while iterating through the graph.
 
-        Return values can be used to make equivalent Connection objects:
-        ```
-        nengo.Connection(obj[pre_slice], post, transform=trans, synapse=syn)
-        ```
+        Return values can be used to make equivalent Connection objects::
+
+            nengo.Connection(
+                obj[pre_slice], post, transform=trans, synapse=syn)
+
         """
+        previous = [] if previous is None else previous
         if obj not in outputs:
             return
 
@@ -199,24 +194,22 @@ def find_clusters(net, offchip):
             if c.post_obj in probed_objs:
                 clusters[c.post_obj].probed_objs.add(c.post_obj)
 
-        if pass_pre:
-            if pass_post:
-                # both pre and post are passthrough, so merge the two
-                # clusters into one cluster
-                cluster = clusters[base_pre]
-                cluster.merge_with(clusters[base_post])
-                for obj in cluster.objs:
-                    clusters[obj] = cluster
-                cluster.conns_mid.add(c)
-            else:
-                # pre is passthrough but post is not, so this is an output
-                cluster = clusters[base_pre]
-                cluster.conns_out.add(c)
-        else:
-            if pass_post:
-                # pre is not a passthrough but post is, so this is an input
-                cluster = clusters[base_post]
-                cluster.conns_in.add(c)
+        if pass_pre and pass_post:
+            # both pre and post are passthrough, so merge the two
+            # clusters into one cluster
+            cluster = clusters[base_pre]
+            cluster.merge_with(clusters[base_post])
+            for obj in cluster.objs:
+                clusters[obj] = cluster
+            cluster.conns_mid.add(c)
+        elif pass_pre:
+            # pre is passthrough but post is not, so this is an output
+            cluster = clusters[base_pre]
+            cluster.conns_out.add(c)
+        elif pass_post:
+            # pre is not a passthrough but post is, so this is an input
+            cluster = clusters[base_post]
+            cluster.conns_in.add(c)
     return clusters
 
 
@@ -229,7 +222,7 @@ def convert_passthroughs(network, offchip):
     Connections.
 
     The parameter offchip provides a list of objects that should be considered
-    to be offchip.  The system will only remove passthrough Nodes that go
+    to be offchip. The system will only remove passthrough Nodes that go
     between two onchip objects.
     """
     clusters = find_clusters(network, offchip=offchip)
