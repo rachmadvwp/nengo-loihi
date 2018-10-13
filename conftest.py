@@ -181,6 +181,11 @@ def allclose(request):
         result = np.all(close)
 
         if print_fail and not result:
+            if a.size > b.size:
+                b = np.broadcast_to(b, a.shape)
+            elif b.size > a.size:
+                a = np.broadcast_to(a, b.shape)
+
             diffs = []
             for k, ind in enumerate(zip(*(~close).nonzero())):
                 diffs.append("%s: %s %s" % (ind, a[ind], b[ind]))
