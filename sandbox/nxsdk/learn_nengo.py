@@ -102,6 +102,9 @@ core.numUpdates.configure(
     numStdp=numStdp,
 )
 
+core.dendriteTimeState[0].tepoch = 2
+core.timeState[0].tepoch = 2
+
 
 # --- set up snips
 snips_dir = os.path.dirname(os.path.realpath(__file__))
