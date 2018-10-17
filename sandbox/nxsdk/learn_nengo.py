@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 from nxsdk.arch.n2a.compiler.tracecfggen.tracecfggen import TraceCfgGen
 from nxsdk.arch.n2a.graph.graph import N2Board
@@ -105,7 +106,16 @@ core.numUpdates.configure(
 # --- set up snips
 snips_dir = os.path.dirname(os.path.realpath(__file__))
 
-learn_process = board.createProcess(
+io_process = board.createProcess(
+    name="learn_nengo_io",
+    cFilePath=os.path.join(snips_dir, "learn_nengo_io.c"),
+    includeDir=snips_dir,
+    funcName="learn_nengo_io",
+    guardName="guard_learn_nengo_io",
+    phase="mgmt",
+)
+
+board.createProcess(
     name="learn_nengo",
     cFilePath=os.path.join(snips_dir, "learn_nengo.c"),
     includeDir=snips_dir,
@@ -114,10 +124,10 @@ learn_process = board.createProcess(
     phase="preLearnMgmt",
 )
 
-inputChannel = board.createChannel(b'inputChannel', "int", n_errors)
-# recvChannel = board.createChannel(b'recvChannel', "int", n_errors)
-inputChannel.connect(None, learn_process)
-# recvChannel.connect(learn_process, None)
+inputChannel = board.createChannel(b'inputChannel', "int", n_errors + 2)
+outputChannel = board.createChannel(b'outputChannel', "int", 1)
+inputChannel.connect(None, io_process)
+outputChannel.connect(io_process, None)
 
 # --- run the simulation
 spike_gen = BasicSpikeGenerator(board)
@@ -125,14 +135,25 @@ for t in (2, 5, 7):
     spike_gen.addSpike(time=t, chipId=chip.id, coreId=core.id, axonId=0)
     spike_gen.addSpike(time=t, chipId=chip.id, coreId=core.id, axonId=1)
 
+up = board.monitor.probe(core.cxState, range(n_cx), 'u')
+vp = board.monitor.probe(core.cxState, range(n_cx), 'v')
+
 board.startDriver()
 
-inputChannel.write(n_errors, [0] * n_errors)
+inputChannel.write(n_errors + 2, [n_errors, core.id] + [0] * n_errors)
 
 n_steps = 10
-board.run(n_steps, async=True)
-for i in range(n_steps):
-    inputChannel.write(n_cx, [0] * n_errors)
+board.run(n_steps, aSync=True)
+for t in range(1, n_steps+1):
+    output = outputChannel.read(1)
+    errors = [100 if t > 2 else 0] * n_errors
+    assert len(errors) == n_errors
+    inputChannel.write(n_errors + 2, [n_errors, core.id] + errors)
 
 print("Waiting for run to finish")
 board.finishRun()
+
+u = np.column_stack([p.timeSeries.data for p in up])
+v = np.column_stack([p.timeSeries.data for p in vp])
+print(u)
+print(v)
