@@ -417,6 +417,7 @@ class Simulator(object):
                     self.sims["emulator"].step()
                     self.handle_chip2host_communications()
             else:
+                raise Exception
                 self.sims["emulator"].run_steps(steps)
         elif "loihi" in self.sims:
             if self.precompute:
@@ -437,6 +438,7 @@ class Simulator(object):
                 self.sims["loihi"].wait_for_completion()
                 logger.info("done")
             else:
+                raise Exception
                 self.sims["loihi"].run_steps(steps, blocking=True)
 
         self._n_steps += steps
@@ -544,6 +546,8 @@ class Simulator(object):
                 for error in errors:
                     msg.extend(error)
                 self.sims["loihi"].nengo_io_h2c.write(len(msg), msg)
+            else:
+                raise NotImplementedError()
 
     def handle_chip2host_communications(self):  # noqa: C901
         if "emulator" in self.sims:
