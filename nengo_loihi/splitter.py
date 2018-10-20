@@ -1,5 +1,6 @@
 from collections import defaultdict
 import logging
+import warnings
 
 import nengo
 from nengo.exceptions import BuildError, SimulationError
@@ -125,8 +126,9 @@ def split(net, precompute, max_rate, inter_tau):
     # Commit to the moves marked in the previous steps
     networks.finalize()
     if precompute:
-        assert len(networks.host_pre.all_objects) > 0, (
-            "No precomputable objects")
+        if len(networks.host_pre.all_objects) == 0:
+            warnings.warn("No precomputable objects, setting precompute=True "
+                          "has no effect")
     else:
         assert len(networks.host_pre.all_objects) == 0, (
             "Object erroneously added to host_pre")

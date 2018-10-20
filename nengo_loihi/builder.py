@@ -74,7 +74,6 @@ class Model(CxModel):
         self.objs = collections.defaultdict(dict)
         self.params = {}  # Holds data generated when building objects
         self.probes = []
-        self.chip2host_params = None  # Will be provided by Simulator
         self.probe_conns = {}
 
         self.seeds = {}
@@ -104,6 +103,11 @@ class Model(CxModel):
 
         # limit for clipping intercepts, to avoid neurons with high gains
         self.intercept_limit = 0.95
+
+        # Will be provided by Simulator
+        self.chip2host_params = None
+        self.chip2host_receivers = None
+        self.host2chip_senders = None
 
     @property
     def inter_rate(self):
