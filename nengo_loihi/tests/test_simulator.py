@@ -138,3 +138,15 @@ def test_close(Simulator, precompute):
 
     assert sim.closed
     assert all(s.closed for s in sim.sims.values())
+
+
+def test_all_run_steps(Simulator):
+    pass
+
+
+def test_no_precomputable(Simulator):
+    pass
+
+
+def test_all_onchip(Simulator):
+    pass
