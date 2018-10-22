@@ -14,7 +14,7 @@ from nengo_loihi.loihi_api import (
     overflow_signed,
     SynapseFmt,
     tracing_mag_int_frac,
-    Q_BIT, U_BIT,
+    Q_BIT, U_BIT, V_BIT,
     VTH_MAX,
     vth_to_manexp,
 )
@@ -702,10 +702,11 @@ class CxSimulator(object):
             self.error("Overflow in u2")
 
         self.v[:] = self.decayV_fn(self.v, u2)
-        # _, o = overflow_signed(self.v, bits=V_BIT, out=self.v,
-        #                        return_hits=True)
-        # if np.any(o):
-        #     self.error("Overflow in V")
+        _, o = overflow_signed(self.v, bits=V_BIT, out=self.v,
+                               return_hits=True)
+        if np.any(o):
+            self.error("Overflow in V")
+            print("V overflow")
 
         np.clip(self.v, self.vmin, self.vmax, out=self.v)
         self.v[self.w > 0] = 0
