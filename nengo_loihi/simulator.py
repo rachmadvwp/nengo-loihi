@@ -493,16 +493,8 @@ class Simulator(object):
                 h2c = self.sims["loihi"].nengo_io_h2c
                 c2h = self.sims["loihi"].nengo_io_c2h
 
-                printed = False
-                for _ in range(steps):
-                    h2c.write(h2c.numElements, [0] * h2c.numElements)
-                    c2h.read(c2h.numElements)
-                    if not printed:
-                        print(traceback.format_exc())
-                        print("\nAttempting to end simulation...")
-                        printed = True
-                self.sims["loihi"].n2board.nxDriver.stopExecution()
-                self.sims["loihi"].n2board.nxDriver.stopDriver()
+                # Need to write to board, otherwise it will wait indefinitely
+                h2c.write(h2c.numElements, [0] * h2c.numElements)
                 self.sims["loihi"].wait_for_completion()
 
         self._n_steps += steps
