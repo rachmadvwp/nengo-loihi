@@ -127,8 +127,8 @@ def split(net, precompute, max_rate, inter_tau):
     networks.finalize()
     if precompute:
         if len(networks.host_pre.all_objects) == 0:
-            warnings.warn("No precomputable objects, setting precompute=True "
-                          "has no effect")
+            warnings.warn("No precomputable objects. Setting precompute=True "
+                          "has no effect.")
     else:
         assert len(networks.host_pre.all_objects) == 0, (
             "Object erroneously added to host_pre")

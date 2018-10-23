@@ -32,7 +32,6 @@ from nengo_loihi.allocators import one_to_one_allocator
 from nengo_loihi.loihi_api import (
     CX_PROFILES_MAX, VTH_PROFILES_MAX, bias_to_manexp)
 from nengo_loihi.loihi_cx import CxGroup
-from nengo_loihi.splitter import PESModulatoryTarget
 
 logger = logging.getLogger(__name__)
 
@@ -583,7 +582,7 @@ class LoihiSimulator(object):
     def _host2chip_spikes(self):
         to_send = []
         for sender, receiver in self.model.host2chip_senders.items():
-            if not isinstance(receiver, PESModulatoryTarget):
+            if hasattr(receiver, "receive"):
                 for t, x in sender.queue:
                     receiver.receive(t, x)
                 del sender.queue[:]
@@ -603,7 +602,7 @@ class LoihiSimulator(object):
     def _host2chip_errors(self):
         errors = []
         for sender, receiver in self.model.host2chip_senders.items():
-            if isinstance(receiver, PESModulatoryTarget):
+            if hasattr(receiver, "target"):
                 for t, x in sender.queue:
                     x = (100 * x).astype(int)
                     x = np.clip(x, -100, 100, out=x)

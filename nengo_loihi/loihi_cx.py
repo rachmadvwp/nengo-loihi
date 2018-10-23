@@ -18,7 +18,6 @@ from nengo_loihi.loihi_api import (
     VTH_MAX,
     vth_to_manexp,
 )
-from nengo_loihi.splitter import PESModulatoryTarget
 
 logger = logging.getLogger(__name__)
 
@@ -753,7 +752,7 @@ class CxSimulator(object):
         # go through the list of host2chip connections
         for sender, receiver in self.model.host2chip_senders.items():
             learning_rate = 50  # This is set to match hardware
-            if isinstance(receiver, PESModulatoryTarget):
+            if hasattr(receiver, "target"):
                 for t, x in sender.queue:
                     probe = receiver.target
                     conn = self.model.probe_conns[probe]
