@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 
 
-# When val=-0.75 and type=array, this test sometimes fails on the chip.
-# This possibly has to do with interneuron noise and not representing
-# the values well.
+# This test sometimes (but not consistently) fails on the chip for various
+# combinations of the parameter values. This possibly has to do with
+# interneuron noise and not representing the values well.
 @pytest.mark.xfail
 @pytest.mark.parametrize("val", (-0.75, -0.5, 0, 0.5, 0.75))
 @pytest.mark.parametrize("type", ("array", "func"))
