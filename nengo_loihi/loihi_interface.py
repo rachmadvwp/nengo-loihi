@@ -450,7 +450,6 @@ class LoihiSimulator(object):
                 for cx_probe in group.probes:
                     cx_probe.use_snip = True
             # create a place to store data from snip probes
-            # TODO: make sure this is all probes?
             for probe in cx_model.probes:
                 self._snip_probes[probe] = []
 
@@ -538,7 +537,7 @@ class LoihiSimulator(object):
             self._chip2host_sent_steps += increment
 
     def send_spikes(self):
-        # TODO: this is almost the same as _host2chip_spikes, should call it
+        # TODO: this is almost the same as _host2chip_spikes
         items = []
         for sender, receiver in self.model.host2chip_senders.items():
             for t, x in sender.queue:
@@ -682,6 +681,10 @@ class LoihiSimulator(object):
 
     def get_probe_output(self, probe):
         cx_probe = self.model.objs[probe]['out']
+        if cx_probe.use_snip:
+            data = self._snip_probes[probe]
+            if probe.synapse is not None:
+                return probe.synapse.filt(data, dt=self.model.dt, y0=0)
         n2probe = self.board.probe_map[cx_probe]
         x = np.column_stack([p.timeSeries.data for p in n2probe])
         x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)

@@ -297,15 +297,8 @@ class Simulator(object):
             assert probe.sample_every is None
             assert ("loihi" not in self.sims
                     or "emulator" not in self.sims)
-            # TODO: move this logic to LoihiSim
             if "loihi" in self.sims:
-                cx_probe = self.sims["loihi"].model.objs[probe]['out']
-                if cx_probe.use_snip:
-                    data = self.sims["loihi"]._snip_probes[probe]
-                    if probe.synapse is not None:
-                        data = probe.synapse.filt(data, dt=self.dt, y0=0)
-                else:
-                    data = self.sims["loihi"].get_probe_output(probe)
+                data = self.sims["loihi"].get_probe_output(probe)
             elif "emulator" in self.sims:
                 data = self.sims["emulator"].get_probe_output(probe)
             # TODO: stop recomputing this all the time
@@ -459,7 +452,7 @@ class Simulator(object):
 
                 def loihi_precomputed_host_only(steps):
                     loihi.run_steps(steps)
-                    loihi.chip2host()
+                    loihi.chip2host_precomputed()
                     host.run_steps(steps)
                 self._run_steps = loihi_precomputed_host_only
 
