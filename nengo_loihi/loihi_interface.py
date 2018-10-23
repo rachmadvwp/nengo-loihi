@@ -687,10 +687,13 @@ class LoihiSimulator(object):
             data = self._snip_probes[probe]
             if probe.synapse is not None:
                 return probe.synapse.filt(data, dt=self.model.dt, y0=0)
-        n2probe = self.board.probe_map[cx_probe]
-        x = np.column_stack([p.timeSeries.data for p in n2probe])
-        x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
-        return self._filter_probe(cx_probe, x)
+            else:
+                return data
+        else:
+            n2probe = self.board.probe_map[cx_probe]
+            x = np.column_stack([p.timeSeries.data for p in n2probe])
+            x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
+            return self._filter_probe(cx_probe, x)
 
     def create_io_snip(self):
         # snips must be created before connecting
