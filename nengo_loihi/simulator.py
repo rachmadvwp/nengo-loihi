@@ -1,6 +1,5 @@
 from collections import OrderedDict
 import logging
-import traceback
 import warnings
 
 import numpy as np
@@ -490,10 +489,8 @@ class Simulator(object):
             self._run_steps(steps)
         except Exception:
             if "loihi" in self.sims:
-                h2c = self.sims["loihi"].nengo_io_h2c
-                c2h = self.sims["loihi"].nengo_io_c2h
-
                 # Need to write to board, otherwise it will wait indefinitely
+                h2c = self.sims["loihi"].nengo_io_h2c
                 h2c.write(h2c.numElements, [0] * h2c.numElements)
                 self.sims["loihi"].wait_for_completion()
 
