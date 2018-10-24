@@ -10,7 +10,6 @@ from nengo_loihi.conv import Conv2D
 from nengo_loihi.loihi_cx import (
     ChipReceiveNode, ChipReceiveNeurons, HostSendNode, HostReceiveNode,
     PESModulatoryTarget)
-from nengo_loihi.neurons import NIF
 from nengo_loihi.passthrough import convert_passthroughs
 
 logger = logging.getLogger(__name__)
@@ -27,9 +26,9 @@ def base_obj(obj):
 
 
 class SplitNetworks(object):
-    def __init__(self, original, max_rate=1000, inter_tau=0.005):
+    def __init__(self, original, inter_neurons=None, inter_tau=0.005):
         self.original = original
-        self.max_rate = max_rate
+        self.inter_neurons = inter_neurons
         self.inter_tau = inter_tau
 
         self.host = nengo.Network(seed=original.seed)
@@ -108,9 +107,10 @@ class SplitNetworks(object):
             del self.moves[obj]
 
 
-def split(net, precompute, max_rate, inter_tau, remove_passthrough=False):
+def split(net, precompute, inter_neurons, inter_tau, remove_passthrough=False):
     logger.info("Splitting model into host and chip parts")
-    networks = SplitNetworks(net, max_rate=max_rate, inter_tau=inter_tau)
+    networks = SplitNetworks(net, inter_neurons=inter_neurons,
+                             inter_tau=inter_tau)
 
     # --- Step 1: place ensembles and nodes
     place_nodes(networks)
@@ -289,13 +289,7 @@ def split_host_to_chip(networks, conn):
     networks.add(receive2post, "chip")
 
     logger.debug("Creating NIF ensemble for %s", conn)
-    ens = nengo.Ensemble(
-        2 * dim, dim,
-        neuron_type=NIF(tau_ref=0.0),
-        encoders=np.vstack([np.eye(dim), -np.eye(dim)]),
-        max_rates=np.ones(dim * 2) * networks.max_rate,
-        intercepts=np.ones(dim * 2) * -1,
-        add_to_container=False)
+    ens = networks.inter_neurons.get_ensemble(dim)
     networks.add(ens, "host")
 
     if isinstance(conn.transform, Conv2D):
