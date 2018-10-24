@@ -6,7 +6,7 @@ import pytest
 
 # This test sometimes (but not consistently) fails on the chip for various
 # combinations of the parameter values. This possibly has to do with
-# interneuron noise and not representing the values well.
+# DecodeNeuron noise and not representing the values well.
 @pytest.mark.xfail
 @pytest.mark.parametrize("val", (-0.75, -0.5, 0, 0.5, 0.75))
 @pytest.mark.parametrize("type", ("array", "func"))
