@@ -31,6 +31,101 @@ from nengo_loihi.neurons import loihi_rates
 logger = logging.getLogger(__name__)
 
 
+class Interneurons(object):
+    def __init__(self, n, dt=0.001):
+        self.dt = dt
+
+        # firing rate of inter neurons
+        self._inter_rate = None
+
+        # number of inter neurons
+        self.inter_n = n
+
+    @property
+    def inter_rate(self):
+        return (1. / (self.dt * self.inter_n) if self._inter_rate is None else
+                self._inter_rate)
+
+    @inter_rate.setter
+    def inter_rate(self, inter_rate):
+        self._inter_rate = inter_rate
+
+    @property
+    def inter_scale(self):
+        """Scaling applied to input from interneurons.
+
+        Such that if all ``inter_n`` interneurons are firing at
+        their max rate ``inter_rate``, then the total output when
+        averaged over time will be 1.
+        """
+        return 1. / (self.dt * self.inter_rate * self.inter_n)
+
+    def get_post_encoders(self, encoders):
+        raise NotImplementedError()
+
+    def get_post_inds(self, inds, d):
+        raise NotImplementedError()
+
+    def get_cx(self, weights):
+        raise NotImplementedError()
+
+
+class OnOffInterneurons(Interneurons):
+    def __init__(self, dt=0.001):
+        super(OnOffInterneurons, self).__init__(1, dt=dt)
+
+    def get_ensemble(self, dim):
+        from nengo_loihi.neurons import NIF
+        assert self.inter_n == 1
+        ens = nengo.Ensemble(
+            2 * dim, dim,
+            neuron_type=NIF(tau_ref=0.0),
+            encoders=np.vstack([np.eye(dim), -np.eye(dim)]),
+            max_rates=np.ones(dim * 2) * self.inter_rate,
+            intercepts=np.ones(dim * 2) * -1,
+            add_to_container=False)
+        return ens
+
+    def get_post_encoders(self, encoders):
+        encoders = encoders * self.inter_scale
+        return np.vstack([encoders.T, -encoders.T])
+
+
+class NoisyInterneurons(Interneurons):
+    def __init__(self, *args, **kwargs):
+        super(NoisyInterneurons, self).__init__(*args, **kwargs)
+
+        # noise exponent for inter neurons
+        self.inter_noise_exp = -2
+
+    def get_post_encoders(self, encoders):
+        encoders = encoders * self.inter_scale
+        return np.vstack([encoders.T, -encoders.T])
+
+    def get_post_inds(self, inds, d):
+        return np.hstack([inds, inds + d] * self.inter_n)
+
+    def get_cx(self, weights, cx_label=None, syn_label=None):
+        d, n = weights.shape
+        gain = self.dt * self.inter_rate
+        cx = CxGroup(2 * d * self.inter_n, label=cx_label, location='core')
+        cx.configure_relu(dt=self.dt)
+        cx.bias[:] = 0.5 * gain * np.array(
+            ([1.] * d + [1.] * d) * self.inter_n)
+        if self.inter_noise_exp > -30:
+            cx.enableNoise[:] = 1
+            cx.noiseExp0 = self.inter_noise_exp
+            cx.noiseAtDendOrVm = 1
+
+        syn = CxSynapses(n, label=syn_label)
+        weights2 = 0.5 * gain * np.vstack([weights,
+                                           -weights] * self.inter_n).T
+        syn.set_full_weights(weights2)
+        cx.add_synapses(syn)
+
+        return cx, syn
+
+
 class Model(CxModel):
     """The data structure for the chip/simulator.
 
@@ -95,14 +190,8 @@ class Model(CxModel):
         # it may not be absolutely necessary since tau_rc provides a filter,
         # and maybe we don't want double filtering if connection has a filter
 
-        # firing rate of inter neurons
-        self._inter_rate = None
-
-        # number of inter neurons
-        self.inter_n = 10
-
-        # noise exponent for inter neurons
-        self.inter_noise_exp = -2
+        self.inter_neurons = NoisyInterneurons(10, dt=dt)
+        self.node_neurons = OnOffInterneurons(dt=dt)
 
         # voltage threshold for non-spiking neurons (i.e. voltage decoders)
         self.vth_nonspiking = 10
@@ -112,25 +201,6 @@ class Model(CxModel):
 
         # Will be provided by Simulator
         self.chip2host_params = {}
-
-    @property
-    def inter_rate(self):
-        return (1. / (self.dt * self.inter_n) if self._inter_rate is None else
-                self._inter_rate)
-
-    @inter_rate.setter
-    def inter_rate(self, inter_rate):
-        self._inter_rate = inter_rate
-
-    @property
-    def inter_scale(self):
-        """Scaling applied to input from interneurons.
-
-        Such that if all ``inter_n`` interneurons are firing at
-        their max rate ``inter_rate``, then the total output when
-        averaged over time will be 1.
-        """
-        return 1. / (self.dt * self.inter_rate * self.inter_n)
 
     def __getstate__(self):
         raise NotImplementedError("Can't pickle nengo_loihi.builder.Model")
@@ -364,16 +434,18 @@ def build_ensemble(model, ens):
         bias=bias)
 
 
-def build_interencoders(model, ens):
-    """Build encoders accepting on/off interneuron input."""
+def build_inter_encoders(model, ens, kind='inter_encoders'):
+    """Build encoders accepting inter-neuron input."""
     group = model.objs[ens.neurons]['in']
     scaled_encoders = model.params[ens].scaled_encoders
+    if kind == 'node_encoders':
+        encoders = model.node_neurons.get_post_encoders(scaled_encoders)
+    elif kind == 'inter_encoders':
+        encoders = model.inter_neurons.get_post_encoders(scaled_encoders)
 
-    synapses = CxSynapses(2*scaled_encoders.shape[1], label="inter_encoders")
-    interscaled_encoders = scaled_encoders * model.inter_scale
-    synapses.set_full_weights(
-        np.vstack([interscaled_encoders.T, -interscaled_encoders.T]))
-    group.add_synapses(synapses, name='inter_encoders')
+    synapses = CxSynapses(encoders.shape[0], label=kind)
+    synapses.set_full_weights(encoders)
+    group.add_synapses(synapses, name=kind)
 
 
 @Builder.register(nengo.neurons.NeuronType)
@@ -539,6 +611,7 @@ def build_connection(model, conn):
         raise NotImplementedError("Cannot handle non-Lowpass synapses")
 
     needs_interneurons = False
+    target_encoders = None
     if isinstance(conn.pre_obj, Node):
         assert conn.pre_slice == slice(None)
 
@@ -556,10 +629,7 @@ def build_connection(model, conn):
         else:
             # input is on-off neuron encoded, so double/flip transform
             weights = np.column_stack([transform, -transform])
-
-            # (max_rate = INTER_RATE * INTER_N) is the spike rate we
-            # use to represent a value of +/- 1
-            weights = weights * model.inter_scale
+            target_encoders = 'node_encoders'
     elif (isinstance(conn.pre_obj, Ensemble)
           and isinstance(conn.pre_obj.neuron_type, nengo.Direct)):
         raise NotImplementedError()
@@ -614,42 +684,33 @@ def build_connection(model, conn):
 
             dec_syn = CxSynapses(n, label="probe_decoders")
             weights2 = gain * np.vstack([weights, -weights]).T
+
+            dec_syn.set_full_weights(weights2)
+            dec_cx.add_synapses(dec_syn)
+            model.objs[conn]['decoders'] = dec_syn
         else:
             # use spiking interneurons for on-chip connection
-            post_d = conn.post_obj.size_in
-            post_inds = np.arange(post_d, dtype=np.int32)[conn.post_slice]
-            assert len(post_inds) == conn.size_out == d
-            mid_axon_inds = np.hstack([post_inds,
-                                       post_inds + post_d] * model.inter_n)
-
-            gain = model.dt * model.inter_rate
-            dec_cx = CxGroup(2 * d * model.inter_n, label='%s' % conn,
-                             location='core')
-            dec_cx.configure_relu(dt=model.dt)
-            dec_cx.bias[:] = 0.5 * gain * np.array(
-                ([1.] * d + [1.] * d) * model.inter_n)
-            if model.inter_noise_exp > -30:
-                dec_cx.enableNoise[:] = 1
-                dec_cx.noiseExp0 = model.inter_noise_exp
-                dec_cx.noiseAtDendOrVm = 1
-            model.add_group(dec_cx)
-            model.objs[conn]['decoded'] = dec_cx
-
             if isinstance(conn.post_obj, Ensemble):
                 # loihi encoders don't include radius, so handle scaling here
                 weights = weights / conn.post_obj.radius
 
-            dec_syn = CxSynapses(n, label="decoders")
-            weights2 = 0.5 * gain * np.vstack([weights,
-                                               -weights] * model.inter_n).T
+            post_d = conn.post_obj.size_in
+            post_inds = np.arange(post_d, dtype=np.int32)[conn.post_slice]
+            assert weights.shape[0] == len(post_inds) == conn.size_out == d
+            mid_axon_inds = model.inter_neurons.get_post_inds(
+                post_inds, post_d)
+
+            target_encoders = 'inter_encoders'
+            dec_cx, dec_syn = model.inter_neurons.get_cx(
+                weights, cx_label="%s" % conn, syn_label="decoders")
+
+            model.add_group(dec_cx)
+            model.objs[conn]['decoded'] = dec_cx
+            model.objs[conn]['decoders'] = dec_syn
 
         # use tau_s for filter into interneurons, and INTER_TAU for filter out
         dec_cx.configure_filter(tau_s, dt=model.dt)
         post_tau = model.inter_tau
-
-        dec_syn.set_full_weights(weights2)
-        dec_cx.add_synapses(dec_syn)
-        model.objs[conn]['decoders'] = dec_syn
 
         dec_ax0 = CxAxons(n, label="decoders")
         dec_ax0.target = dec_syn
@@ -726,11 +787,12 @@ def build_connection(model, conn):
         if conn.learning_rule_type is not None:
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble):
-        if 'inter_encoders' not in post_cx.named_synapses:
-            build_interencoders(model, conn.post_obj)
+        assert target_encoders is not None
+        if target_encoders not in post_cx.named_synapses:
+            build_inter_encoders(model, conn.post_obj, kind=target_encoders)
 
         mid_ax = CxAxons(mid_cx.n, label="encoders")
-        mid_ax.target = post_cx.named_synapses['inter_encoders']
+        mid_ax.target = post_cx.named_synapses[target_encoders]
         mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax
