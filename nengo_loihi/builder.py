@@ -33,40 +33,44 @@ logger = logging.getLogger(__name__)
 
 class Interneurons(object):
     def __init__(self, n, dt=0.001):
+        from nengo_loihi.neurons import LoihiSpikingRectifiedLinear
+        self.neuron_type = LoihiSpikingRectifiedLinear()
+
         self.dt = dt
 
         # firing rate of inter neurons
         self._inter_rate = None
 
         # number of inter neurons
-        self.inter_n = n
+        self.n = n
 
     @property
     def inter_rate(self):
-        return (1. / (self.dt * self.inter_n) if self._inter_rate is None else
+        return (1. / (self.dt * self.n) if self._inter_rate is None else
                 self._inter_rate)
 
     @inter_rate.setter
     def inter_rate(self, inter_rate):
         self._inter_rate = inter_rate
 
-    @property
     def inter_scale(self):
         """Scaling applied to input from interneurons.
 
-        Such that if all ``inter_n`` interneurons are firing at
+        Such that if all ``n`` interneurons are firing at
         their max rate ``inter_rate``, then the total output when
         averaged over time will be 1.
         """
-        return 1. / (self.dt * self.inter_rate * self.inter_n)
+        return 1. / (self.dt * self.inter_rate * self.n)
 
     def get_post_encoders(self, encoders):
+        """Take interneuron raw output and encode to population"""
         raise NotImplementedError()
 
     def get_post_inds(self, inds, d):
+        """Index into post encoders"""
         raise NotImplementedError()
 
-    def get_cx(self, weights):
+    def get_cx(self, weights, cx_label=None, syn_label=None):
         raise NotImplementedError()
 
 
@@ -76,7 +80,7 @@ class OnOffInterneurons(Interneurons):
 
     def get_ensemble(self, dim):
         from nengo_loihi.neurons import NIF
-        assert self.inter_n == 1
+        assert self.n == 1
         ens = nengo.Ensemble(
             2 * dim, dim,
             neuron_type=NIF(tau_ref=0.0),
@@ -87,43 +91,128 @@ class OnOffInterneurons(Interneurons):
         return ens
 
     def get_post_encoders(self, encoders):
-        encoders = encoders * self.inter_scale
+        encoders = encoders * self.inter_scale()
         return np.vstack([encoders.T, -encoders.T])
 
 
-class NoisyInterneurons(Interneurons):
+class EqualDecoderInterneurons(Interneurons):
+    def get_post_inds(self, inds, d):
+        return np.concatenate([inds, inds + d] * self.n)
+
+
+class NoisyInterneurons(EqualDecoderInterneurons):
     def __init__(self, *args, **kwargs):
         super(NoisyInterneurons, self).__init__(*args, **kwargs)
 
         # noise exponent for inter neurons
         self.inter_noise_exp = -2
 
+        self.gain = None
+        self.bias = None
+
+    def fix_parameters(self):
+        self.gain = 0.5 * self.dt * self.inter_rate
+        self.bias = self.gain
+
+    def inter_scale(self):
+        self.fix_parameters()
+        return 1. / (self.dt * self.inter_rate * self.n)
+
     def get_post_encoders(self, encoders):
-        encoders = encoders * self.inter_scale
+        encoders = encoders * self.inter_scale()
         return np.vstack([encoders.T, -encoders.T])
 
-    def get_post_inds(self, inds, d):
-        return np.hstack([inds, inds + d] * self.inter_n)
-
     def get_cx(self, weights, cx_label=None, syn_label=None):
+        self.fix_parameters()
         d, n = weights.shape
-        gain = self.dt * self.inter_rate
-        cx = CxGroup(2 * d * self.inter_n, label=cx_label, location='core')
+        cx = CxGroup(2 * d * self.n, label=cx_label, location='core')
         cx.configure_relu(dt=self.dt)
-        cx.bias[:] = 0.5 * gain * np.array(
-            ([1.] * d + [1.] * d) * self.inter_n)
+        cx.bias[:] = self.bias * np.ones(d * 2 * self.n)
         if self.inter_noise_exp > -30:
             cx.enableNoise[:] = 1
             cx.noiseExp0 = self.inter_noise_exp
             cx.noiseAtDendOrVm = 1
 
+        # TODO: can eliminate the weight copies (tiling) by using input indices
+        # to target input axons
         syn = CxSynapses(n, label=syn_label)
-        weights2 = 0.5 * gain * np.vstack([weights,
-                                           -weights] * self.inter_n).T
+        weights2 = self.gain * np.vstack([weights, -weights] * self.n).T
         syn.set_full_weights(weights2)
         cx.add_synapses(syn)
 
         return cx, syn
+
+
+class PresetInterneurons(EqualDecoderInterneurons):
+    def fix_parameters(self):
+        raise NotImplementedError()
+
+    def inter_scale(self):
+        self.fix_parameters()
+        return self.out_gain
+
+    def get_post_encoders(self, encoders):
+        encoders = encoders * self.inter_scale()
+        return np.vstack([encoders.T, -encoders.T])
+
+    def get_cx(self, weights, cx_label=None, syn_label=None):
+        self.fix_parameters()
+        d, n = weights.shape
+        cx = CxGroup(self.n * 2 * d, label=cx_label, location='core')
+        cx.configure_relu(dt=self.dt)
+        cx.bias[:] = self.bias.repeat(d)
+
+        syn = CxSynapses(n, label=syn_label)
+        weights2 = []
+        for ga, gb in self.gain.reshape(self.n, 2):
+            weights2.extend([ga*weights.T, -gb*weights.T])
+        weights2 = np.hstack(weights2)
+        syn.set_full_weights(weights2)
+        cx.add_synapses(syn)
+
+        return cx, syn
+
+
+class Preset5Interneurons(PresetInterneurons):
+    def __init__(self, **kwargs):
+        super(Preset5Interneurons, self).__init__(5, **kwargs)
+
+    def fix_parameters(self):
+        assert self.n == 5
+        intercepts = np.linspace(-0.8, 0.8, self.n)
+        max_rates = np.linspace(70, 160, self.n)[::-1]
+        gain, bias = self.neuron_type.gain_bias(max_rates, intercepts)
+
+        target_point = 0.85
+        gain, bias = self.neuron_type.gain_bias(max_rates, intercepts)
+        target_rates = self.neuron_type.rates(target_point, gain, bias)
+        target_rate = target_rates.sum()
+        # TODO: why does this 1.1 factor help??
+        self.out_gain = 1.1 * target_point / (self.dt * target_rate)
+
+        self.gain = gain.repeat(2) * self.dt
+        self.bias = bias.repeat(2) * self.dt
+
+
+class Preset10Interneurons(PresetInterneurons):
+    def __init__(self, **kwargs):
+        super(Preset10Interneurons, self).__init__(10, **kwargs)
+
+    def fix_parameters(self):
+        # Parameters determined by hyperopt
+        assert self.n == 10
+        intercepts = np.linspace(-0.612, 0.448, self.n)
+        max_rates = np.linspace(98, 148, self.n)[::-1]
+        gain, bias = self.neuron_type.gain_bias(max_rates, intercepts)
+
+        target_point = 0.67
+        gain, bias = self.neuron_type.gain_bias(max_rates, intercepts)
+        target_rates = self.neuron_type.rates(target_point, gain, bias)
+        target_rate = target_rates.sum()
+        self.out_gain = target_point / (self.dt * target_rate)
+
+        self.gain = gain.repeat(2) * self.dt
+        self.bias = bias.repeat(2) * self.dt
 
 
 class Model(CxModel):
@@ -190,7 +279,9 @@ class Model(CxModel):
         # it may not be absolutely necessary since tau_rc provides a filter,
         # and maybe we don't want double filtering if connection has a filter
 
-        self.inter_neurons = NoisyInterneurons(10, dt=dt)
+        # self.inter_neurons = NoisyInterneurons(10, dt=dt)
+        # self.inter_neurons = Preset5Interneurons(dt=dt)
+        self.inter_neurons = Preset10Interneurons(dt=dt)
         self.node_neurons = OnOffInterneurons(dt=dt)
 
         # voltage threshold for non-spiking neurons (i.e. voltage decoders)
@@ -862,7 +953,7 @@ def conn_probe(model, probe):
 
     d = conn.size_out
     if isinstance(probe.target, Node):
-        w = np.diag(model.inter_scale * np.ones(d))
+        w = np.diag(model.node_neurons.inter_scale() * np.ones(d))
         weights = np.vstack([w, -w])
     else:
         # probed values are scaled by the target ensemble's radius
