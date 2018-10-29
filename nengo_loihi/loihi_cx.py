@@ -428,17 +428,20 @@ class Spike(object):
         self.axon_id = axon_id
         self.atom = atom
 
+    def __repr__(self):
+        return "%s(axon_id=%d, atom=%d)" % (
+            type(self).__name__, self.axon_id, self.atom)
+
 
 class CxAxons(object):
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
         self.label = label
-        self.group = None
+        self.group = None  # parent group of these axons (set when adding)
 
-        self.target = None
-        self.cx_to_axon_map = None
-        self.cx_atoms = None
-        self.axon_to_synapse_map = None
+        self.target = None  # target object for axons
+        self.cx_to_axon_map = None  # maps cx to target's input axon id
+        self.cx_atoms = None  # maps cx to atom
 
     def __str__(self):
         return "%s(%s)" % (
@@ -453,14 +456,24 @@ class CxAxons(object):
         """The total number of axonCfg slots used by all axons."""
         return self.slots_per_axon * self.n_axons
 
-    def map_cx_spikes(self, cx_idxs):
-        axon_idxs = (self.cx_to_axon_map[cx_idxs]
-                     if self.cx_to_axon_map is not None else cx_idxs)
-        axon_ids = (self.axon_to_synapse_map[axon_idxs]
-                    if self.axon_to_synapse_map is not None else axon_idxs)
+    def set_axon_map(self, cx_to_axon_map, cx_atoms=None):
+        self.cx_to_axon_map = cx_to_axon_map
+        self.cx_atoms = cx_atoms
+
+    def map_cx_axons(self, cx_idxs):
+        axon_ids = (self.cx_to_axon_map[cx_idxs]
+                    if self.cx_to_axon_map is not None else cx_idxs)
+        return axon_ids
+
+    def map_cx_atoms(self, cx_idxs):
         atoms = (self.cx_atoms[cx_idxs]
                  if self.cx_atoms is not None else [0 for _ in cx_idxs])
-        return [Spike(axon_id, atom=atom)
+        return atoms
+
+    def map_cx_spikes(self, cx_idxs):
+        axon_ids = self.map_cx_axons(cx_idxs)
+        atoms = self.map_cx_atoms(cx_idxs)
+        return [Spike(axon_id, atom=atom) if axon_id >= 0 else None
                 for axon_id, atom in zip(axon_ids, atoms)]
 
 
@@ -479,18 +492,16 @@ class CxProbe(object):
 
 
 class CxSpikeInput(object):
-    def __init__(self, spikes):
-        assert spikes.ndim == 2
-        self.spikes = spikes
+    def __init__(self, n):
+        self.n = n
+        self.spikes = {}  # map sim timestep index to list of spike inds
         self.axons = []
         self.probes = []
 
-    @property
-    def n(self):
-        return self.spikes.shape[1]
-
     def add_axons(self, axons):
         assert axons.n_axons == self.n
+        assert axons.group is None
+        axons.group = self
         self.axons.append(axons)
 
     def add_probe(self, probe):
@@ -499,10 +510,28 @@ class CxSpikeInput(object):
         assert probe.target is self
         self.probes.append(probe)
 
+    def add_spikes(self, ti, spike_idxs):
+        assert isinstance(ti, int)
+        assert ti not in self.spikes
+        self.spikes[ti] = spike_idxs
+
+    def clear_spikes(self):
+        self.spikes.clear()
+
+    def spike_times(self):
+        return sorted(self.spikes)
+
+    def spike_idxs(self, ti):
+        assert ti in self.spikes
+        return self.spikes.get(ti, [])
+
 
 class CxModel(object):
 
-    def __init__(self):
+    def __init__(self, dt=0.001, label=None):
+        self.dt = dt
+        self.label = label
+
         self.cx_inputs = collections.OrderedDict()
         self.cx_groups = collections.OrderedDict()
 
@@ -581,7 +610,10 @@ class CxSimulator(object):
         self.inputs = list(self.model.cx_inputs)
         self.groups = sorted(self.model.cx_groups,
                              key=lambda g: g.location == 'cpu')
-        self.probe_outputs = collections.defaultdict(list)
+        self.probe_outputs = {}
+        for obj in self.inputs + self.groups:
+            for probe in obj.probes:
+                self.probe_outputs[probe] = []
 
         self.n_cx = sum(group.n for group in self.groups)
         self.group_cxs = {}
@@ -726,12 +758,13 @@ class CxSimulator(object):
         self.closed = True
         self.clear()
 
-    def chip2host(self):
-        # go through the list of chip2host connections
+    def chip2host(self, probes_receivers=None):
+        if probes_receivers is None:
+            probes_receivers = {}
+
         increment = None
-        for probe, receiver in self.model.chip2host_receivers.items():
+        for cx_probe, receiver in probes_receivers.items():
             # extract the probe data from the simulator
-            cx_probe = self.model.objs[probe]['out']
             x = self.probe_outputs[cx_probe][self._chip2host_sent_steps:]
             if len(x) > 0:
                 if increment is None:
@@ -748,31 +781,23 @@ class CxSimulator(object):
         if increment is not None:
             self._chip2host_sent_steps += increment
 
-    def host2chip(self):
-        # go through the list of host2chip connections
-        for sender, receiver in self.model.host2chip_senders.items():
-            learning_rate = 50  # This is set to match hardware
-            if hasattr(receiver, "target"):
-                for t, x in sender.queue:
-                    probe = receiver.target
-                    conn = self.model.probe_conns[probe]
-                    dec_syn = self.model.objs[conn]['decoders']
-                    assert dec_syn.tracing
+    def host2chip(self, spikes, errors):
+        for cx_spike_input, t, spike_idxs in spikes:
+            cx_spike_input.add_spikes(t, spike_idxs)
 
-                    z = self.z[dec_syn]
-                    x = np.hstack([-x, x])
+        learning_rate = 50  # This is set to match hardware
+        for synapses, t, e in errors:
+            z = self.z[synapses]
+            x = np.hstack([-e, e])
 
-                    delta_w = np.outer(z, x) * learning_rate
+            delta_w = np.outer(z, x) * learning_rate
 
-                    for i, w in enumerate(dec_syn.weights):
-                        w += delta_w[i].astype('int32')
-            else:
-                for t, x in sender.queue:
-                    receiver.receive(t, x)
-            del sender.queue[:]
+            for i, w in enumerate(synapses.weights):
+                w += delta_w[i].astype('int32')
 
     def step(self):  # noqa: C901
         """Advance the simulation by 1 step (``dt`` seconds)."""
+        self.t += 1
 
         # --- connections
         self.q[:-1] = self.q[1:]  # advance delays
@@ -783,17 +808,17 @@ class CxSimulator(object):
             axons_in_spikes.clear()
 
         # --- inputs pass spikes to synapses
-        if self.t >= 1:  # input spikes take one time-step to arrive
+        if self.t >= 2:  # input spikes take one time-step to arrive
             for input in self.inputs:
+                cx_idxs = input.spike_idxs(self.t - 1)
                 for axons in input.axons:
-                    cx_idxs = input.spikes[self.t - 1].nonzero()[0]
                     spikes = axons.map_cx_spikes(cx_idxs)
                     self.axons_in[axons.target].extend(spikes)
 
         # --- axons pass spikes to synapses
         for group in self.groups:
+            cx_idxs = self.s[self.group_cxs[group]].nonzero()[0]
             for axons in group.axons:
-                cx_idxs = self.s[self.group_cxs[axons.group]].nonzero()[0]
                 spikes = axons.map_cx_spikes(cx_idxs)
                 self.axons_in[axons.target].extend(spikes)
 
@@ -871,8 +896,6 @@ class CxSimulator(object):
                 x = getattr(self, probe.key)[x_slice][p_slice].copy()
                 self.probe_outputs[probe].append(x)
 
-        self.t += 1
-
     def run_steps(self, steps):
         """Simulate for the given number of ``dt`` steps.
 
@@ -908,8 +931,7 @@ class CxSimulator(object):
             self._probe_filter_pos[cx_probe] = i + k
             return filt_data
 
-    def get_probe_output(self, probe):
-        cx_probe = self.model.objs[probe]['out']
+    def get_probe_output(self, cx_probe):
         assert isinstance(cx_probe, CxProbe)
         x = np.asarray(self.probe_outputs[cx_probe], dtype=np.float32)
         x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)

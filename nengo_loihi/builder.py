@@ -66,10 +66,7 @@ class Model(CxModel):
         Mapping from objects to the integer seed assigned to that object.
     """
     def __init__(self, dt=0.001, label=None, builder=None):
-        super(Model, self).__init__()
-
-        self.dt = dt
-        self.label = label
+        super(Model, self).__init__(dt=dt, label=label)
 
         self.objs = collections.defaultdict(dict)
         self.params = {}  # Holds data generated when building objects
@@ -387,10 +384,10 @@ def build_relu(model, relu, neurons, group):
 @Builder.register(Node)
 def build_node(model, node):
     if isinstance(node, ChipReceiveNode):
-        cx_spiker = node.cx_spike_input
-        model.add_input(cx_spiker)
-        model.objs[node]['out'] = cx_spiker
-        return
+        spike_input = CxSpikeInput(node.raw_dimensions, model.dt)
+        model.add_input(spike_input)
+        model.objs[node]['out'] = spike_input
+        node.cx_spike_input = spike_input
     else:
         raise NotImplementedError()
 
@@ -712,7 +709,7 @@ def build_connection(model, conn):
 
         mid_ax = CxAxons(mid_cx.n, label="encoders")
         mid_ax.target = post_cx.named_synapses['inter_encoders']
-        mid_ax.axon_to_synapse_map = mid_axon_inds
+        mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax
 

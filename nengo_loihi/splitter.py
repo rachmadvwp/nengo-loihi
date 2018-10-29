@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import logging
 import warnings
 
@@ -426,6 +426,21 @@ def split_pre_from_host(networks):  # noqa: C901
 class PESModulatoryTarget(object):
     def __init__(self, target):
         self.target = target
+        self.errors = OrderedDict()
+
+    def clear(self):
+        self.errors.clear()
+
+    def receive(self, t, x):
+        assert len(self.errors) == 0 or t >= next(reversed(self.errors))
+        if t in self.errors:
+            self.errors[t] += x
+        else:
+            self.errors[t] = np.array(x)
+
+    def collect_errors(self):
+        for t, x in self.errors.items():
+            yield (self.target, t, x)
 
 
 class HostSendNode(nengo.Node):
@@ -465,21 +480,26 @@ class ChipReceiveNode(nengo.Node):
 
     def __init__(self, dimensions, size_out):
         self.raw_dimensions = dimensions
-        self.cx_spike_input = loihi_cx.CxSpikeInput(
-            np.zeros((0, dimensions), dtype=bool))
-        self.last_time = None
+        self.spikes = []
+        self.cx_spike_input = None
         super(ChipReceiveNode, self).__init__(self.update,
                                               size_in=0, size_out=size_out)
+
+    def clear(self):
+        self.spikes.clear()
+
+    def receive(self, t, x):
+        assert len(self.spikes) == 0 or t > self.spikes[-1][0]
+        assert x.ndim == 1
+        self.spikes.append((t, x.nonzero()[0]))
 
     def update(self, t):
         raise SimulationError("ChipReceiveNodes should not be run")
 
-    def receive(self, t, x):
-        assert self.last_time is None or t > self.last_time
-        # TODO: make this stacking efficient
-        self.cx_spike_input.spikes = np.vstack([self.cx_spike_input.spikes,
-                                                [x > 0]])
-        self.last_time = t
+    def collect_spikes(self):
+        assert self.cx_spike_input is not None
+        for t, x in self.spikes:
+            yield (self.cx_spike_input, t, x)
 
 
 class ChipReceiveNeurons(ChipReceiveNode):
