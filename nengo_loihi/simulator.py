@@ -300,10 +300,11 @@ class Simulator(object):
             assert probe.sample_every is None
             assert ("loihi" not in self.sims
                     or "emulator" not in self.sims)
+            cx_probe = self.model.objs[probe]['out']
             if "loihi" in self.sims:
-                data = self.sims["loihi"].get_probe_output(probe)
+                data = self.sims["loihi"].get_probe_output(cx_probe)
             elif "emulator" in self.sims:
-                data = self.sims["emulator"].get_probe_output(probe)
+                data = self.sims["emulator"].get_probe_output(cx_probe)
             # TODO: stop recomputing this all the time
             del self._probe_outputs[probe][:]
             self._probe_outputs[probe].extend(data)
@@ -372,6 +373,45 @@ class Simulator(object):
         """Advance the simulator by 1 step (``dt`` seconds)."""
         self.run_steps(1)
 
+    def _collect_receiver_info(self):
+        spikes = []
+        errors = {}
+        for sender, receiver in self.model.host2chip_senders.items():
+            receiver.clear()
+            for t, x in sender.queue:
+                receiver.receive(t, x)
+            del sender.queue[:]
+
+            if hasattr(receiver, 'collect_spikes'):
+                for cx_spike_input, t, spike_idxs in receiver.collect_spikes():
+                    ti = round(t / self.model.dt)
+                    spikes.append((cx_spike_input, ti, spike_idxs))
+            if hasattr(receiver, 'collect_errors'):
+                for probe, t, e in receiver.collect_errors():
+                    conn = self.model.probe_conns[probe]
+                    synapses = self.model.objs[conn]['decoders']
+                    assert synapses.tracing
+                    ti = round(t / self.model.dt)
+                    errors_ti = errors.setdefault(ti, {})
+                    if synapses in errors_ti:
+                        errors_ti[synapses] += e
+                    else:
+                        errors_ti[synapses] = e.copy()
+
+        errors = [(synapses, ti, e) for ti, ee in errors.items()
+                  for synapses, e in ee.items()]
+        return spikes, errors
+
+    def _host2chip(self, sim):
+        spikes, errors = self._collect_receiver_info()
+        sim.host2chip(spikes, errors)
+
+    def _chip2host(self, sim):
+        probes_receivers = {  # map cx_probes to receivers
+            self.model.objs[probe]['out']: receiver
+            for probe, receiver in self.networks.chip2host_receivers.items()}
+        sim.chip2host(probes_receivers)
+
     def _make_run_steps(self):
         if self._run_steps is not None:
             return
@@ -391,9 +431,9 @@ class Simulator(object):
 
                 def emu_precomputed_host_pre_and_host(steps):
                     host_pre.run_steps(steps)
-                    emulator.host2chip()
+                    self._host2chip(emulator)
                     emulator.run_steps(steps)
-                    emulator.chip2host()
+                    self._chip2host(emulator)
                     host.run_steps(steps)
                 self._run_steps = emu_precomputed_host_pre_and_host
 
@@ -401,7 +441,7 @@ class Simulator(object):
 
                 def emu_precomputed_host_pre_only(steps):
                     host_pre.run_steps(steps)
-                    emulator.host2chip()
+                    self._host2chip(emulator)
                     emulator.run_steps(steps)
                 self._run_steps = emu_precomputed_host_pre_only
 
@@ -409,7 +449,7 @@ class Simulator(object):
 
                 def emu_precomputed_host_only(steps):
                     emulator.run_steps(steps)
-                    emulator.chip2host()
+                    self._chip2host(emulator)
                     host.run_steps(steps)
                 self._run_steps = emu_precomputed_host_only
 
@@ -422,9 +462,9 @@ class Simulator(object):
             def emu_bidirectional_with_host(steps):
                 for _ in range(steps):
                     host.step()
-                    emulator.host2chip()
+                    self._host2chip(emulator)
                     emulator.step()
-                    emulator.chip2host()
+                    self._chip2host(emulator)
             self._run_steps = emu_bidirectional_with_host
 
     def _make_loihi_run_steps(self):
@@ -437,9 +477,9 @@ class Simulator(object):
 
                 def loihi_precomputed_host_pre_and_host(steps):
                     host_pre.run_steps(steps)
-                    loihi.send_spikes()
+                    self._host2chip(loihi)
                     loihi.run_steps(steps, blocking=True)
-                    loihi.chip2host_precomputed()
+                    self._chip2host(loihi)
                     host.run_steps(steps)
                 self._run_steps = loihi_precomputed_host_pre_and_host
 
@@ -447,15 +487,15 @@ class Simulator(object):
 
                 def loihi_precomputed_host_pre_only(steps):
                     host_pre.run_steps(steps)
-                    loihi.send_spikes()
+                    self._host2chip(loihi)
                     loihi.run_steps(steps, blocking=True)
                 self._run_steps = loihi_precomputed_host_pre_only
 
             elif host is not None:
 
                 def loihi_precomputed_host_only(steps):
-                    loihi.run_steps(steps)
-                    loihi.chip2host_precomputed()
+                    loihi.run_steps(steps, blocking=True)
+                    self._chip2host(loihi)
                     host.run_steps(steps)
                 self._run_steps = loihi_precomputed_host_only
 
@@ -466,12 +506,11 @@ class Simulator(object):
             assert host is not None, "Model is precomputable"
 
             def loihi_bidirectional_with_host(steps):
-                loihi.create_io_snip()
                 loihi.run_steps(steps, blocking=False)
                 for _ in range(steps):
                     host.step()
-                    loihi.host2chip()
-                    loihi.chip2host()
+                    self._host2chip(loihi)
+                    self._chip2host(loihi)
                 logger.info("Waiting for run_steps to complete...")
                 loihi.wait_for_completion()
                 logger.info("run_steps completed")
