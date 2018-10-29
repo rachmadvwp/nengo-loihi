@@ -395,8 +395,7 @@ class LoihiSimulator(object):
         self.n2board = None
         self._probe_filters = {}
         self._probe_filter_pos = {}
-        self._snip_probes = {}
-        self._cx_probe2probe = {}
+        self._snip_probe_data = {}
         self._chip2host_sent_steps = 0
         self.snip_max_spikes_per_step = snip_max_spikes_per_step
 
@@ -449,20 +448,7 @@ class LoihiSimulator(object):
             for group in cx_model.cx_groups.keys():
                 for cx_probe in group.probes:
                     cx_probe.use_snip = True
-            # create a place to store data from snip probes
-            for probe in cx_model.probes:
-                self._snip_probes[probe] = []
-
-            # map CxProbes to their nengo.Probes
-            for obj in cx_model.objs:
-                if isinstance(obj, nengo.Probe):
-                    # actual nengo.Probes on chip objects
-                    cx_probe = cx_model.objs[obj]['out']
-                    self._cx_probe2probe[cx_probe] = obj
-            for probe in cx_model.chip2host_receivers:
-                # probes used for chip->host communication
-                cx_probe = cx_model.objs[probe]['out']
-                self._cx_probe2probe[cx_probe] = probe
+                    self._snip_probe_data[cx_probe] = []
 
         self.model = cx_model
 
@@ -490,7 +476,7 @@ class LoihiSimulator(object):
         data = self.nengo_io_c2h.read(count)
         time_step, data = data[0], np.array(data[1:])
         snip_range = self.nengo_io_snip_range
-        for cx_probe, probe in self._cx_probe2probe.items():
+        for cx_probe in self._snip_probe_data:
             x = data[snip_range[cx_probe]]
             if cx_probe.key == 's':
                 if isinstance(cx_probe.target, CxGroup):
@@ -504,13 +490,14 @@ class LoihiSimulator(object):
                 x = (x == refract_delays * 128)
             if cx_probe.weights is not None:
                 x = np.dot(x, cx_probe.weights)
-            receiver = self.model.chip2host_receivers.get(probe, None)
+            receiver = self.model.chip2host_receivers.get(cx_probe.nengo_probe,
+                                                          None)
             if receiver is not None:
                 # chip->host
                 receiver.receive(self.model.dt * time_step, x)
             else:
                 # onchip probes
-                self._snip_probes[probe].append(x)
+                self._snip_probe_data[cx_probe].append(x)
 
     def chip2host_precomputed(self):
         # TODO: this is almost identical to CxSimulator.chip2host
@@ -682,7 +669,7 @@ class LoihiSimulator(object):
     def get_probe_output(self, probe):
         cx_probe = self.model.objs[probe]['out']
         if cx_probe.use_snip:
-            data = self._snip_probes[probe]
+            data = self._snip_probe_data[cx_probe]
             if probe.synapse is not None:
                 return probe.synapse.filt(data, dt=self.model.dt, y0=0)
             else:

@@ -435,6 +435,7 @@ class CxProbe(object):
         self.synapse = synapse
         self.use_snip = False
         self.snip_info = None
+        self.nengo_probe = None
 
 
 class CxSpikeInput(object):

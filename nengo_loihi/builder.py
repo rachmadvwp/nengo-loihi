@@ -789,6 +789,7 @@ def conn_probe(model, probe):
         w = np.diag(scale * np.ones(d))
         weights = np.vstack([w, -w])
     cx_probe = CxProbe(key='v', weights=weights, synapse=probe.synapse)
+    cx_probe.nengo_probe = probe
     model.objs[target]['in'] = cx_probe
     model.objs[target]['out'] = cx_probe
 
@@ -822,6 +823,7 @@ def signal_probe(model, key, probe):
     cx_probe = CxProbe(
         target=target, key=key, slice=probe.slice,
         synapse=probe.synapse, weights=weights)
+    cx_probe.nengo_probe = probe
     target.add_probe(cx_probe)
     model.objs[probe]['in'] = target
     model.objs[probe]['out'] = cx_probe
