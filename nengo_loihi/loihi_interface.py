@@ -343,7 +343,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
 
 def build_axons(n2core, core, group, axons, cx_idxs):
     tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(axons.target)
-    taxon_idxs = np.asarray(tsyn_idxs)[axons.target_inds]
+    taxon_idxs = np.asarray(tsyn_idxs)[axons.axon_to_synapse_map]
     n2board = n2core.parent.parent
     tchip_id = n2board.n2Chips[tchip_idx].id
     tcore_id = n2board.n2Chips[tchip_idx].n2Cores[tcore_idx].id
