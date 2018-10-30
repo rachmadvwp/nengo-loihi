@@ -440,6 +440,19 @@ class CxAxons(object):
         self.cx_atoms = None
         self.axon_to_synapse_map = None
 
+    def __str__(self):
+        return "%s(%s)" % (
+            type(self).__name__, self.label if self.label else '')
+
+    @property
+    def slots_per_axon(self):
+        """The number of axonCfg slots occupied by each axon."""
+        return 1
+
+    def axon_slots(self):
+        """The total number of axonCfg slots used by all axons."""
+        return self.slots_per_axon * self.n_axons
+
     def map_cx_spikes(self, cx_idxs):
         axon_idxs = (self.cx_to_axon_map[cx_idxs]
                      if self.cx_to_axon_map is not None else cx_idxs)
@@ -448,11 +461,7 @@ class CxAxons(object):
         atoms = (self.cx_atoms[cx_idxs]
                  if self.cx_atoms is not None else [0 for _ in cx_idxs])
         return [Spike(axon_id, atom=atom)
-                  for axon_id, atom in zip(axon_ids, atoms)]
-
-    def __str__(self):
-        return "%s(%s)" % (
-            type(self).__name__, self.label if self.label else '')
+                for axon_id, atom in zip(axon_ids, atoms)]
 
 
 class CxProbe(object):
