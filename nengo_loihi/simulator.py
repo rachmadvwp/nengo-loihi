@@ -494,7 +494,7 @@ class Simulator(object):
             elif host is not None:
 
                 def loihi_precomputed_host_only(steps):
-                    loihi.run_steps(steps)
+                    loihi.run_steps(steps, blocking=True)
                     self._chip2host(loihi)
                     host.run_steps(steps)
                 self._run_steps = loihi_precomputed_host_only

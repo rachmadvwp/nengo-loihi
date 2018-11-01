@@ -290,7 +290,7 @@ def build_input(n2core, core, spike_input, cx_idxs):
     # add any pre-existing spikes to spikegen
     for t in spike_input.spike_times():
         spikes = spike_input.spike_idxs(t)
-        for spike in loihi_input.spikes_to_loihi(spikes):
+        for spike in loihi_input.spikes_to_loihi(t, spikes):
             assert spike.axon.atom == 0, (
                 "Cannot send population spikes through spike generator")
             n2board.global_spike_generator.addSpike(
@@ -390,8 +390,8 @@ class LoihiSimulator(object):
         the nengo_io_h2c channel on one timestep.
     """
 
-    def __init__(self, cx_model,
-                 use_snips=True, seed=None, snip_max_spikes_per_step=50):
+    def __init__(self, cx_model, use_snips=False, seed=None,
+                 snip_max_spikes_per_step=50):
         self.closed = False
         self.check_nxsdk_version()
 

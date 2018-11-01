@@ -6,7 +6,7 @@ import warnings
 
 import numpy as np
 from nengo.exceptions import BuildError, SimulationError
-from nengo.utils.compat import is_iterable
+from nengo.utils.compat import is_integer, is_iterable
 
 from nengo_loihi.loihi_api import (
     BIAS_MAX,
@@ -511,7 +511,9 @@ class CxSpikeInput(object):
         self.probes.append(probe)
 
     def add_spikes(self, ti, spike_idxs):
-        assert isinstance(ti, int)
+        assert is_integer(ti)
+        ti = int(ti)
+        assert ti > 0, "Spike times must be >= 1 (got %d)" % ti
         assert ti not in self.spikes
         self.spikes[ti] = spike_idxs
 
@@ -522,7 +524,6 @@ class CxSpikeInput(object):
         return sorted(self.spikes)
 
     def spike_idxs(self, ti):
-        assert ti in self.spikes
         return self.spikes.get(ti, [])
 
 

@@ -343,12 +343,23 @@ class SpikeInput(object):
             self.axon_id = axon_id
             self.atom = atom
 
+        def _slots_str(self):
+            return ", ".join("%s=%s" % (s, getattr(self, s))
+                             for s in self.__slots__)
+
+        def __repr__(self):
+            return "%s(%s)" % (type(self).__name__, self._slots_str())
+
     class LoihiSpike(object):
         __slots__ = ['time', 'axon']
 
         def __init__(self, time, axon):
             self.time = time
             self.axon = axon
+
+        def __repr__(self):
+            return "%s(time=%s, %s)" % (
+                type(self).__name__, self.time, self.axon._slots_str())
 
     def __init__(self):
         self.axon_map = {}  # maps cx_spike_input idx to axon in self.axons

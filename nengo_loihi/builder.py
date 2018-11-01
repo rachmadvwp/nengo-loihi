@@ -384,7 +384,7 @@ def build_relu(model, relu, neurons, group):
 @Builder.register(Node)
 def build_node(model, node):
     if isinstance(node, ChipReceiveNode):
-        spike_input = CxSpikeInput(node.raw_dimensions, model.dt)
+        spike_input = CxSpikeInput(node.raw_dimensions)
         model.add_input(spike_input)
         model.objs[node]['out'] = spike_input
         node.cx_spike_input = spike_input
