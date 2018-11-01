@@ -530,7 +530,7 @@ class Simulator(object):
             self._make_run_steps()
         try:
             self._run_steps(steps)
-        except Exception:
+        except Exception as e:
             if "loihi" in self.sims and self.sims["loihi"].use_snips:
                 # Need to write to board, otherwise it will wait indefinitely
                 h2c = self.sims["loihi"].nengo_io_h2c
@@ -545,6 +545,8 @@ class Simulator(object):
                 self.sims["loihi"].wait_for_completion()
                 self.sims["loihi"].n2board.nxDriver.stopExecution()
                 self.sims["loihi"].n2board.nxDriver.stopDriver()
+            else:
+                raise e
 
         self._n_steps += steps
         logger.info("Finished running for %d steps", steps)
