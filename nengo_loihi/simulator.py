@@ -174,8 +174,6 @@ class Simulator(object):
             network = self.networks.chip
 
             self.model.chip2host_params = self.networks.chip2host_params
-            self.model.chip2host_receivers = self.networks.chip2host_receivers
-            self.model.host2chip_senders = self.networks.host2chip_senders
 
             self.chip = self.networks.chip
             self.host = self.networks.host
@@ -295,7 +293,7 @@ class Simulator(object):
         self._probe_step_time()
 
         for probe in self.model.probes:
-            if probe in self.model.chip2host_params:
+            if probe in self.networks.chip2host_params:
                 continue
             assert probe.sample_every is None
             assert ("loihi" not in self.sims
@@ -376,7 +374,7 @@ class Simulator(object):
     def _collect_receiver_info(self):
         spikes = []
         errors = {}
-        for sender, receiver in self.model.host2chip_senders.items():
+        for sender, receiver in self.networks.host2chip_senders.items():
             receiver.clear()
             for t, x in sender.queue:
                 receiver.receive(t, x)

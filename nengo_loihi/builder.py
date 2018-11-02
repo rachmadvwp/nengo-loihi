@@ -109,9 +109,7 @@ class Model(CxModel):
         self.intercept_limit = 0.95
 
         # Will be provided by Simulator
-        self.chip2host_params = None
-        self.chip2host_receivers = None
-        self.host2chip_senders = None
+        self.chip2host_params = {}
 
     @property
     def inter_rate(self):
