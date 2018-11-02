@@ -5,7 +5,7 @@
 #define N_OUTPUTS {{ n_outputs }}
 #define N_ERRORS {{ n_errors }}
 #define MAX_ERROR_LEN {{ max_error_len }}
-#define SPIKE_SIZE 4
+#define SPIKE_SIZE 2
 
 int guard_io(runState *s) {
     return 1;
@@ -41,11 +41,13 @@ void nengo_io(runState *s) {
 
     for (int i=0; i < count[0]; i++) {
         readChannel(inChannel, spike, SPIKE_SIZE);
-        // printf("send spike %d.%d.%d.%d\n", spike[0], spike[1], spike[2], spike[3]);
-        axonType = spike[0];
-        coreId = (CoreId) { .id=spike[1] };
-        axonId = spike[2];
-        atom = spike[3];
+        // printf("send spike %d.%d\n", spike[0], spike[1]);
+        coreId = (CoreId) { .id=(spike[0] >> 16) };
+        axonId = spike[0] & 0x0000FFFF;
+        axonType = spike[1] >> 16;
+        atom = spike[1] & 0x0000FFFF;
+        // printf("send spike core=%d, axon=%d, type=%d atom=%d\n",
+        //        coreId.id, axonId, axonType, atom);
         if (axonType == 0) {
             nx_send_discrete_spike(s->time, coreId, axonId);
         } else if (axonType == 32) {
