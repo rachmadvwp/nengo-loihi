@@ -1025,9 +1025,9 @@ class ChipReceiveNode(nengo.Node):
     def __init__(self, dimensions, size_out):
         self.raw_dimensions = dimensions
         self.spikes = []
-        self.cx_spike_input = None
-        super(ChipReceiveNode, self).__init__(self.update,
-                                              size_in=0, size_out=size_out)
+        self.cx_spike_input = None  # set by builder
+        super(ChipReceiveNode, self).__init__(
+            self.update, size_in=0, size_out=size_out)
 
     def clear(self):
         self.spikes.clear()

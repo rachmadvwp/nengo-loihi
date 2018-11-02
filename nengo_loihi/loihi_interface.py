@@ -649,9 +649,6 @@ class LoihiSimulator(object):
             os.chdir(self.cwd)
             self.cwd = None
 
-        # clear inputs so we can safely start a new simulator if desired
-        self.n2board.spike_inputs.clear()
-
         self.closed = True
 
     def _filter_probe(self, cx_probe, data):
