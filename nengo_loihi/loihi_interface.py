@@ -506,18 +506,11 @@ def build_probe(n2core, core, group, probe, cx_idxs):
 
 class SpikePacker(object):
     """Packs spikes for sending to chip"""
-    # class SpikeStructure(ctypes.Structure):
-    #     _fields_ = (
-    #         ('core_id', ctypes.c_uint32, 10),
-    #         ('core_id', ctypes.c_uint32, 10),
-    #         ('core_id', ctypes.c_uint32, 10),
-    #         )
 
     @classmethod
     def size(cls):
         size = len(cls.pack(None))
-        # assert size == 2  # must match nengo_io.c.template
-        assert size == 4  # must match nengo_io.c.template
+        assert size == 2  # must match nengo_io.c.template
         return size
 
     @classmethod
@@ -528,10 +521,13 @@ class SpikePacker(object):
         axon_type = int(spike.axon.axon_type if spike is not None else 0)
         atom = int(spike.axon.atom if spike is not None else 0)
         assert chip_id == 0, "Multiple chips not supported"
-        # assert 0 <= core_id < 1024
-        # assert 0 <= axon_id < 4096
+        assert 0 <= core_id < 1024
+        assert 0 <= axon_id < 4096
+        assert 0 <= axon_type <= 32
+        assert 0 <= atom < 1024
 
-        return (axon_type, core_id, axon_id, atom)
+        return (int(np.left_shift(core_id, 16)) + axon_id,
+                int(np.left_shift(axon_type, 16) + atom))
 
 
 class LoihiSimulator(object):
