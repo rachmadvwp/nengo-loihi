@@ -23,6 +23,9 @@ from nengo_loihi.conv import (
 
 parser = argparse.ArgumentParser(description="mnist_convnet")
 parser.add_argument('--retrain', action='store_true')
+parser.add_argument('--show-train-error', action='store_true')
+parser.add_argument('--show-test-error', action='store_true')
+parser.add_argument('--default-output-range', action='store_true')
 parser.add_argument('key', nargs='?', default='small',
                     help="Key for the network architecture to use")
 args = parser.parse_args()
@@ -260,6 +263,8 @@ amp = 1. / max_rate
 rate_reg = 1e-2
 rate_target = max_rate * amp  # must be in amplitude scaled units
 
+default_ann_out_min = -10
+default_ann_out_max = 5
 neuron_type = SoftLIFRate(amplitude=amp, sigma=0.01)
 # neuron_type = nengo.RectifiedLinear(amplitude=amp)
 if args.key == 'small':
@@ -310,6 +315,8 @@ elif args.key == 'demolike':
         dict(layer_func=TfConv2d('layer6', 128, kernel_size=1), neuron_type=neuron_type),
         dict(layer_func=TfDense('layer_out', 10)),
     ]
+    default_ann_out_min = -8.9
+    default_ann_out_max = 6.1
 elif args.key == 'demolike2':
     layer_dicts = [
         dict(layer_func=TfConv2d('layer1', 4, kernel_size=1,
@@ -411,6 +418,12 @@ with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
     if not args.retrain and has_checkpoint(checkpoint_base):
         sim.load_params(checkpoint_base)
 
+        if args.show_train_error:
+            print("Train error after training: %.2f%%" %
+                  sim.loss(train_inputs, train_targets, classification_error))
+        if args.show_test_error:
+            print("Test error after training: %.2f%%" %
+                  sim.loss(test_inputs, test_targets, classification_error))
     else:
         print("Test error before training: %.2f%%" %
               sim.loss(test_inputs, test_targets, classification_error))
@@ -438,11 +451,15 @@ with nengo_dl.Simulator(net, minibatch_size=minibatch_size) as sim:
                 layer_func, rate.mean(), np.percentile(rate, 99)))
 
     # compute output range
-    outs = get_outputs(sim, rate_inputs, out_p)
-    print("Output range: min=%0.3f, 1st=%0.3f, 99th=%0.3f, max=%0.3f" % (
-        outs.min(), np.percentile(outs, 1), np.percentile(outs, 99), outs.max()))
-    ann_out_min = np.percentile(outs, 1)
-    ann_out_max = np.percentile(outs, 99)
+    if args.default_output_range:
+        ann_out_min = default_ann_out_min
+        ann_out_max = default_ann_out_max
+    else:
+        outs = get_outputs(sim, rate_inputs, out_p)
+        print("Output range: min=%0.3f, 1st=%0.3f, 99th=%0.3f, max=%0.3f" % (
+            outs.min(), np.percentile(outs, 1), np.percentile(outs, 99), outs.max()))
+        ann_out_min = np.percentile(outs, 1)
+        ann_out_max = np.percentile(outs, 99)
 
     # store trained parameters back into the network
     for fn_layer, _ in layers:
@@ -552,7 +569,9 @@ with nengo.Network() as nengo_net:
 print("Used %d cores" % cores_used)
 
 n_presentations = 10
-with nengo_loihi.Simulator(nengo_net, dt=0.001, precompute=False) as sim:
+loihi_args = dict(snip_max_spikes_per_step=700)
+with nengo_loihi.Simulator(nengo_net, dt=0.001, precompute=False,
+                           loihi_args=loihi_args) as sim:
     sim.run(n_presentations * presentation_time)
 
 class_output = sim.data[out_p]
