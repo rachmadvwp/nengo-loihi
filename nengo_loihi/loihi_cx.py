@@ -343,9 +343,6 @@ class CxGroup(object):
                     mag_frac = 127
                 synapse.tracing_mag = mag_int + mag_frac / 128.
 
-                print("Learning rate: %0.3e, mag: %0.3e" % (
-                    synapse.learning_rate, synapse.tracing_mag))
-
         # --- noise
         assert (v_scale[0] == v_scale).all()
         noiseExp0 = np.round(np.log2(10.**self.noiseExp0 * v_scale[0]))
