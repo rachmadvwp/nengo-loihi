@@ -78,15 +78,19 @@ def test_multiple_pes(allclose, plt, seed, Simulator):
             conn = nengo.Connection(
                 pre_ea.ea_ensembles[i],
                 output[i],
-                learning_rule_type=nengo.PES(learning_rate=5e-4),
+                learning_rule_type=nengo.PES(learning_rate=3e-3),
             )
             nengo.Connection(target[i], conn.learning_rule, transform=-1)
             nengo.Connection(output[i], conn.learning_rule)
 
         probe = nengo.Probe(output, synapse=0.1)
+
+    simtime = 2.5
     with Simulator(model) as sim:
-        sim.run(1.0)
+        sim.run(simtime)
+
     t = sim.trange()
+    tmask = t > simtime * 0.85
 
     plt.plot(t, sim.data[probe])
     for target, style in zip(targets, plt.rcParams["axes.prop_cycle"]):
