@@ -970,7 +970,7 @@ class CxSimulator(object):
 class PESModulatoryTarget(object):
     def __init__(self, target):
         self.target = target
-        self.errors = OrderedDict()
+        self.errors = collections.OrderedDict()
 
     def clear(self):
         self.errors.clear()
