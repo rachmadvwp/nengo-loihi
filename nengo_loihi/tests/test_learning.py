@@ -90,4 +90,5 @@ def test_multiple_pes(allclose, plt, seed, Simulator):
         plt.axhline(target, **style)
 
     for i, target in enumerate(targets):
-        assert allclose(sim.data[probe][t > 0.8, i], target, atol=0.05, rtol=0.05)
+        assert allclose(sim.data[probe][t > 0.8, i], target,
+                        atol=0.05, rtol=0.05)
