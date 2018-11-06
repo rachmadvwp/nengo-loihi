@@ -799,6 +799,7 @@ class CxSimulator(object):
                     q = y > clip
                     if np.any(q):
                         warnings.warn("Clipping %s" % name)
+                    y[q] = clip
                 return x_sign * y
 
             def trace_round(x, dtype=group_dtype, rng=self.rng):
@@ -817,7 +818,7 @@ class CxSimulator(object):
                     learn_w = shift(w, LEARN_FRAC - wgt_exp) + product
                     learn_w[:] = stochastic_round(
                         learn_w * 2**(-LEARN_FRAC - shift_bits),
-                        clip=2**(8 - shift_bits) - 1, name="weights")
+                        clip=2**(8 - shift_bits) - 1, name="learning weights")
                     w[:] = np.left_shift(learn_w, wgt_exp + shift_bits)
 
         elif group_dtype == np.float32:
