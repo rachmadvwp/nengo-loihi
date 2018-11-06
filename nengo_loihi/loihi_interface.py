@@ -10,7 +10,6 @@ import warnings
 import jinja2
 import numpy as np
 
-import nengo
 from nengo.exceptions import SimulationError
 
 try:
