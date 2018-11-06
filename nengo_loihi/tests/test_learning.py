@@ -82,6 +82,7 @@ def test_multiple_pes(allclose, plt, seed, Simulator):
             conn = nengo.Connection(
                 pre_ea.ea_ensembles[i],
                 output[i],
+                function=lambda x: 0,
                 learning_rule_type=nengo.PES(learning_rate=3e-3),
             )
             nengo.Connection(target[i], conn.learning_rule, transform=-1)

@@ -249,6 +249,7 @@ class CxGroup(object):
         self.vmax = 2**(9 + 2*vmaxe) - 1
 
         # --- discretize weights and vth
+        vth_max = VTH_MAX  # TODO: should this be smaller to avoid overflow?
         w_maxs = [s.max_abs_weight() for s in self.synapses]
         w_max = max(w_maxs) if len(w_maxs) > 0 else 0
         b_max = np.abs(self.bias).max()
@@ -263,7 +264,7 @@ class CxGroup(object):
                 b_scale = v_scale * v_infactor
                 vth = np.round(self.vth * v_scale)
                 bias = np.round(self.bias * b_scale)
-                if (vth <= VTH_MAX).all() and (np.abs(bias) <= BIAS_MAX).all():
+                if (vth <= vth_max).all() and (np.abs(bias) <= BIAS_MAX).all():
                     break
             else:
                 raise BuildError("Could not find appropriate wgtExp")
@@ -274,14 +275,17 @@ class CxGroup(object):
                 w_scale = b_scale * u_infactor / SynapseFmt.get_scale(wgtExp)
                 vth = np.round(self.vth * v_scale)
                 bias = np.round(self.bias * b_scale)
-                if np.all(vth <= VTH_MAX):
+                if np.all(vth <= vth_max):
                     break
 
                 b_scale /= 2.
             else:
                 raise BuildError("Could not find appropriate bias scaling")
         else:
-            v_scale = np.array([VTH_MAX / (self.vth.max() + 1)])
+            # reduce vth_max in this case to avoid overflow since we're setting
+            # all vth to vth_max (esp. in learning with zeroed initial weights)
+            vth_max = min(vth_max, 2**Q_BITS - 1)
+            v_scale = np.array([vth_max / (self.vth.max() + 1)])
             vth = np.round(self.vth * v_scale)
             b_scale = v_scale * v_infactor
             bias = np.round(self.bias * b_scale)
@@ -319,10 +323,12 @@ class CxGroup(object):
                 if is_iterable(w_scale):
                     assert np.all(w_scale == w_scale[0])
                 w_scale_i = w_scale[0] if is_iterable(w_scale) else w_scale
+                print(w_scale_i)
 
                 ws = w_scale_i * 2**dWgtExp
                 synapse.learning_rate *= ws
                 synapse.learning_rate *= 2**learn_overflow_bits(2)
+                print(synapse.learning_rate)
 
                 # TODO: Currently, Loihi learning rate fixed at 2**-7, but
                 # by using microcode generation it can be adjusted.
@@ -342,6 +348,9 @@ class CxGroup(object):
                     mag_int = 127
                     mag_frac = 127
                 synapse.tracing_mag = mag_int + mag_frac / 128.
+
+                print("rate: %0.3e, mag: %0.3e" % (synapse.learning_rate,
+                                                   synapse.tracing_mag))
 
         # --- noise
         assert (v_scale[0] == v_scale).all()
@@ -819,6 +828,7 @@ class CxSimulator(object):
                     learn_w[:] = stochastic_round(
                         learn_w * 2**(-LEARN_FRAC - shift_bits),
                         clip=2**(8 - shift_bits) - 1, name="learning weights")
+                    # print("%r: %d %d" % (synapses, learn_w.min(), learn_w.max()))
                     w[:] = np.left_shift(learn_w, wgt_exp + shift_bits)
 
         elif group_dtype == np.float32:
