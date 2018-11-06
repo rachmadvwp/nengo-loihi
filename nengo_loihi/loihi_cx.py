@@ -422,15 +422,44 @@ class CxSynapses(object):
         self.synapse_fmt.set(**kwargs)
 
 
-class Spike(object):
-    __slots__ = ['axon_id', 'atom']
-
-    def __init__(self, axon_id, atom=0):
-        self.axon_id = axon_id
-        self.atom = atom
-
-
 class CxAxons(object):
+    """A group of axons, targeting a specific CxSynapses object.
+
+    Parameters
+    ----------
+    n_axons : int
+        The number of outgoing axons.
+    group : CxGroup
+        Parent CxGroup for this object (set in `CxGroup.add_axons`).
+    target : CxSynapses
+        Target synapses for these axons.
+    cx_to_axon_map : list of length `group.n` (optional, default: None)
+        Index of the axon in `target` targeted by each group compartment.
+    cx_atoms : list of length `group.n` (optional, default: None)
+        Atom (weight index) associated with each group compartment.
+    """
+
+    class Spike(object):
+        """A spike, targeting a particular axon within a CxSynapses object.
+
+        The CxSynapses target is implicit, given by the CxAxons object that
+        creates this Spike.
+
+        Parameters
+        ----------
+        axon_id : int
+            The index of the axon within the targeted CxSynapses object.
+        atom : int
+            An index into the target CxSynapses weights. This allows spikes
+            targeting a particular axon to use different weights.
+        """
+
+        __slots__ = ['axon_id', 'atom']
+
+        def __init__(self, axon_id, atom=0):
+            self.axon_id = axon_id
+            self.atom = atom
+
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
         self.label = label
@@ -439,7 +468,6 @@ class CxAxons(object):
         self.target = None
         self.cx_to_axon_map = None
         self.cx_atoms = None
-        self.axon_to_synapse_map = None
 
     def __str__(self):
         return "%s(%s)" % (
@@ -454,14 +482,22 @@ class CxAxons(object):
         """The total number of axonCfg slots used by all axons."""
         return self.slots_per_axon * self.n_axons
 
+    def set_axon_map(self, cx_to_axon_map, cx_atoms=None):
+        self.cx_to_axon_map = cx_to_axon_map
+        self.cx_atoms = cx_atoms
+
+    def map_cx_axons(self, cx_idxs):
+        return (self.cx_to_axon_map[cx_idxs]
+                if self.cx_to_axon_map is not None else cx_idxs)
+
+    def map_cx_atoms(self, cx_idxs):
+        return (self.cx_atoms[cx_idxs] if self.cx_atoms is not None else
+                [0 for _ in cx_idxs])
+
     def map_cx_spikes(self, cx_idxs):
-        axon_idxs = (self.cx_to_axon_map[cx_idxs]
-                     if self.cx_to_axon_map is not None else cx_idxs)
-        axon_ids = (self.axon_to_synapse_map[axon_idxs]
-                    if self.axon_to_synapse_map is not None else axon_idxs)
-        atoms = (self.cx_atoms[cx_idxs]
-                 if self.cx_atoms is not None else [0 for _ in cx_idxs])
-        return [Spike(axon_id, atom=atom)
+        axon_ids = self.map_cx_axons(cx_idxs)
+        atoms = self.map_cx_atoms(cx_idxs)
+        return [self.Spike(axon_id, atom=atom) if axon_id >= 0 else None
                 for axon_id, atom in zip(axon_ids, atoms)]
 
 

@@ -719,7 +719,7 @@ def build_connection(model, conn):
 
         mid_ax = CxAxons(mid_cx.n, label="encoders")
         mid_ax.target = post_cx.named_synapses['inter_encoders']
-        mid_ax.axon_to_synapse_map = mid_axon_inds
+        mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax
 
