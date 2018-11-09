@@ -87,8 +87,10 @@ def test_loihi_neurons(neuron_type, Simulator, plt, allclose):
 
 @pytest.mark.parametrize(
     'neuron_type', [LoihiLIF(amplitude=1.0, tau_rc=0.02, tau_ref=0.002),
-                    LoihiLIF(amplitude=0.063, tau_rc=0.05, tau_ref=0.001)])
-def test_nengo_dl_loihi_lif(neuron_type, plt, allclose):
+                    LoihiLIF(amplitude=0.063, tau_rc=0.05, tau_ref=0.001),
+                    LoihiSpikingRectifiedLinear(),
+                    LoihiSpikingRectifiedLinear(amplitude=0.42)])
+def test_nengo_dl_neurons(neuron_type, plt, allclose):
     pytest.importorskip('nengo_dl')
     import nengo_dl
     from nengo_extras.neurons import SoftLIFRate
@@ -97,18 +99,29 @@ def test_nengo_dl_loihi_lif(neuron_type, plt, allclose):
 
     dt = 0.001
     nx = 256
-    x = np.linspace(-1, 30, nx)
 
-    sigma = 0.02
-    params = dict(amplitude=neuron_type.amplitude, tau_rc=neuron_type.tau_rc,
-                  tau_ref=neuron_type.tau_ref)
-    params2 = dict(params)
-    params2['tau_ref'] += 0.5*dt
     gain = 1
     bias = 0
 
+    params = dict(amplitude=neuron_type.amplitude)
+    if isinstance(neuron_type, LoihiLIF):
+        x = np.linspace(-1, 30, nx)
+
+        sigma = 0.02
+        params.update(dict(tau_rc=neuron_type.tau_rc,
+                           tau_ref=neuron_type.tau_ref))
+
+        params2 = dict(params)
+        params2['tau_ref'] = params2['tau_ref'] + 0.5*dt
+    elif isinstance(neuron_type, LoihiSpikingRectifiedLinear):
+        x = np.linspace(-1, 999, nx)
+
+        tau_ref1 = 0.5*dt
+        j = neuron_type.current(x, gain, bias) - 1
+
     with nengo.Network() as model:
-        nengo_dl.configure_settings(lif_smoothing=sigma)
+        if isinstance(neuron_type, LoihiLIF):
+            nengo_dl.configure_settings(lif_smoothing=sigma)
 
         u = nengo.Node([0] * nx)
         a = nengo.Ensemble(nx, 1, neuron_type=neuron_type,
@@ -119,7 +132,13 @@ def test_nengo_dl_loihi_lif(neuron_type, plt, allclose):
 
     # --- compute rates
     y_ref = loihi_rates(neuron_type, x, gain, bias, dt=dt)
-    y_med = nengo.LIF(**params2).rates(x, gain, bias)
+
+    # y_med is an approximation of the smoothed Loihi tuning curve
+    if isinstance(neuron_type, LoihiLIF):
+        y_med = nengo.LIF(**params2).rates(x, gain, bias)
+    elif isinstance(neuron_type, LoihiSpikingRectifiedLinear):
+        y_med = np.zeros_like(j)
+        y_med[j > 0] = neuron_type.amplitude / (tau_ref1 + 1./j[j > 0])
 
     with nengo_dl.Simulator(model, dt=dt) as sim:
         sim.run_steps(1, input_feeds={u: x[None, None, :]},
@@ -137,7 +156,12 @@ def test_nengo_dl_loihi_lif(neuron_type, plt, allclose):
         y_spikerate = y_spikes.mean(axis=0)
 
     # --- compute derivates
-    dy_ref = SoftLIFRate(sigma=sigma, **params2).derivative(x, gain, bias)
+    if isinstance(neuron_type, LoihiLIF):
+        dy_ref = SoftLIFRate(sigma=sigma, **params2).derivative(x, gain, bias)
+    else:
+        # use the derivative of y_med (the smoothed Loihi tuning curve)
+        dy_ref = np.zeros_like(j)
+        dy_ref[j > 0] = neuron_type.amplitude / (j[j > 0]*tau_ref1 + 1)**2
 
     with nengo_dl.Simulator(model, dt=dt) as sim:
         n_steps = sim.unroll
