@@ -123,7 +123,7 @@ def allclose(request):
 
     def _allclose(a, b, rtol=1e-5, atol=1e-8, xtol=0,
                   equal_nan=False, print_fail=5):
-        """Check for bounded equality of two arrays (mimicking np.allclose).
+        """Check for bounded equality of two arrays (mimics ``np.allclose``).
 
         Parameters
         ----------
@@ -136,12 +136,12 @@ def allclose(request):
         atol : float
             Absolute tolerance between a and b
         xtol : int
-            Allow signals to be right or left shifted by up to *xtol*
+            Allow signals to be right or left shifted by up to ``xtol``
             indices along the first axis
         equal_nan : bool
             If True, nans will be considered equal to nans.
         print_fail : int
-            If > 0, print out the first `print_fail` entries failing
+            If > 0, print out the first ``print_fail`` entries failing
             the allclose check along the first axis.
 
         Returns
