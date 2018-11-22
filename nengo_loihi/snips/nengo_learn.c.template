@@ -2,7 +2,7 @@
 #include <string.h>
 #include "nengo_learn.h"
 
-int guard_learn(runState *s) {
+int guard_nengo_learn(runState *s) {
     return 1;
 }
 

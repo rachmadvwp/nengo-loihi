@@ -227,7 +227,7 @@ class Simulator(object):
         elif target == 'loihi':
             loihi_args = {} if loihi_args is None else loihi_args
             self.sims["loihi"] = LoihiSimulator(
-                self.model, use_snips=not self.precompute, seed=seed,
+                self.model, precompute=self.precompute, seed=seed,
                 **loihi_args)
         else:
             raise ValidationError("Must be 'simreal', 'sim', or 'loihi'",
@@ -529,7 +529,7 @@ class Simulator(object):
         try:
             self._run_steps(steps)
         except Exception:
-            if "loihi" in self.sims and self.sims["loihi"].use_snips:
+            if "loihi" in self.sims and not self.sims["loihi"].precompute:
                 # Need to write to board, otherwise it will wait indefinitely
                 h2c = self.sims["loihi"].nengo_io_h2c
                 c2h = self.sims["loihi"].nengo_io_c2h

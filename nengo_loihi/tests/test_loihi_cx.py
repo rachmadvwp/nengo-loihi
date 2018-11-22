@@ -30,7 +30,7 @@ def test_simulator_noise(request, plt, seed):
     model.discretize()
 
     if target == 'loihi':
-        with LoihiSimulator(model, use_snips=False, seed=seed) as sim:
+        with LoihiSimulator(model, precompute=True, seed=seed) as sim:
             sim.run_steps(1000)
             y = sim.get_probe_output(probe)
     else:
@@ -141,7 +141,7 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
     finally:
         CxSimulator.strict = True  # change back to True for subsequent tests
 
-    with LoihiSimulator(model, use_snips=False) as sim:
+    with LoihiSimulator(model, precompute=True) as sim:
         sim.run_steps(nt)
         sim_u = sim.get_probe_output(probe_u)
         sim_v = sim.get_probe_output(probe_v)

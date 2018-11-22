@@ -6,7 +6,7 @@
 #define N_ERRORS {{ n_errors }}
 #define MAX_ERROR_LEN {{ max_error_len }}
 
-int guard_io(runState *s) {
+int guard_nengo_io(runState *s) {
     return 1;
 }
 

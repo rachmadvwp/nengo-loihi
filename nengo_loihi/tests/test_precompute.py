@@ -4,6 +4,8 @@ import nengo
 import nengo.utils.matplotlib
 import pytest
 
+from nengo_loihi.precompute import SpikeGenerator
+
 
 @pytest.mark.skipif(pytest.config.getoption("--target") != "loihi",
                     reason="Loihi only test")
@@ -94,3 +96,21 @@ def test_input_node_precompute(allclose, Simulator, plt):
     plt.legend(loc='best')
 
     assert allclose(x['sim'], x['loihi'], atol=0.1, rtol=0.01)
+
+
+class TestSpikeGenerator(object):
+
+    def test_add_spike(self):
+        spike_gen = SpikeGenerator()
+        spike_gen.add_spike(time=1, chip_id=0, core_id=1, axon_id=0)
+        spike_gen.add_spike(time=1, chip_id=0, core_id=1, axon_id=1)
+        spike_gen.add_spike(time=1, chip_id=0, core_id=2, axon_id=2)
+        spike_gen.add_spike(time=1, chip_id=0, core_id=3, axon_id=3)
+
+        assert spike_gen.core_ids == [1, 2, 3]
+        assert spike_gen.axon_ids == {
+            1: [0, 1], 2: [2], 3: [3]
+        }
+        assert spike_gen.spikes == {
+            1: {0: [1], 1: [1]}, 2: {2: [1]}, 3: {3: [1]}
+        }

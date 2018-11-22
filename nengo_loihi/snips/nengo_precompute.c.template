@@ -1,0 +1,49 @@
+#include <stdlib.h>
+#include <string.h>
+#include "nengo_precompute.h"
+
+#define STEPS_PER_READ 10
+#define BYTES_PER_STEP {{ bytes_per_step }}
+
+// TODO: read core_ids from file if n_neurons > some value
+const uint32_t core_ids[] = {{ core_ids }};
+// TODO: read axon_ids from file if n_neurons > some value
+const uint16_t axon_ids[] = {{ axon_ids }};
+FILE *fp_in = NULL;
+
+int guard_nengo_precompute(runState *s) {
+    return 1;
+}
+
+void nengo_precompute(runState *s) {
+    uint16_t time_offset = (s->time - 1) % STEPS_PER_READ;
+    uint8_t *read_buffer;
+    uint8_t byte;
+    uint16_t id_ix = 0;
+
+    if (fp_in == NULL) {
+        fp_in = fopen("{{ input_file_name }}", "rb");
+        if (fp_in == NULL) {
+            printf("Error opening input file\n");
+            return;
+        }
+    }
+
+    if (time_offset == 0) {
+        fread(s->userData, 1, STEPS_PER_READ*BYTES_PER_STEP, fp_in);
+        printf("t=%d, read %d bytes", s->time, STEPS_PER_READ*BYTES_PER_STEP);
+    }
+    read_buffer = s->userData + time_offset*BYTES_PER_STEP;
+
+    for (uint8_t b = 0; b < BYTES_PER_STEP; b++) {
+        byte = read_buffer[b];
+        for (uint8_t b_ix = 7; b_ix >= 0; b_ix--, id_ix++, byte >>= 1) {
+            if (byte % 2 != 0) {
+                nx_send_discrete_spike(
+                    s->time, (CoreId){.id=core_ids[id_ix]}, axon_ids[id_ix]);
+            }
+        }
+    }
+}
+
+// TODO: can we do an fclose somewhere? maybe in a different snip phase

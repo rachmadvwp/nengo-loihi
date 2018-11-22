@@ -16,7 +16,6 @@ try:
     import nxsdk
     from nxsdk.arch.n2a.compiler.tracecfggen.tracecfggen import TraceCfgGen
     from nxsdk.arch.n2a.graph.graph import N2Board
-    from nxsdk.arch.n2a.graph.inputgen import BasicSpikeGenerator
     from nxsdk.arch.n2a.graph.probes import N2SpikeProbe
 
 except ImportError:
@@ -24,14 +23,14 @@ except ImportError:
 
     def no_nxsdk(*args, **kwargs):
         raise exc_info[1]
-    nxsdk = N2Board = BasicSpikeGenerator = TraceCfgGen = N2SpikeProbe = (
-        no_nxsdk)
+    nxsdk = N2Board = TraceCfgGen = N2SpikeProbe = no_nxsdk
 
 import nengo_loihi.loihi_cx as loihi_cx
 from nengo_loihi.allocators import one_to_one_allocator
 from nengo_loihi.loihi_api import (
     CX_PROFILES_MAX, VTH_PROFILES_MAX, SpikeInput, bias_to_manexp)
 from nengo_loihi.loihi_cx import CxGroup
+from nengo_loihi.precompute import SpikeGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ def build_board(board):
 
     # add our own attribute for storing our spike generator
     assert not hasattr(n2board, 'global_spike_generator')
-    n2board.global_spike_generator = BasicSpikeGenerator(n2board)
+    n2board.global_spike_generator = SpikeGenerator()
 
     # custom attr for storing SpikeInputs (filled in build_input)
     assert not hasattr(n2board, 'spike_inputs')
@@ -289,12 +288,13 @@ def build_input(n2core, core, spike_input, cx_idxs):
     # add any pre-existing spikes to spikegen
     for t in spike_input.spike_times():
         spikes = spike_input.spike_idxs(t)
+
         for spike in loihi_input.spikes_to_loihi(t, spikes):
             assert spike.axon.atom == 0, (
                 "Cannot send population spikes through spike generator")
-            n2board.global_spike_generator.addSpike(
-                time=spike.time, chipId=spike.axon.chip_id,
-                coreId=spike.axon.core_id, axonId=spike.axon.axon_id)
+            n2board.global_spike_generator.add_spike(
+                time=spike.time, chip_id=spike.axon.chip_id,
+                core_id=spike.axon.core_id, axon_id=spike.axon.axon_id)
 
 
 def build_synapses(n2core, core, group, synapses, cx_idxs):
@@ -389,7 +389,7 @@ class LoihiSimulator(object):
         the nengo_io_h2c channel on one timestep.
     """
 
-    def __init__(self, cx_model, use_snips=False, seed=None,
+    def __init__(self, cx_model, precompute=False, seed=None,
                  snip_max_spikes_per_step=50):
         self.closed = False
         self.check_nxsdk_version()
@@ -402,7 +402,7 @@ class LoihiSimulator(object):
         self._snip_probe_data = {}
         self._chip2host_sent_steps = 0
 
-        self.use_snips = use_snips
+        self.precompute = precompute
         self.snip_max_spikes_per_step = snip_max_spikes_per_step
 
         nxsdk_dir = os.path.realpath(
@@ -445,6 +445,10 @@ class LoihiSimulator(object):
                           "version (%s); latest fully supported version is "
                           "%s" % (version, max_tested))
 
+    @property
+    def snips_dir(self):
+        return os.path.join(os.path.dirname(__file__), "snips")
+
     def _iter_groups(self):
         return iter(self.model.cx_groups)
 
@@ -457,7 +461,7 @@ class LoihiSimulator(object):
         cx_model.validate()
         self.model = cx_model
 
-        if self.use_snips:
+        if not self.precompute:
             # tag all probes as being snip-based,
             # having normal probes at the same time as snips causes problems
             for cx_probe in self._iter_probes():
@@ -472,8 +476,9 @@ class LoihiSimulator(object):
         # --- build
         self.n2board = build_board(self.board)
 
-        if self.use_snips:
+        if not self.precompute:
             self.create_io_snip()
+            self.create_pes_snip()
 
     def print_cores(self):
         for j, n2chip in enumerate(self.n2board.n2Chips):
@@ -551,17 +556,18 @@ class LoihiSimulator(object):
         if probes_receivers is None:
             probes_receivers = {}
 
-        return (self._chip2host_snips(probes_receivers) if self.use_snips else
-                self._chip2host_monitor(probes_receivers))
+        return (self._chip2host_monitor(probes_receivers) if self.precompute
+                else self._chip2host_snips(probes_receivers))
 
     def _host2chip_spikegen(self, loihi_spikes):
         # sort all spikes because spikegen needs them in temporal order
         loihi_spikes = sorted(loihi_spikes, key=lambda s: s.time)
         for spike in loihi_spikes:
             assert spike.axon.atom == 0, "Spikegen does not support atom"
-            self.n2board.global_spike_generator.addSpike(
-                time=spike.time, chipId=spike.axon.chip_id,
-                coreId=spike.axon.core_id, axonId=spike.axon.axon_id)
+            self.n2board.global_spike_generator.add_spike(
+                time=spike.time, chip_id=spike.axon.chip_id,
+                core_id=spike.axon.core_id, axon_id=spike.axon.axon_id)
+        self.create_precompute_snip()
 
     def _host2chip_snips(self, loihi_spikes, loihi_errors):
         max_spikes = self.snip_max_spikes_per_step
@@ -608,11 +614,11 @@ class LoihiSimulator(object):
             assert coreid is not None
             loihi_errors.append([coreid, len(x)] + x.tolist())
 
-        if self.use_snips:
-            return self._host2chip_snips(loihi_spikes, loihi_errors)
-        else:
+        if self.precompute:
             assert len(loihi_errors) == 0
             return self._host2chip_spikegen(loihi_spikes)
+        else:
+            return self._host2chip_snips(loihi_spikes, loihi_errors)
 
     def wait_for_completion(self):
         self.n2board.finishRun()
@@ -687,19 +693,53 @@ class LoihiSimulator(object):
         x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
         return self._filter_probe(cx_probe, x)
 
-    def create_io_snip(self):
+    def create_snip(self, template_name, phase, template_args):
+        # NB: function name must be same as template name
+        # NB: guard name must be guard_<template_name>
+
         # snips must be created before connecting
         assert not self.is_connected()
+        c_path = os.path.join(self.snips_dir, "%s.c" % template_name)
 
-        snips_dir = os.path.join(os.path.dirname(__file__), "snips")
         env = jinja2.Environment(
             trim_blocks=True,
-            loader=jinja2.FileSystemLoader(snips_dir),
+            loader=jinja2.FileSystemLoader(self.snips_dir),
             keep_trailing_newline=True
         )
-        template = env.get_template("nengo_io.c.template")
+        template = env.get_template("%s.c.template" % template_name)
+        with open(c_path, 'w') as f:
+            f.write(template.render(**template_args))
 
-        # --- generate custom code
+        # --- create SNIP process and channels
+        logger.debug("Creating %s snip process", template_name)
+        return self.n2board.createProcess(
+            name=template_name,
+            cFilePath=c_path,
+            includeDir=self.snips_dir,
+            funcName=template_name,
+            guardName="guard_%s" % template_name,
+            phase=phase,
+        )
+
+    def create_precompute_snip(self):
+        spike_file_name = "input_spikes.bin"
+        spike_gen = self.n2board.global_spike_generator
+        spike_gen.write_spikes(spike_file_name)
+        assert spike_gen.core_ids is not None
+        assert spike_gen.axon_ids is not None
+        assert spike_gen.bytes_per_step is not None
+        self.create_snip("nengo_precompute", "mgmt", dict(
+            core_ids="{%s}" % ",".join(
+                hex(core_id) for core_id in spike_gen.tiled_core_ids
+            ),
+            axon_ids="{%s}" % ",".join(
+                hex(axon_id) for axon_id in spike_gen.axon_ids
+            ),
+            bytes_per_step=spike_gen.bytes_per_step,
+            input_file_name=spike_file_name,
+        ))
+
+    def create_io_snip(self):
         # Determine which cores have learning
         n_errors = 0
         total_error_len = 0
@@ -731,50 +771,28 @@ class LoihiSimulator(object):
                             (n_outputs, info["coreid"], cx, info['key']))
                         n_outputs += 1
 
-        # --- write c file using template
-        c_path = os.path.join(snips_dir, "nengo_io.c")
-        logger.debug(
-            "Creating %s with %d outputs, %d error, %d cores, %d probes",
-            c_path, n_outputs, n_errors, len(cores), len(probes))
-        code = template.render(
+        logger.debug("Creating nengo_io.c with %d outputs, %d error, %d cores, "
+                     "%d probes", n_outputs, n_errors, len(cores), len(probes))
+        nengo_io = self.create_snip("nengo_io", dict(
             n_outputs=n_outputs,
             n_errors=n_errors,
             max_error_len=max_error_len,
             cores=cores,
             probes=probes,
-        )
-        with open(c_path, 'w') as f:
-            f.write(code)
-
-        # --- create SNIP process and channels
-        logger.debug("Creating nengo_io snip process")
-        nengo_io = self.n2board.createProcess(
-            name="nengo_io",
-            cFilePath=c_path,
-            includeDir=snips_dir,
-            funcName="nengo_io",
-            guardName="guard_io",
-            phase="mgmt",
-        )
-        logger.debug("Creating nengo_learn snip process")
-        self.n2board.createProcess(
-            name="nengo_learn",
-            cFilePath=os.path.join(snips_dir, "nengo_learn.c"),
-            includeDir=snips_dir,
-            funcName="nengo_learn",
-            guardName="guard_learn",
-            phase="preLearnMgmt",
-        )
+        ))
 
         size = self.snip_max_spikes_per_step * 2 + 1 + total_error_len
         logger.debug("Creating nengo_io_h2c channel")
-        self.nengo_io_h2c = self.n2board.createChannel(b'nengo_io_h2c',
-                                                       "int", size)
+        self.nengo_io_h2c = self.n2board.createChannel(
+            name=b'nengo_io_h2c', elementType="int", numElements=size)
         logger.debug("Creating nengo_io_c2h channel")
-        self.nengo_io_c2h = self.n2board.createChannel(b'nengo_io_c2h',
-                                                       "int", n_outputs)
+        self.nengo_io_c2h = self.n2board.createChannel(
+            name=b'nengo_io_c2h', elementType="int", numElements=n_outputs)
         self.nengo_io_h2c.connect(None, nengo_io)
         self.nengo_io_c2h.connect(nengo_io, None)
         self.nengo_io_h2c_errors = n_errors
         self.nengo_io_c2h_count = n_outputs
         self.nengo_io_snip_range = snip_range
+
+    def create_pes_snip(self):
+        self.create_snip("nengo_learn", "preLearnMgmt", {})
