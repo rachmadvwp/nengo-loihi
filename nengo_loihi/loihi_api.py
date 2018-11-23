@@ -69,6 +69,7 @@ def overflow_signed(x, bits=7, out=None):
 
 
 def vth_to_manexp(vth):
+    """Convert Vth to a rounded value in mantissa-exponent form"""
     exp = VTH_EXP * np.ones(vth.shape, dtype=np.int32)
     man = np.round(vth / 2**exp).astype(np.int32)
     assert (man > 0).all()
@@ -77,6 +78,7 @@ def vth_to_manexp(vth):
 
 
 def bias_to_manexp(bias):
+    """Convert bias to a rounded value in mantissa-exponent form"""
     r = np.maximum(np.abs(bias) / BIAS_MAN_MAX, 1)
     exp = np.ceil(np.log2(r)).astype(np.int32)
     man = np.round(bias / 2**exp).astype(np.int32)
@@ -106,16 +108,8 @@ def shift(x, s, **kwargs):
         return np.left_shift(x, s, **kwargs)
 
 
-class CxSlice(object):
-    def __init__(self, board_idx, chip_idx, core_idx, cx_i0, cx_i1):
-        self.board_idx = board_idx
-        self.chip_idx = chip_idx
-        self.core_idx = core_idx
-        self.cx_i0 = cx_i0
-        self.cx_i1 = cx_i1
-
-
 class Board(object):
+    """An entire Loihi board, consisting of multiple Chips."""
     def __init__(self, board_id=1):
         self.board_id = board_id
 
@@ -176,6 +170,7 @@ class Board(object):
 
 
 class Chip(object):
+    """A Loihi chip, consisting of multiple Cores."""
     def __init__(self, board):
         self.board = board
 
@@ -204,6 +199,7 @@ class Chip(object):
 
 
 class Core(object):
+    """A Loihi core, implementing one or more CxGroups"""
     def __init__(self, chip):
         self.chip = chip
         self.groups = []
@@ -331,6 +327,7 @@ class Core(object):
 
 
 class Profile(object):
+    """Base class for all Profiles, which configure options on the chip"""
     def __eq__(self, obj):
         return isinstance(obj, type(self)) and all(
             self.__dict__[key] == obj.__dict__[key] for key in self.params)
@@ -340,6 +337,7 @@ class Profile(object):
 
 
 class CxProfile(Profile):
+    """Represents the CxProfile of a compartment (Cx)."""
     DECAY_U_MAX = 2**12 - 1
     DECAY_V_MAX = 2**12 - 1
     REFRACT_DELAY_MAX = 2**6 - 1
@@ -481,6 +479,11 @@ class SynapseFmt(object):
         assert 1 <= self.fanoutType < 4
 
     def discretize_weights(self, w, dtype=np.int32):
+        """Quantize weights for the chip.
+
+        The returned weights still contain the ``scale``. When being put on the
+        chip, they are divided by ``scale``.
+        """
         s = 8 - self.realWgtBits + self.isMixed
         m = 2**(8 - s) - 1
 
