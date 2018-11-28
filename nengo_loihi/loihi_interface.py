@@ -1,3 +1,10 @@
+"""
+This file houses functions to turn a loihi_api.Board into a configured
+nxsdk.N2Board, which can then be used to run the model on Loihi.
+
+It also contains the LoihiSimulator class, which helps with running the model
+on the chip (mostly by handling IO).
+"""
 from __future__ import division
 
 from distutils.version import LooseVersion
@@ -37,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_board(board):
+    """Take a loihi_api.Board object, return a nxsdk.N2Board object"""
     n_chips = board.n_chips()
     n_cores_per_chip = board.n_cores_per_chip()
     n_synapses_per_core = board.n_synapses_per_core()
@@ -53,6 +61,7 @@ def build_board(board):
 
 
 def build_chip(n2chip, chip):
+    """Fill the given n2chip with parameters from the loihi_api.Chip"""
     assert len(chip.cores) == len(n2chip.n2Cores)
     for core, n2core in zip(chip.cores, n2chip.n2Cores):
         logger.debug("Building core %s", core)
@@ -60,6 +69,7 @@ def build_chip(n2chip, chip):
 
 
 def build_core(n2core, core):  # noqa: C901
+    """Fill the given n2core with parameters from the loihi_apo.Core"""
     assert len(core.cxProfiles) < CX_PROFILES_MAX
     assert len(core.vthProfiles) < VTH_PROFILES_MAX
 
@@ -231,6 +241,7 @@ def build_core(n2core, core):  # noqa: C901
 
 
 def build_group(n2core, core, group, cx_idxs, ax_range):
+    """Fill the given n2core with parameters for the given loihi_cx.CxGroup"""
     assert group.scaleU is False
     assert group.scaleV is False
 
@@ -262,6 +273,7 @@ def build_group(n2core, core, group, cx_idxs, ax_range):
 
 
 def build_input(n2core, core, spike_input, cx_idxs):
+    """Set up the given n2core for performing spike input."""
     assert len(spike_input.axons) > 0
 
     for axon in spike_input.axons:
@@ -298,6 +310,8 @@ def build_input(n2core, core, spike_input, cx_idxs):
 
 
 def build_synapses(n2core, core, group, synapses, cx_idxs):
+    """Build the given CxSynapses into the n2core."""
+
     syn_idxs = core.synapse_axons[synapses]
     assert len(syn_idxs) == len(synapses.weights)
 
@@ -344,6 +358,8 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):
 
 
 def build_axons(n2core, core, group, axons, cx_idxs):
+    """Build the given CxAxons into the n2core."""
+
     tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(axons.target)
     taxon_idxs = np.asarray(tsyn_idxs)[axons.target_inds]
     n2board = n2core.parent.parent
@@ -356,6 +372,8 @@ def build_axons(n2core, core, group, axons, cx_idxs):
 
 
 def build_probe(n2core, core, group, probe, cx_idxs):
+    """Build the given CxProbe into the n2core."""
+
     assert probe.key in ('u', 'v', 's')
     key_map = {'s': 'spike'}
     key = key_map.get(probe.key, probe.key)
