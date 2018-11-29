@@ -169,7 +169,7 @@ def test_pop_tiny(pop_type, out_channels_last, request, plt, seed, rng,
                             [0.0825, 0.02],
                             [0.125, 0.055],
                             [0.1675, 0.0825]])
-    assert np.array_equal(sim_out[:, :, 0], ref_out)
+    assert allclose(sim_out[:, :, 0], ref_out, rtol=0, atol=1e-7)
 
 
 def test_conv2d_weights(request, plt, seed, rng, allclose):
