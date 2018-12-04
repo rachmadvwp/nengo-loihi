@@ -187,6 +187,7 @@ def test_all_run_steps(Simulator):
     with net:
         out = nengo.Node(size_in=1)
         nengo.Connection(post, out)
+        nengo.Probe(out)  # probe to prevent `out` from being optimized away
 
     # 3a. precompute=False, host (same as 2a)
     with Simulator(net) as sim:
