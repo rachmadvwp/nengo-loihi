@@ -249,10 +249,10 @@ def convert_passthroughs(network, offchip):
                 if base_obj(c.post_obj) not in offchip:
                     onchip_output = True
                     break
-            no_input = len(cluster.conns_in) == 0
+            has_input = len(cluster.conns_in) > 0
             no_output = len(cluster.conns_out) + len(cluster.probed_objs) == 0
 
-            if (onchip_input and onchip_output) or no_input or no_output:
+            if has_input and ((onchip_input and onchip_output) or no_output):
                 try:
                     new_conns = list(cluster.generate_conns())
                 except ClusterException:

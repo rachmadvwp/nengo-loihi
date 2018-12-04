@@ -83,14 +83,17 @@ def test_identity_array(n_ensembles, ens_dimensions):
     networks = splitter.split(model, precompute=False,
                               remove_passthrough=True,
                               max_rate=1000, inter_tau=0.005)
-    chip = networks.chip
-    host = networks.host
 
-    assert len(chip.connections) == n_ensembles
+    # ignore the a.input -> a.ensemble connections
+    connections = [c for c in networks.chip.connections
+                   if not (isinstance(c.pre_obj, splitter.ChipReceiveNode)
+                           and c.post_obj in a.ensembles)]
+
+    assert len(connections) == n_ensembles
     pre = set()
     post = set()
-    for c in chip.connections:
-        assert c.pre in a.all_ensembles
+    for c in connections:
+        assert c.pre in a.all_ensembles or c.pre_obj is a.input
         assert c.post in b.all_ensembles
         assert np.allclose(c.transform, np.eye(ens_dimensions))
         pre.add(c.pre)
@@ -112,12 +115,15 @@ def test_full_array(n_ensembles, ens_dimensions):
     networks = splitter.split(model, precompute=False,
                               remove_passthrough=True,
                               max_rate=1000, inter_tau=0.005)
-    chip = networks.chip
-    host = networks.host
 
-    assert len(chip.connections) == n_ensembles ** 2
+    # ignore the a.input -> a.ensemble connections
+    connections = [c for c in networks.chip.connections
+                   if not (isinstance(c.pre_obj, splitter.ChipReceiveNode)
+                           and c.post_obj in a.ensembles)]
+
+    assert len(connections) == n_ensembles ** 2
     pairs = set()
-    for c in chip.connections:
+    for c in connections:
         assert c.pre in a.all_ensembles
         assert c.post in b.all_ensembles
         assert np.allclose(c.transform, np.ones((ens_dimensions,
@@ -142,10 +148,13 @@ def test_synapse_merging():
     networks = splitter.split(model, precompute=False,
                               remove_passthrough=True,
                               max_rate=1000, inter_tau=0.005)
-    chip = networks.chip
-    host = networks.host
 
-    assert len(chip.connections) == 4
+    # ignore the a.input -> a.ensemble connections
+    connections = [c for c in networks.chip.connections
+                   if not (isinstance(c.pre_obj, splitter.ChipReceiveNode)
+                           and c.post_obj in a.ensembles)]
+
+    assert len(connections) == 4
     desired_filters = {
         ('0', '0'): None,
         ('0', '1'): nengo.synapses.Lowpass(0.2),
@@ -153,5 +162,5 @@ def test_synapse_merging():
         ('1', '1'): nengo.synapses.Lowpass(0.1).combine(
                         nengo.synapses.Lowpass(0.2)),
         }
-    for c in chip.connections:
+    for c in connections:
         assert desired_filters[(c.pre.label, c.post.label)] == c.synapse
