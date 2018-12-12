@@ -223,7 +223,8 @@ def test_long_tau(Simulator):
         sim.run(0.002)  # Ensure it at least runs
 
 
-@pytest.mark.parametrize('pre_on_chip', [True, False])
+# @pytest.mark.parametrize('pre_on_chip', [True, False])
+@pytest.mark.parametrize('pre_on_chip', [True])
 def test_neurons_to_ensemble(pre_on_chip, Simulator, seed, rng, allclose, plt):
     with nengo.Network(seed=seed) as net:
         add_params(net)
@@ -233,8 +234,9 @@ def test_neurons_to_ensemble(pre_on_chip, Simulator, seed, rng, allclose, plt):
         pre_max_rate = 100
         n_pre = 50
         pre = nengo.Ensemble(n_pre, 1,
+                             # encoders=np.ones((n_pre, 1)),
                              max_rates=pre_max_rate * np.ones(n_pre),
-                             intercepts=np.linspace(-1, 0.9, n_pre))
+                             intercepts=np.linspace(-1, 0.5, n_pre))
         net.config[pre].on_chip = pre_on_chip
         nengo.Connection(stim, pre, synapse=None)
 
@@ -250,6 +252,8 @@ def test_neurons_to_ensemble(pre_on_chip, Simulator, seed, rng, allclose, plt):
                               )
 
         nengo.Connection(pre.neurons, post, synapse=0.005)
+        # nengo.Connection(pre.neurons, post, transform=1./pre_max, synapse=0.005)
+        # nengo.Connection(pre.neurons, post, transform=1/pre_max, synapse=0.005)
 
         p_pre = nengo.Probe(pre, synapse=nengo.synapses.Alpha(0.03))
         p_post = nengo.Probe(post, synapse=nengo.synapses.Alpha(0.03))
@@ -257,7 +261,7 @@ def test_neurons_to_ensemble(pre_on_chip, Simulator, seed, rng, allclose, plt):
     with nengo.Simulator(net) as nengosim:
         nengosim.run(1.0)
 
-    with Simulator(net, precompute=False) as sim:
+    with Simulator(net) as sim:
         sim.run(1.0)
 
     y0 = nengosim.data[p_post].sum(axis=1)

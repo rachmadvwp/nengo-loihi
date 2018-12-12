@@ -654,6 +654,23 @@ def multiply(x, y):
                          % (x.ndim, y.ndim))
 
 
+def expand_to_2d(weights, pre_size, post_size):
+    if weights.ndim == 0:
+        assert pre_size == post_size
+        weights2d = weights * np.eye(pre_size)
+    elif weights.ndim == 1:
+        assert pre_size == post_size
+        assert weights.size == pre_size
+        weights2d = np.diag(weights)
+    else:
+        assert weights.ndim == 2
+        weights2d = weights
+
+    assert weights2d.shape[0] == post_size
+    assert weights2d.shape[1] == pre_size
+    return weights2d
+
+
 @Builder.register(Solver)
 def build_solver(model, solver, conn, rng, transform):
     return build_decoders(model, conn, rng, transform)
@@ -738,9 +755,12 @@ def build_connection(model, conn):
             needs_interneurons = True
     elif isinstance(conn.pre_obj, Neurons):
         assert conn.pre_slice == slice(None)
-        assert transform.ndim == 2, "transform shape not handled yet"
-        weights = transform / model.dt
+        weights = expand_to_2d(transform, conn.pre.size_out, conn.post.size_in)
+        weights = weights / model.dt
         neuron_type = conn.pre_obj.ensemble.neuron_type
+
+        if isinstance(conn.post_obj, Ensemble):
+            needs_interneurons = True
     else:
         raise NotImplementedError("Connection from type %r" % (
             type(conn.pre_obj),))
