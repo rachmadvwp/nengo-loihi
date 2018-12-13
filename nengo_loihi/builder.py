@@ -720,7 +720,8 @@ def build_connection(model, conn):
 
     needs_interneurons = False
     target_encoders = None
-    if isinstance(conn.pre_obj, Node):
+    if (isinstance(conn.pre_obj, Node)
+            and not isinstance(conn.pre_obj, ChipReceiveNeurons)):
         assert conn.pre_slice == slice(None)
 
         if np.array_equal(transform, np.array(1.)):
@@ -731,13 +732,9 @@ def build_connection(model, conn):
             assert transform.shape[1] == conn.pre.size_out
 
         assert transform.shape[1] == conn.pre.size_out
-        if isinstance(conn.pre_obj, ChipReceiveNeurons):
-            weights = transform / model.dt
-            neuron_type = conn.pre_obj.neuron_type
-        else:
-            # input is on-off neuron encoded, so double/flip transform
-            weights = np.column_stack([transform, -transform])
-            target_encoders = 'node_encoders'
+        # input is on-off neuron encoded, so double/flip transform
+        weights = np.column_stack([transform, -transform])
+        target_encoders = 'node_encoders'
     elif (isinstance(conn.pre_obj, Ensemble)
           and isinstance(conn.pre_obj.neuron_type, nengo.Direct)):
         raise NotImplementedError()
@@ -753,11 +750,14 @@ def build_connection(model, conn):
 
         if not conn.solver.weights:
             needs_interneurons = True
-    elif isinstance(conn.pre_obj, Neurons):
+    elif (isinstance(conn.pre_obj, Neurons)
+          or isinstance(conn.pre_obj, ChipReceiveNeurons)):
         assert conn.pre_slice == slice(None)
         weights = expand_to_2d(transform, conn.pre.size_out, conn.post.size_in)
         weights = weights / model.dt
-        neuron_type = conn.pre_obj.ensemble.neuron_type
+        neuron_type = (conn.pre_obj.neuron_type
+                       if isinstance(conn.pre_obj, ChipReceiveNeurons)
+                       else conn.pre_obj.ensemble.neuron_type)
 
         if isinstance(conn.post_obj, Ensemble):
             needs_interneurons = True
