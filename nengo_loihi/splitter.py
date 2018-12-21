@@ -289,6 +289,9 @@ def split_host_to_chip(networks, conn):
     networks.add(receive2post, "chip")
 
     logger.debug("Creating NIF ensemble for %s", conn)
+    if networks.inter_neurons is None:
+        raise BuildError("Interneurons must be specified for host->chip "
+                         "connection.")
     ens = networks.inter_neurons.get_ensemble(dim)
     networks.add(ens, "host")
 
