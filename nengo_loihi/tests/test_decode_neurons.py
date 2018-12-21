@@ -2,9 +2,12 @@ import nengo
 import numpy as np
 import pytest
 
-from nengo_loihi.builder import (
-    Model, NoisyDecodeNeurons, OnOffDecodeNeurons,
-    Preset5DecodeNeurons, Preset10DecodeNeurons,
+from nengo_loihi.builder import Model
+from nengo_loihi.builder.decode_neurons import (
+    NoisyDecodeNeurons,
+    OnOffDecodeNeurons,
+    Preset5DecodeNeurons,
+    Preset10DecodeNeurons,
 )
 
 

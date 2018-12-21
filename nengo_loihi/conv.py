@@ -1,7 +1,5 @@
 import itertools
 
-import numpy as np
-
 import nengo
 from nengo import Direct, Ensemble, Node
 from nengo.builder import Signal
@@ -12,14 +10,20 @@ from nengo.dists import Distribution
 from nengo.ensemble import Neurons
 from nengo.exceptions import BuildError
 from nengo.utils.compat import is_iterable
+import numpy as np
 
 try:
     import nengo_dl
 except ImportError:
     nengo_dl = None
 
-from nengo_loihi.loihi_cx import (
-    ChipReceiveNeurons, CxGroup, CxSpikeInput, CxSynapses, CxAxons)
+from nengo_loihi.axons import CxAxons
+from nengo_loihi.compartments import CxGroup
+from nengo_loihi.inputs import (
+    ChipReceiveNeurons,
+    CxSpikeInput,
+)
+from nengo_loihi.synapses import CxSynapses
 
 
 def numpy_conv2d(x, kernel, strides=(1, 1), mode='valid', channels_last=True):
