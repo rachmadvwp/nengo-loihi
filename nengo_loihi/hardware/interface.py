@@ -29,7 +29,7 @@ class HardwareInterface(object):
 
     Parameters
     ----------
-    cx_model : CxModel
+    model : Model
         Model specification that will be placed on the Loihi board.
     seed : int, optional (Default: None)
         A seed for stochastic operations.
@@ -38,7 +38,7 @@ class HardwareInterface(object):
                       operations run on the Loihi board.
     """
 
-    def __init__(self, cx_model, use_snips=True, seed=None):
+    def __init__(self, model, use_snips=True, seed=None):
         self.closed = False
         self.use_snips = use_snips
         self.check_nxsdk_version()
@@ -69,7 +69,7 @@ class HardwareInterface(object):
         # from previous simulators
         N2SpikeProbe.probeDict.clear()
 
-        self.build(cx_model, seed=seed)
+        self.build(model, seed=seed)
 
     def __enter__(self):
         return self
@@ -102,10 +102,10 @@ class HardwareInterface(object):
             for cx_probe in group.probes:
                 yield cx_probe
 
-    def build(self, cx_model, seed=None):
-        cx_model.validate()
-        self.model = cx_model
-        self.pes_error_scale = getattr(cx_model, 'pes_error_scale', 1.)
+    def build(self, model, seed=None):
+        model.validate()
+        self.model = model
+        self.pes_error_scale = getattr(model, 'pes_error_scale', 1.)
 
         if self.use_snips:
             # tag all probes as being snip-based,
@@ -115,7 +115,7 @@ class HardwareInterface(object):
                 self._snip_probe_data[cx_probe] = []
 
         # --- allocate --
-        # maps CxModel to cores and chips
+        # maps Model to cores and chips
         allocator = one_to_one_allocator  # one core per ensemble
         self.board = allocator(self.model)
 

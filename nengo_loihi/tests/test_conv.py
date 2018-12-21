@@ -15,7 +15,7 @@ except ImportError:
 
 import nengo_loihi
 from nengo_loihi.axons import CxAxons
-from nengo_loihi.builder import CxModel
+from nengo_loihi.builder import Model
 from nengo_loihi.compartments import CxGroup
 from nengo_loihi.conv import (
     Conv2D,
@@ -95,7 +95,7 @@ def test_pop_tiny(
     out_size = nyi * nyj * nf
     assert out_size <= 1024
 
-    model = CxModel()
+    model = Model()
 
     # input group
     inp = CxGroup(ni * nj * nk, label='inp')
@@ -237,7 +237,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     nf, nyi, nyj = ref_out.shape
     assert out_size <= 1024
 
-    model = CxModel()
+    model = Model()
 
     # input group
     inp = CxGroup(inp_shape.size, label='inp')
