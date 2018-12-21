@@ -7,7 +7,7 @@ import pytest
 import nengo_loihi
 
 
-def test_cx_model_validate_notempty(Simulator):
+def test_model_validate_notempty(Simulator):
     with nengo.Network() as model:
         nengo_loihi.add_params(model)
 
