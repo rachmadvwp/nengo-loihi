@@ -3,7 +3,6 @@ from __future__ import division
 from distutils.version import LooseVersion
 import logging
 import os
-import sys
 import time
 import warnings
 

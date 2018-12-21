@@ -1,7 +1,6 @@
 from __future__ import division
 
 import logging
-import sys
 
 import numpy as np
 
