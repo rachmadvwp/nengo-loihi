@@ -2,7 +2,7 @@ import pytest
 import nengo
 import numpy as np
 
-from nengo_loihi.builder import OnOffInterneurons
+from nengo_loihi.builder.interneurons import OnOffInterneurons
 from nengo_loihi.config import add_params
 from nengo_loihi.neurons import NIF
 from nengo_loihi.splitter import (

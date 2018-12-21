@@ -3,7 +3,7 @@ import nengo
 import numpy as np
 
 import nengo_loihi
-from nengo_loihi.builder import OnOffInterneurons
+from nengo_loihi.builder.interneurons import OnOffInterneurons
 from nengo_loihi import splitter
 
 default_inter_neurons = OnOffInterneurons()

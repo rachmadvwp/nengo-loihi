@@ -3,9 +3,9 @@ from nengo.exceptions import BuildError
 import numpy as np
 import pytest
 
-from nengo_loihi.allocators import core_stdp_pre_cfgs
-from nengo_loihi.loihi_api import Board
-from nengo_loihi.loihi_cx import CxSynapses
+from nengo_loihi.hardware.allocators import core_stdp_pre_cfgs
+from nengo_loihi.hardware.api import Board
+from nengo_loihi.synapses import CxSynapses
 
 
 def test_core_stdp_pre_cfgs():

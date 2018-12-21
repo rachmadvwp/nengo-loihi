@@ -8,12 +8,15 @@ import numpy as np
 import nengo
 import nengo.utils.numpy as npext
 from nengo.exceptions import (
-    BuildError, ReadonlyError, SimulatorClosed, ValidationError)
+    ReadonlyError,
+    SimulatorClosed,
+    ValidationError,
+)
 from nengo.simulator import ProbeDict as NengoProbeDict
 
 from nengo_loihi.builder import Model
-from nengo_loihi.loihi_cx import CxSimulator
-from nengo_loihi.loihi_interface import LoihiSimulator
+from nengo_loihi.emulator import CxSimulator
+from nengo_loihi.hardware import LoihiSimulator
 from nengo_loihi.splitter import split
 import nengo_loihi.config as config
 

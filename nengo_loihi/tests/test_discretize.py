@@ -3,8 +3,11 @@ import pytest
 
 from nengo.utils.numpy import rms
 
-from nengo_loihi.loihi_api import overflow_signed
-from nengo_loihi.loihi_api import decay_magnitude, decay_int
+from nengo_loihi.discretize import (
+    decay_int,
+    decay_magnitude,
+    overflow_signed,
+)
 
 
 @pytest.mark.parametrize("b", (8, 16, 17, 23))

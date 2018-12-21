@@ -1,13 +1,15 @@
 from nengo.exceptions import ValidationError
 import numpy as np
 
-from nengo_loihi.loihi_api import (
+from nengo_loihi.discretize import (
+    tracing_mag_int_frac,
+    vth_to_manexp,
+)
+from nengo_loihi.hardware.api import (
     Board,
     CxProfile,
     TraceCfg,
-    tracing_mag_int_frac,
     VthProfile,
-    vth_to_manexp
 )
 
 
@@ -111,8 +113,8 @@ def one_to_one_allocator(cx_model):
         [core.add_stdp_pre_cfg(stdp_pre_cfg) for stdp_pre_cfg in stdp_pre_cfgs]
         core.stdp_pre_cfg_idxs = stdp_pre_cfg_idxs
 
-        core.stdp_pre_profile_idx = None  # loihi_interface will set
-        core.stdp_profile_idx = None  # loihi_interface will set
+        core.stdp_pre_profile_idx = None  # hardware.builder will set
+        core.stdp_profile_idx = None  # hardware.builder will set
 
     for input in cx_model.cx_inputs:
         # TODO: how to allocate inputs?

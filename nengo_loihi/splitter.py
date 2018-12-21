@@ -7,9 +7,13 @@ from nengo.exceptions import BuildError
 import numpy as np
 
 from nengo_loihi.conv import Conv2D
-from nengo_loihi.loihi_cx import (
-    ChipReceiveNode, ChipReceiveNeurons, HostSendNode, HostReceiveNode,
-    PESModulatoryTarget)
+from nengo_loihi.inputs import (
+    ChipReceiveNode,
+    ChipReceiveNeurons,
+    HostSendNode,
+    HostReceiveNode,
+    PESModulatoryTarget,
+)
 from nengo_loihi.passthrough import convert_passthroughs
 
 logger = logging.getLogger(__name__)

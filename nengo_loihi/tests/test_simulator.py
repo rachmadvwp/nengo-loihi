@@ -259,3 +259,33 @@ def test_all_onchip(Simulator):
     assert sim._run_steps.__name__ == "run_steps"
     assert sim.data[out_p].shape[0] == sim.trange().shape[0]
     assert np.all(sim.data[out_p][-1] > 100)
+
+
+def test_tau_s_warning(Simulator):
+    with nengo.Network() as net:
+        stim = nengo.Node(0)
+        ens = nengo.Ensemble(10, 1)
+        nengo.Connection(stim, ens, synapse=0.1)
+        nengo.Connection(ens, ens,
+                         synapse=0.001,
+                         solver=nengo.solvers.LstsqL2(weights=True))
+
+    with pytest.warns(UserWarning) as record:
+        with Simulator(net):
+            pass
+    # The 0.001 synapse is applied first due to splitting rules putting
+    # the stim -> ens connection later than the ens -> ens connection
+    assert any(rec.message.args[0] == (
+        "tau_s is currently 0.001, which is smaller than 0.005. "
+        "Overwriting tau_s with 0.005.") for rec in record)
+
+    with net:
+        nengo.Connection(ens, ens,
+                         synapse=0.1,
+                         solver=nengo.solvers.LstsqL2(weights=True))
+    with pytest.warns(UserWarning) as record:
+        with Simulator(net):
+            pass
+    assert any(rec.message.args[0] == (
+        "tau_s is already set to 0.1, which is larger than 0.005. Using 0.1."
+    ) for rec in record)
