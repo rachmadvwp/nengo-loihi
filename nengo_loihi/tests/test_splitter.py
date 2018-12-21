@@ -3,7 +3,7 @@ import nengo
 from nengo.exceptions import BuildError
 import numpy as np
 
-from nengo_loihi.builder import OnOffDecodeNeurons
+from nengo_loihi.builder.decode_neurons import OnOffDecodeNeurons
 from nengo_loihi.config import add_params
 from nengo_loihi.neurons import NIF
 from nengo_loihi.splitter import (

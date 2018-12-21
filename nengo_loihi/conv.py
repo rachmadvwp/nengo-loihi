@@ -18,8 +18,13 @@ try:
 except ImportError:
     nengo_dl = None
 
-from nengo_loihi.loihi_cx import (
-    ChipReceiveNeurons, CxGroup, CxSpikeInput, CxSynapses, CxAxons)
+from nengo_loihi.axons import CxAxons
+from nengo_loihi.compartments import CxGroup
+from nengo_loihi.inputs import (
+    ChipReceiveNeurons,
+    CxSpikeInput,
+)
+from nengo_loihi.synapses import CxSynapses
 
 
 def numpy_conv2d(x, kernel, strides=(1, 1), mode='valid', channels_last=True):

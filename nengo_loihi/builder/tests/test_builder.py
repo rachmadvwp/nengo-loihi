@@ -2,15 +2,15 @@ import nengo
 import numpy as np
 import pytest
 
-from nengo_loihi.builder import (
+from nengo_loihi.builder import Model
+from nengo_loihi.builder.decode_neurons import (
     DecodeNeurons,
-    get_gain_bias,
-    Model,
     NoisyDecodeNeurons,
     OnOffDecodeNeurons,
     Preset5DecodeNeurons,
     Preset10DecodeNeurons,
 )
+from nengo_loihi.builder.ensemble import get_gain_bias
 
 
 @pytest.mark.parametrize("passed_intercepts", [

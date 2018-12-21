@@ -14,13 +14,25 @@ except ImportError:
     nengo_dl = None
 
 import nengo_loihi
-import nengo_loihi.loihi_cx as loihi_cx
+from nengo_loihi.axons import CxAxons
+from nengo_loihi.builder import CxModel
+from nengo_loihi.compartments import CxGroup
 from nengo_loihi.conv import (
-    Conv2D, conv2d_loihi_weights, ImageShape, ImageSlice, split_transform)
-from nengo_loihi.loihi_cx import CxSimulator
-from nengo_loihi.loihi_interface import LoihiSimulator
+    Conv2D,
+    conv2d_loihi_weights,
+    ImageShape,
+    ImageSlice,
+    split_transform
+)
+from nengo_loihi.emulator import CxSimulator
+from nengo_loihi.hardware import LoihiSimulator
 from nengo_loihi.neurons import (
-    loihi_rates, LoihiLIF, LoihiSpikingRectifiedLinear)
+    loihi_rates,
+    LoihiLIF,
+    LoihiSpikingRectifiedLinear,
+)
+from nengo_loihi.probes import CxProbe
+from nengo_loihi.synapses import CxSynapses
 
 home_dir = os.path.dirname(nengo_loihi.__file__)
 test_dir = os.path.join(home_dir, 'tests')
@@ -83,28 +95,28 @@ def test_pop_tiny(
     out_size = nyi * nyj * nf
     assert out_size <= 1024
 
-    model = loihi_cx.CxModel()
+    model = CxModel()
 
     # input group
-    inp = loihi_cx.CxGroup(ni * nj * nk, label='inp')
+    inp = CxGroup(ni * nj * nk, label='inp')
     assert inp.n <= 1024
     inp.configure_relu()
     inp.bias[:] = inp_biases.ravel()
 
-    inp_ax = loihi_cx.CxAxons(nij, label='inp_ax')
+    inp_ax = CxAxons(nij, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
     model.add_group(inp)
 
     # conv group
-    neurons = loihi_cx.CxGroup(out_size, label='neurons')
+    neurons = CxGroup(out_size, label='neurons')
     assert neurons.n <= 1024
     neurons.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.configure_filter(tau_s, dt=dt)
     neurons.bias[:] = neuron_bias
 
-    synapses = loihi_cx.CxSynapses(inp_shape.n_pixels, label='synapses')
+    synapses = CxSynapses(inp_shape.n_pixels, label='synapses')
     conv2d_transform = Conv2D.from_kernel(
         filters, inp_shape, strides=(sti, stj),
         output_channels_last=out_channels_last)
@@ -114,7 +126,7 @@ def test_pop_tiny(
         weights, indices, axon_to_weight_map, cx_bases, pop_type=pop_type)
     neurons.add_synapses(synapses)
 
-    out_probe = loihi_cx.CxProbe(target=neurons, key='s')
+    out_probe = CxProbe(target=neurons, key='s')
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses
@@ -225,28 +237,28 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     nf, nyi, nyj = ref_out.shape
     assert out_size <= 1024
 
-    model = loihi_cx.CxModel()
+    model = CxModel()
 
     # input group
-    inp = loihi_cx.CxGroup(inp_shape.size, label='inp')
+    inp = CxGroup(inp_shape.size, label='inp')
     assert inp.n <= 1024
     inp.configure_relu()
     inp.bias[:] = inp_biases.ravel()
 
-    inp_ax = loihi_cx.CxAxons(inp_shape.n_pixels, label='inp_ax')
+    inp_ax = CxAxons(inp_shape.n_pixels, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
     model.add_group(inp)
 
     # conv group
-    neurons = loihi_cx.CxGroup(out_size, label='neurons')
+    neurons = CxGroup(out_size, label='neurons')
     assert neurons.n <= 1024
     neurons.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.configure_filter(tau_s, dt=dt)
     neurons.bias[:] = neuron_bias
 
-    synapses = loihi_cx.CxSynapses(inp_shape.n_pixels, label='synapses')
+    synapses = CxSynapses(inp_shape.n_pixels, label='synapses')
     weights, indices, axon_to_weight_map, cx_bases = conv2d_loihi_weights(
         conv2d_transform)
     synapses.set_population_weights(
@@ -254,7 +266,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     neurons.add_synapses(synapses)
 
-    out_probe = loihi_cx.CxProbe(target=neurons, key='s')
+    out_probe = CxProbe(target=neurons, key='s')
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses

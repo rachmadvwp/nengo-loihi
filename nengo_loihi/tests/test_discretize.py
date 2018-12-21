@@ -2,8 +2,13 @@ from nengo.utils.numpy import rms
 import numpy as np
 import pytest
 
-from nengo_loihi.loihi_api import (
-    overflow_signed, decay_int, decay_magnitude, SynapseFmt)
+
+from nengo_loihi.discretize import (
+    decay_int,
+    decay_magnitude,
+    overflow_signed,
+)
+from nengo_loihi.synapses import SynapseFmt
 
 
 @pytest.mark.parametrize("b", (8, 16, 17, 23))
