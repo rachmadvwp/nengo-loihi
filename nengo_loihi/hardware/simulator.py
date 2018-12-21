@@ -3,7 +3,6 @@ from __future__ import division
 from distutils.version import LooseVersion
 import logging
 import os
-import sys
 import time
 import warnings
 
@@ -12,22 +11,15 @@ import numpy as np
 
 from nengo.exceptions import SimulationError
 
-try:
-    import nxsdk
-    from nxsdk.arch.n2a.graph.probes import N2SpikeProbe
-
-except ImportError:
-    exc_info = sys.exc_info()
-
-    def no_nxsdk(*args, **kwargs):
-        raise exc_info[1]
-    nxsdk = N2Board = BasicSpikeGenerator = TraceCfgGen = N2SpikeProbe = (
-        no_nxsdk)
-
 from nengo_loihi.compartments import CxGroup
 from nengo_loihi.discretize import scale_pes_errors
 from nengo_loihi.hardware.allocators import one_to_one_allocator
 from nengo_loihi.hardware.builder import build_board
+from nengo_loihi.hardware.nxsdk_shim import (
+    assert_nxsdk,
+    nxsdk,
+    N2SpikeProbe,
+)
 from nengo_loihi.probes import CxProbe
 
 logger = logging.getLogger(__name__)
@@ -89,8 +81,7 @@ class LoihiSimulator(object):
     @staticmethod
     def check_nxsdk_version():
         # raise exception if nxsdk not installed
-        if callable(nxsdk):
-            nxsdk()
+        assert_nxsdk()
 
         # if installed, check version
         version = LooseVersion(getattr(nxsdk, "__version__", "0.0.0"))
