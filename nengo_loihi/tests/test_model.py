@@ -1,6 +1,6 @@
 import numpy as np
 
-from nengo_loihi.builder import CxModel
+from nengo_loihi.builder import Model
 from nengo_loihi.compartments import CxGroup
 from nengo_loihi.emulator import CxSimulator
 from nengo_loihi.hardware import LoihiSimulator
@@ -10,7 +10,7 @@ from nengo_loihi.probes import CxProbe
 def test_simulator_noise(request, plt, seed):
     target = request.config.getoption("--target")
 
-    model = CxModel()
+    model = Model()
     group = CxGroup(10)
     group.configure_relu()
 

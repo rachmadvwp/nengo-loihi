@@ -4,9 +4,10 @@ import numpy as np
 import pytest
 
 from nengo_loihi.axons import CxAxons
+from nengo_loihi.builder import Model
 from nengo_loihi.compartments import CxGroup
 from nengo_loihi.discretize import VTH_MAX
-from nengo_loihi.emulator import CxModel, CxSimulator
+from nengo_loihi.emulator import CxSimulator
 from nengo_loihi.inputs import CxSpikeInput
 from nengo_loihi.hardware import LoihiSimulator
 from nengo_loihi.probes import CxProbe
@@ -37,7 +38,7 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
     #  and I haven't been able to figure out a way to make it overflow.
     nt = 15
 
-    model = CxModel()
+    model = Model()
 
     # n_axons controls number of input spikes and thus amount of overflow
     input = CxSpikeInput(n_axons)
