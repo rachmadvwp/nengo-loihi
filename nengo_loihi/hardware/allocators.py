@@ -83,11 +83,11 @@ def core_stdp_pre_cfgs(core):
     return profiles, profile_idxs
 
 
-def one_to_one_allocator(cx_model):
+def one_to_one_allocator(model):
     board = Board()
     chip = board.new_chip()
 
-    for group in cx_model.cx_groups:
+    for group in model.cx_groups:
         if group.n > 1024:
             raise ValidationError("Group does not fit on one chip",
                                   "n_neurons")
@@ -116,7 +116,7 @@ def one_to_one_allocator(cx_model):
         core.stdp_pre_profile_idx = None  # hardware.builder will set
         core.stdp_profile_idx = None  # hardware.builder will set
 
-    for input in cx_model.cx_inputs:
+    for input in model.cx_inputs:
         # TODO: how to allocate inputs?
         core = chip.new_core()
         core.add_input(input)

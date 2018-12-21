@@ -19,44 +19,12 @@ from nengo_loihi.inputs import CxSpikeInput
 logger = logging.getLogger(__name__)
 
 
-class CxModel(object):
-
-    def __init__(self, dt=0.001, label=None):
-        self.dt = dt
-        self.label = label
-
-        self.cx_inputs = collections.OrderedDict()
-        self.cx_groups = collections.OrderedDict()
-
-    def add_input(self, input):
-        assert isinstance(input, CxSpikeInput)
-        assert input not in self.cx_inputs
-        self.cx_inputs[input] = len(self.cx_inputs)
-
-    def add_group(self, group):
-        assert isinstance(group, CxGroup)
-        assert group not in self.cx_groups
-        self.cx_groups[group] = len(self.cx_groups)
-
-    def discretize(self):
-        for group in self.cx_groups:
-            group.discretize()
-
-    def validate(self):
-        if len(self.cx_groups) == 0:
-            raise BuildError("No neurons marked for execution on-chip. "
-                             "Please mark some ensembles as on-chip.")
-
-        for group in self.cx_groups:
-            group.validate()
-
-
-class Model(CxModel):
+class Model(object):
     """The data structure for the chip/simulator.
 
-    This is a subclass of CxModel, which defines methods for adding ensembles,
-    discretizing, and tracking the simulator. This class handles build
-    functions and keeping track of chip/host communication.
+    Defines methods for adding compartments/axons/synapses and discretizing.
+    Also handles build functions, and information associated with building
+    the Nengo model.
 
     Parameters
     ----------
@@ -95,7 +63,11 @@ class Model(CxModel):
         Mapping from objects to the integer seed assigned to that object.
     """
     def __init__(self, dt=0.001, label=None, builder=None):
-        super(Model, self).__init__(dt=dt, label=label)
+        self.dt = dt
+        self.label = label
+
+        self.cx_inputs = collections.OrderedDict()
+        self.cx_groups = collections.OrderedDict()
 
         self.objs = collections.defaultdict(dict)
         self.params = {}  # Holds data generated when building objects
@@ -141,14 +113,36 @@ class Model(CxModel):
     def __str__(self):
         return "Model: %s" % self.label
 
+    def add_input(self, input):
+        assert isinstance(input, CxSpikeInput)
+        assert input not in self.cx_inputs
+        self.cx_inputs[input] = len(self.cx_inputs)
+
+    def add_group(self, group):
+        assert isinstance(group, CxGroup)
+        assert group not in self.cx_groups
+        self.cx_groups[group] = len(self.cx_groups)
+
     def build(self, obj, *args, **kwargs):
         built = self.builder.build(self, obj, *args, **kwargs)
         if self.build_callback is not None:
             self.build_callback(obj)
         return built
 
+    def discretize(self):
+        for group in self.cx_groups:
+            group.discretize()
+
     def has_built(self, obj):
         return obj in self.params
+
+    def validate(self):
+        if len(self.cx_groups) == 0:
+            raise BuildError("No neurons marked for execution on-chip. "
+                             "Please mark some ensembles as on-chip.")
+
+        for group in self.cx_groups:
+            group.validate()
 
 
 class Builder(object):
