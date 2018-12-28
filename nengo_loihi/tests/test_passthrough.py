@@ -71,7 +71,7 @@ def test_transform_merging(d1, d2, d3):
 
     assert len(chip.connections) == 1
     conn = chip.connections[0]
-    assert np.allclose(conn.transform, np.dot(t2, t1))
+    assert np.allclose(conn.transform.init, np.dot(t2, t1))
 
 
 @pytest.mark.parametrize("n_ensembles", [1, 3])
@@ -100,7 +100,7 @@ def test_identity_array(n_ensembles, ens_dimensions):
     for c in connections:
         assert c.pre in a.all_ensembles or c.pre_obj is a.input
         assert c.post in b.all_ensembles
-        assert np.allclose(c.transform, np.eye(ens_dimensions))
+        assert np.allclose(c.transform.init, np.eye(ens_dimensions))
         pre.add(c.pre)
         post.add(c.post)
     assert len(pre) == n_ensembles
@@ -133,8 +133,8 @@ def test_full_array(n_ensembles, ens_dimensions):
     for c in connections:
         assert c.pre in a.all_ensembles
         assert c.post in b.all_ensembles
-        assert np.allclose(c.transform, np.ones((ens_dimensions,
-                                                 ens_dimensions)))
+        assert np.allclose(c.transform.init, np.ones((ens_dimensions,
+                                                      ens_dimensions)))
         pairs.add((c.pre, c.post))
     assert len(pairs) == n_ensembles ** 2
 

@@ -45,8 +45,7 @@ class Cluster(object):
         self.conns_mid.update(other.conns_mid)
         self.probed_objs.update(other.probed_objs)
 
-    def merge_transforms(self, size1, trans1, slice1,
-                         node, slice2, trans2, size2):
+    def merge_transforms(self, node, sizes, transforms, slices):
         """Return an equivalent transform to the two provided transforms.
 
         This is for finding a transform that converts this::
@@ -63,18 +62,34 @@ class Cluster(object):
             nengo.Connection(a, b, transform=t)
 
         """
-        if trans1.ndim == 0:  # scalar
-            trans1 = np.eye(size1) * trans1
-        elif trans1.ndim != 2:
-            raise BuildError("Unhandled transform shape: %s" % (trans1.shape,))
 
-        if trans2.ndim == 0:  # scalar
-            trans2 = np.eye(size2) * trans2
-        elif trans2.ndim != 2:
-            raise BuildError("Unhandled transform shape: %s" % (trans2.shape,))
+        transform = None
+        mid_t = np.eye(node.size_in)[slices[1], slices[0]]
 
-        mid_t = np.eye(node.size_in)[slice2, slice1]
-        return np.dot(trans2, np.dot(mid_t, trans1))
+        for i, t in enumerate(transforms):
+            if isinstance(t, nengo.Dense):
+                if not isinstance(t.init, np.ndarray):
+                    raise NotImplementedError(
+                        "Mergeable transforms must be specified as np arrays; "
+                        "set remove_passthrough=False")
+
+                t = t.init
+            else:
+                raise NotImplementedError(
+                    "Mergeable transforms must be Dense; "
+                    "set remove_passthrough=False")
+
+            if t.ndim == 0:  # scalar
+                t = np.eye(sizes[i]) * t
+            elif t.ndim != 2:
+                raise BuildError("Unhandled transform shape: %s" % (t.shape,))
+
+            if transform is None:
+                transform = np.dot(mid_t, t)
+            else:
+                transform = np.dot(t, transform)
+
+        return nengo.Dense(transform.shape, init=transform)
 
     def merge_synapses(self, syn1, syn2):
         """Return an equivalent synapse for the two provided synapses."""
@@ -113,7 +128,8 @@ class Cluster(object):
             # this Node has a Probe, so we need to keep it around and create
             # a new Connection that goes to it, as the original Connections
             # will get removed
-            yield slice(None), np.array(1.0), None, obj
+            yield (slice(None), nengo.Dense((obj.size_out, obj.size_out), 1.0),
+                   None, obj)
 
         for c in outputs[obj]:
             if c.learning_rule_type is not None:
@@ -135,13 +151,11 @@ class Cluster(object):
                         c.post_obj, outputs, previous=previous+[obj]):
 
                     syn = self.merge_synapses(c.synapse, synapse)
-                    trans = self.merge_transforms(c.pre.size_out,
-                                                  c.transform,
-                                                  c.post_slice,
-                                                  c.post_obj,
-                                                  pre_slice,
-                                                  transform,
-                                                  post.size_in)
+                    trans = self.merge_transforms(
+                        c.post_obj,
+                        [c.pre.size_out, post.size_in],
+                        [c.transform, transform],
+                        [c.post_slice, pre_slice])
 
                     yield c.pre_slice, trans, syn, post
 
@@ -160,15 +174,13 @@ class Cluster(object):
             for pre_slice, transform, synapse, post in self.generate_from(
                     c.post_obj, outputs):
                 syn = self.merge_synapses(c.synapse, synapse)
-                trans = self.merge_transforms(c.size_mid,
-                                              c.transform,
-                                              c.post_slice,
-                                              c.post_obj,
-                                              pre_slice,
-                                              transform,
-                                              post.size_in)
+                trans = self.merge_transforms(
+                    c.post_obj,
+                    [c.size_mid, post.size_in],
+                    [c.transform, transform],
+                    [c.post_slice, pre_slice])
 
-                if not np.allclose(trans, np.zeros_like(trans)):
+                if not np.allclose(trans.init, 0):
                     yield nengo.Connection(
                         pre=c.pre,
                         post=post,
