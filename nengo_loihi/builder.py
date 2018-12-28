@@ -511,7 +511,7 @@ def build_no_solver(model, solver, conn, rng, transform):
 
 @Builder.register(Connection)  # noqa: C901
 def build_connection(model, conn):
-    if isinstance(conn.transform, conv.Conv2D):
+    if isinstance(conn.transform, nengo.Convolution):
         # TODO: integrate these into the same function
         conv.build_conv2d_connection(model, conn)
         return
