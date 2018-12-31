@@ -8,10 +8,10 @@ import numpy as np
 
 
 def loihi_lif_rates(neuron_type, x, gain, bias, dt):
-    # discretize tau_ref as per CxGroup.configure_lif
+    # discretize tau_ref as per CompartmentGroup.configure_lif
     tau_ref = dt * np.round(neuron_type.tau_ref / dt)
 
-    # discretize tau_rc as per CxGroup.discretize
+    # discretize tau_rc as per CompartmentGroup.discretize
     decay_rc = -np.expm1(-dt/neuron_type.tau_rc)
     decay_rc = np.round(decay_rc * (2**12 - 1)) / (2**12 - 1)
     tau_rc = -dt/np.log1p(-decay_rc)

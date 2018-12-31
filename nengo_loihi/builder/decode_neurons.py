@@ -1,12 +1,12 @@
 import nengo
 import numpy as np
 
-from nengo_loihi.compartments import CxGroup
+from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.neurons import (
     LoihiSpikingRectifiedLinear,
     NIF,
 )
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.synapses import Synapses
 
 
 class DecodeNeurons(object):
@@ -29,8 +29,8 @@ class DecodeNeurons(object):
     def __str__(self):
         return "%s(dt=%0.3g)" % (type(self).__name__, self.dt)
 
-    def get_cx(self, weights, cx_label=None, syn_label=None):
-        """Get a CxGroup for implementing neurons on the chip.
+    def get_compartments(self, weights, comp_label=None, syn_label=None):
+        """Get a CompartmentGroup for implementing neurons on the chip.
 
         Parameters
         ----------
@@ -38,16 +38,16 @@ class DecodeNeurons(object):
             Weights that project the ``n`` inputs to the ``d`` dimensions
             represented by these neurons. Typically, the inputs will be neurons
             belonging to an Ensemble, and these weights will be decoders.
-        cx_label : string (Default: None)
-            Optional label for the CxGroup.
+        comp_label : string (Default: None)
+            Optional label for the CompartmentGroup.
         syn_label : string (Default: None)
-            Optional label for the CxSynapses.
+            Optional label for the Synapses.
 
         Returns
         -------
-        cx : CxGroup
+        cx : CompartmentGroup
             The neurons on the chip.
-        syn : CxSynapses
+        syn : Synapses
             The synapses connecting into the chip neurons.
         """
         raise NotImplementedError()
@@ -146,17 +146,17 @@ class OnOffDecodeNeurons(DecodeNeurons):
         return "%s(pairs_per_dim=%d, dt=%0.3g, rate=%0.3g)" % (
             type(self).__name__, self.pairs_per_dim, self.dt, self.rate)
 
-    def get_cx(self, weights, cx_label=None, syn_label=None):
+    def get_compartments(self, weights, comp_label=None, syn_label=None):
         gain = self.gain * self.dt
         bias = self.bias * self.dt
 
         d, n = weights.shape
         n_neurons = 2 * d * self.pairs_per_dim
-        cx = CxGroup(n_neurons, label=cx_label, location='core')
+        cx = CompartmentGroup(n_neurons, label=comp_label, location='core')
         cx.configure_relu(dt=self.dt)
         cx.bias[:] = bias.repeat(d)
 
-        syn = CxSynapses(n, label=syn_label)
+        syn = Synapses(n, label=syn_label)
         weights2 = []
         for ga, gb in gain.reshape(self.pairs_per_dim, 2):
             weights2.extend([ga*weights.T, -gb*weights.T])
@@ -235,9 +235,9 @@ class NoisyDecodeNeurons(OnOffDecodeNeurons):
             )
         )
 
-    def get_cx(self, weights, cx_label=None, syn_label=None):
-        cx, syn = super(NoisyDecodeNeurons, self).get_cx(
-            weights, cx_label=cx_label, syn_label=syn_label)
+    def get_compartments(self, weights, comp_label=None, syn_label=None):
+        cx, syn = super(NoisyDecodeNeurons, self).get_compartments(
+            weights, comp_label=comp_label, syn_label=syn_label)
 
         if self.noise_exp > -30:
             cx.enableNoise[:] = 1

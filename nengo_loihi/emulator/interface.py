@@ -16,7 +16,7 @@ from nengo_loihi.discretize import (
     Q_BITS,
     U_BITS,
 )
-from nengo_loihi.probes import CxProbe
+from nengo_loihi.probes import Probe
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +70,8 @@ class EmulatorInterface(object):
         self.t = 0
 
         self.model = model
-        self.inputs = list(self.model.cx_inputs)
-        self.groups = sorted(self.model.cx_groups,
+        self.inputs = list(self.model.inputs)
+        self.groups = sorted(self.model.groups,
                              key=lambda g: g.location == 'cpu')
         self.probe_outputs = {}
         for obj in self.inputs + self.groups:
@@ -275,16 +275,16 @@ class EmulatorInterface(object):
             probes_receivers = {}
 
         increment = None
-        for cx_probe, receiver in probes_receivers.items():
+        for probe, receiver in probes_receivers.items():
             # extract the probe data from the simulator
-            x = self.probe_outputs[cx_probe][self._chip2host_sent_steps:]
+            x = self.probe_outputs[probe][self._chip2host_sent_steps:]
             if len(x) > 0:
                 if increment is None:
                     increment = len(x)
                 else:
                     assert increment == len(x)
-                if cx_probe.weights is not None:
-                    x = np.dot(x, cx_probe.weights)
+                if probe.weights is not None:
+                    x = np.dot(x, probe.weights)
                 for j in range(len(x)):
                     receiver.receive(
                         self.model.dt * (self._chip2host_sent_steps + j + 2),
@@ -298,7 +298,7 @@ class EmulatorInterface(object):
             cx_spike_input.add_spikes(t, spike_idxs)
 
         # TODO: these are sent every timestep, but learning only happens every
-        # `tepoch * 2**learn_k` timesteps (see CxSynapses). Need to average.
+        # `tepoch * 2**learn_k` timesteps (see Synapses). Need to average.
         for pes_errors in self.pes_errors.values():
             pes_errors[:] = 0
 
@@ -437,32 +437,32 @@ class EmulatorInterface(object):
         for _ in range(steps):
             self.step()
 
-    def _filter_probe(self, cx_probe, data):
+    def _filter_probe(self, probe, data):
         dt = self.model.dt
-        i = self._probe_filter_pos.get(cx_probe, 0)
+        i = self._probe_filter_pos.get(probe, 0)
         if i == 0:
             shape = data[0].shape
-            synapse = cx_probe.synapse
+            synapse = probe.synapse
             rng = None
             step = (synapse.make_step(shape, shape, dt, rng, dtype=data.dtype)
                     if synapse is not None else None)
-            self._probe_filters[cx_probe] = step
+            self._probe_filters[probe] = step
         else:
-            step = self._probe_filters[cx_probe]
+            step = self._probe_filters[probe]
 
         if step is None:
-            self._probe_filter_pos[cx_probe] = i + len(data)
+            self._probe_filter_pos[probe] = i + len(data)
             return data
         else:
             filt_data = np.zeros_like(data)
             for k, x in enumerate(data):
                 filt_data[k] = step((i + k) * dt, x)
 
-            self._probe_filter_pos[cx_probe] = i + k
+            self._probe_filter_pos[probe] = i + k
             return filt_data
 
-    def get_probe_output(self, cx_probe):
-        assert isinstance(cx_probe, CxProbe)
-        x = np.asarray(self.probe_outputs[cx_probe], dtype=np.float32)
-        x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
-        return self._filter_probe(cx_probe, x)
+    def get_probe_output(self, probe):
+        assert isinstance(probe, Probe)
+        x = np.asarray(self.probe_outputs[probe], dtype=np.float32)
+        x = x if probe.weights is None else np.dot(x, probe.weights)
+        return self._filter_probe(probe, x)

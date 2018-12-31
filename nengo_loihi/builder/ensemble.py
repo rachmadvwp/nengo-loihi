@@ -10,8 +10,8 @@ import nengo.utils.numpy as npext
 import numpy as np
 
 from nengo_loihi.builder.builder import Builder
-from nengo_loihi.compartments import CxGroup
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.compartments import CompartmentGroup
+from nengo_loihi.synapses import Synapses
 
 
 def gen_eval_points(ens, eval_points, rng, scale_eval_points=True):
@@ -113,7 +113,7 @@ def build_ensemble(model, ens):
     gain, bias, max_rates, intercepts = get_gain_bias(
         ens, rng, model.intercept_limit)
 
-    group = CxGroup(ens.n_neurons, label='%s' % ens)
+    group = CompartmentGroup(ens.n_neurons, label='%s' % ens)
     group.bias[:] = bias
     model.build(ens.neuron_type, ens.neurons, group)
 
@@ -157,7 +157,7 @@ def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
     elif kind == 'decode_neuron_encoders':
         encoders = model.decode_neurons.get_post_encoders(scaled_encoders)
 
-    synapses = CxSynapses(encoders.shape[0], label=kind)
+    synapses = Synapses(encoders.shape[0], label=kind)
     synapses.set_full_weights(encoders)
     group.add_synapses(synapses, name=kind)
 

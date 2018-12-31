@@ -10,7 +10,7 @@ import jinja2
 from nengo.exceptions import SimulationError
 import numpy as np
 
-from nengo_loihi.compartments import CxGroup
+from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.discretize import scale_pes_errors
 from nengo_loihi.hardware.allocators import one_to_one_allocator
 from nengo_loihi.hardware.builder import build_board
@@ -19,7 +19,7 @@ from nengo_loihi.hardware.nxsdk_shim import (
     nxsdk,
     N2SpikeProbe,
 )
-from nengo_loihi.probes import CxProbe
+from nengo_loihi.probes import Probe
 
 logger = logging.getLogger(__name__)
 
@@ -95,12 +95,12 @@ class HardwareInterface(object):
                           "%s" % (version, max_tested))
 
     def _iter_groups(self):
-        return iter(self.model.cx_groups)
+        return iter(self.model.groups)
 
     def _iter_probes(self):
         for group in self._iter_groups():
-            for cx_probe in group.probes:
-                yield cx_probe
+            for probe in group.probes:
+                yield probe
 
     def build(self, model, seed=None):
         model.validate()
@@ -110,9 +110,9 @@ class HardwareInterface(object):
         if self.use_snips:
             # tag all probes as being snip-based,
             # having normal probes at the same time as snips causes problems
-            for cx_probe in self._iter_probes():
-                cx_probe.use_snip = True
-                self._snip_probe_data[cx_probe] = []
+            for probe in self._iter_probes():
+                probe.use_snip = True
+                self._snip_probe_data[probe] = []
 
         # --- allocate --
         # maps Model to cores and chips
@@ -138,9 +138,9 @@ class HardwareInterface(object):
 
     def _chip2host_monitor(self, probes_receivers):
         increment = None
-        for cx_probe, receiver in probes_receivers.items():
-            assert not cx_probe.use_snip
-            n2probe = self.board.probe_map[cx_probe]
+        for probe, receiver in probes_receivers.items():
+            assert not probe.use_snip
+            n2probe = self.board.probe_map[probe]
             x = np.column_stack([
                 p.timeSeries.data[self._chip2host_sent_steps:]
                 for p in n2probe])
@@ -152,8 +152,8 @@ class HardwareInterface(object):
                 else:
                     assert increment == len(x)
 
-                if cx_probe.weights is not None:
-                    x = np.dot(x, cx_probe.weights)
+                if probe.weights is not None:
+                    x = np.dot(x, probe.weights)
 
                 for j in range(len(x)):
                     receiver.receive(
@@ -169,13 +169,13 @@ class HardwareInterface(object):
         time_step, data = data[0], np.array(data[1:])
         snip_range = self.nengo_io_snip_range
 
-        for cx_probe in self._snip_probe_data:
-            assert cx_probe.use_snip
-            x = data[snip_range[cx_probe]]
+        for probe in self._snip_probe_data:
+            assert probe.use_snip
+            x = data[snip_range[probe]]
             assert x.ndim == 1
-            if cx_probe.key == 's':
-                if isinstance(cx_probe.target, CxGroup):
-                    refract_delays = cx_probe.target.refractDelay
+            if probe.key == 's':
+                if isinstance(probe.target, CompartmentGroup):
+                    refract_delays = probe.target.refractDelay
                 else:
                     refract_delays = 1
 
@@ -184,16 +184,16 @@ class HardwareInterface(object):
                 # starting their refractory period.
                 x = (x == refract_delays * 128)
 
-            if cx_probe.weights is not None:
-                x = np.dot(x, cx_probe.weights)
+            if probe.weights is not None:
+                x = np.dot(x, probe.weights)
 
-            receiver = probes_receivers.get(cx_probe, None)
+            receiver = probes_receivers.get(probe, None)
             if receiver is not None:
                 # chip->host
                 receiver.receive(self.model.dt * time_step, x)
             else:
                 # onchip probes
-                self._snip_probe_data[cx_probe].append(x)
+                self._snip_probe_data[probe].append(x)
 
         self._chip2host_sent_steps += 1
 
@@ -242,11 +242,10 @@ class HardwareInterface(object):
 
         loihi_errors = []
         for synapses, t, e in errors:
-            cx_group = synapses.group
             coreid = None
             for core in self.board.chips[0].cores:
                 for group in core.groups:
-                    if group is cx_group:
+                    if group is synapses.group:
                         # TODO: assumes one group per core
                         coreid = core.learning_coreid
                         break
@@ -300,42 +299,42 @@ class HardwareInterface(object):
 
         self.closed = True
 
-    def _filter_probe(self, cx_probe, data):
+    def _filter_probe(self, probe, data):
         dt = self.model.dt
-        i = self._probe_filter_pos.get(cx_probe, 0)
+        i = self._probe_filter_pos.get(probe, 0)
         if i == 0:
             shape = data[0].shape
-            synapse = cx_probe.synapse
+            synapse = probe.synapse
             rng = None
             step = (synapse.make_step(shape, shape, dt, rng, dtype=data.dtype)
                     if synapse is not None else None)
-            self._probe_filters[cx_probe] = step
+            self._probe_filters[probe] = step
         else:
-            step = self._probe_filters[cx_probe]
+            step = self._probe_filters[probe]
 
         if step is None:
-            self._probe_filter_pos[cx_probe] = i + len(data)
+            self._probe_filter_pos[probe] = i + len(data)
             return data
         else:
             filt_data = np.zeros_like(data)
             for k, x in enumerate(data):
                 filt_data[k] = step((i + k) * dt, x)
 
-            self._probe_filter_pos[cx_probe] = i + k
+            self._probe_filter_pos[probe] = i + k
             return filt_data
 
-    def get_probe_output(self, cx_probe):
-        assert isinstance(cx_probe, CxProbe)
-        if cx_probe.use_snip:
-            data = self._snip_probe_data[cx_probe]
-            if cx_probe.synapse is not None:
-                return cx_probe.synapse.filt(data, dt=self.model.dt, y0=0)
+    def get_probe_output(self, probe):
+        assert isinstance(probe, Probe)
+        if probe.use_snip:
+            data = self._snip_probe_data[probe]
+            if probe.synapse is not None:
+                return probe.synapse.filt(data, dt=self.model.dt, y0=0)
             else:
                 return data
-        n2probe = self.board.probe_map[cx_probe]
+        n2probe = self.board.probe_map[probe]
         x = np.column_stack([p.timeSeries.data for p in n2probe])
-        x = x if cx_probe.weights is None else np.dot(x, cx_probe.weights)
-        return self._filter_probe(cx_probe, x)
+        x = x if probe.weights is None else np.dot(x, probe.weights)
+        return self._filter_probe(probe, x)
 
     def create_io_snip(self):
         # snips must be created before connecting
@@ -367,7 +366,7 @@ class HardwareInterface(object):
         cores = set()
         # TODO: should snip_range be stored on the probe?
         snip_range = {}
-        for group in self.model.cx_groups.keys():
+        for group in self.model.groups.keys():
             for probe in group.probes:
                 if probe.use_snip:
                     info = probe.snip_info

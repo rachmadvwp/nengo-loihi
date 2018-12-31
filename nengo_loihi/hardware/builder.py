@@ -8,7 +8,7 @@ import numpy as np
 from nengo_loihi.discretize import bias_to_manexp
 from nengo_loihi.hardware.nxsdk_objects import (
     CX_PROFILES_MAX,
-    SpikeInput,
+    LoihiSpikeInput,
     VTH_PROFILES_MAX,
 )
 from nengo_loihi.hardware.nxsdk_shim import (
@@ -17,7 +17,7 @@ from nengo_loihi.hardware.nxsdk_shim import (
     N2Board,
     TraceCfgGen,
 )
-from nengo_loihi.io_objects import CxSpikeInput
+from nengo_loihi.io_objects import SpikeInput
 
 logger = logging.getLogger(__name__)
 
@@ -277,8 +277,8 @@ def build_input(n2core, core, spike_input, cx_idxs):
 
     n2board = n2core.parent.parent
 
-    assert isinstance(spike_input, CxSpikeInput)
-    loihi_input = SpikeInput()
+    assert isinstance(spike_input, SpikeInput)
+    loihi_input = LoihiSpikeInput()
     loihi_input.set_axons(core.board, n2board, spike_input)
     assert spike_input not in n2board.spike_inputs
     n2board.spike_inputs[spike_input] = loihi_input

@@ -1,4 +1,4 @@
-class CxProbe(object):
+class Probe(object):
     _slice = slice
 
     def __init__(self, target=None, key=None, slice=None, weights=None,

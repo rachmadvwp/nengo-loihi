@@ -8,7 +8,7 @@ from nengo.utils.compat import is_integer
 import numpy as np
 
 
-class CxSpikeInput(object):
+class SpikeInput(object):
     def __init__(self, n, label=None):
         self.n = n
         self.label = label

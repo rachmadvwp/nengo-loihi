@@ -483,11 +483,11 @@ class Simulator(object):
                 "probe.sample_every not implemented")
             assert ("loihi" not in self.sims
                     or "emulator" not in self.sims)
-            cx_probe = self.model.objs[probe]['out']
+            loihi_probe = self.model.objs[probe]['out']
             if "loihi" in self.sims:
-                data = self.sims["loihi"].get_probe_output(cx_probe)
+                data = self.sims["loihi"].get_probe_output(loihi_probe)
             elif "emulator" in self.sims:
-                data = self.sims["emulator"].get_probe_output(cx_probe)
+                data = self.sims["emulator"].get_probe_output(loihi_probe)
             # TODO: stop recomputing this all the time
             del self._probe_outputs[probe][:]
             self._probe_outputs[probe].extend(data)
@@ -591,7 +591,7 @@ class Simulator(object):
         sim.host2chip(spikes, errors)
 
     def _chip2host(self, sim):
-        probes_receivers = {  # map cx_probes to receivers
+        probes_receivers = {  # map probes to receivers
             self.model.objs[probe]['out']: receiver
             for probe, receiver in self.networks.chip2host_receivers.items()}
         sim.chip2host(probes_receivers)

@@ -3,15 +3,15 @@ from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 
-from nengo_loihi.axons import CxAxons
+from nengo_loihi.axons import Axons
 from nengo_loihi.builder import Model
-from nengo_loihi.compartments import CxGroup
+from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.discretize import VTH_MAX
 from nengo_loihi.emulator import EmulatorInterface
-from nengo_loihi.io_objects import CxSpikeInput
 from nengo_loihi.hardware import HardwareInterface
-from nengo_loihi.probes import CxProbe
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.io_objects import SpikeInput
+from nengo_loihi.probes import Probe
+from nengo_loihi.synapses import Synapses
 
 
 def test_strict_mode():
@@ -41,29 +41,29 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
     model = Model()
 
     # n_axons controls number of input spikes and thus amount of overflow
-    input = CxSpikeInput(n_axons)
+    input = SpikeInput(n_axons)
     for t in np.arange(1, nt+1):
         input.add_spikes(t, np.arange(n_axons))  # send spikes to all axons
     model.add_input(input)
 
-    group = CxGroup(1)
+    group = CompartmentGroup(1)
     group.configure_relu()
     group.configure_filter(0.1)
     group.vmin = -2**22
 
-    synapses = CxSynapses(n_axons)
+    synapses = Synapses(n_axons)
     synapses.set_full_weights(np.ones((n_axons, 1)))
     group.add_synapses(synapses)
 
-    axons = CxAxons(n_axons)
+    axons = Axons(n_axons)
     axons.target = synapses
     input.add_axons(axons)
 
-    probe_u = CxProbe(target=group, key='u')
+    probe_u = Probe(target=group, key='u')
     group.add_probe(probe_u)
-    probe_v = CxProbe(target=group, key='v')
+    probe_v = Probe(target=group, key='v')
     group.add_probe(probe_v)
-    probe_s = CxProbe(target=group, key='s')
+    probe_s = Probe(target=group, key='s')
     group.add_probe(probe_s)
 
     model.add_group(group)
