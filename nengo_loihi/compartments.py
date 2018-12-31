@@ -19,7 +19,7 @@ from nengo_loihi.discretize import (
 from nengo_loihi.synapses import SynapseFmt
 
 
-class CxGroup(object):
+class CompartmentGroup(object):
     """Class holding Loihi objects that can be placed on the chip or Lakemont.
 
     Typically an ensemble or node, can be a special decoding ensemble. Once
@@ -66,16 +66,16 @@ class CxGroup(object):
         in units of current or voltage. Integer values are in base 2.
     noiseAtDenOrVm : {0, 1}
         Inject noise into current (0) or voltage (1).
-    synapses : list of CxSynapse
-        CxSynapse objects projecting to these compartments.
+    synapses : list of Synapses
+        Synapses objects projecting to these compartments.
     named_synapses : dict
-        Dictionary mapping names to CxSynapse objects.
-    axons : list of CxAxon
-        CxAxon objects outputting from these compartments.
+        Dictionary mapping names to Synapses objects.
+    axons : list of Axons
+        Axons objects outputting from these compartments.
     named_axons : dict
-        Dictionary mapping names to CxAxon objects.
-    probes : list of CxProbe
-        CxProbes recording information from these compartments.
+        Dictionary mapping names to Axons objects.
+    probes : list of Probe
+        Probes recording information from these compartments.
     location : {"core", "cpu"}
         Whether these compartments are on a Loihi core
         or handled by the Loihi x86 processor (CPU).
@@ -119,7 +119,7 @@ class CxGroup(object):
             type(self).__name__, self.label if self.label else '')
 
     def add_synapses(self, synapses, name=None):
-        """Add a CxSynapses object to ensemble."""
+        """Add a Synapses object to ensemble."""
 
         assert synapses.group is None
         synapses.group = self
@@ -129,7 +129,7 @@ class CxGroup(object):
             self.named_synapses[name] = synapses
 
     def add_axons(self, axons, name=None):
-        """Add a CxAxons object to ensemble."""
+        """Add a Axons object to ensemble."""
 
         assert axons.group is None
         axons.group = self
@@ -139,14 +139,14 @@ class CxGroup(object):
             self.named_axons[name] = axons
 
     def add_probe(self, probe):
-        """Add a CxProbe object to ensemble."""
+        """Add a Probe object to ensemble."""
         if probe.target is None:
             probe.target = self
         assert probe.target is self
         self.probes.append(probe)
 
     def configure_default_filter(self, tau_s, dt=0.001):
-        """Set the default Lowpass synaptic input filter for Cx.
+        """Set the default Lowpass synaptic input filter for compartments.
 
         Parameters
         ----------
@@ -159,7 +159,7 @@ class CxGroup(object):
             self._configure_filter(tau_s, dt=dt)
 
     def configure_filter(self, tau_s, dt=0.001):
-        """Set Lowpass synaptic input filter for Cx to time constant tau_s.
+        """Set Lowpass synaptic input filter for compartments.
 
         Parameters
         ----------
