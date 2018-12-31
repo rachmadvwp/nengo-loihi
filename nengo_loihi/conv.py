@@ -18,13 +18,13 @@ try:
 except ImportError:
     nengo_dl = None
 
-from nengo_loihi.axons import CxAxons
-from nengo_loihi.compartments import CxGroup
+from nengo_loihi.axons import Axons
+from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.inputs import (
     ChipReceiveNeurons,
-    CxSpikeInput,
+    SpikeInput,
 )
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.synapses import Synapses
 
 
 def numpy_conv2d(x, kernel, strides=(1, 1), mode='valid', channels_last=True):
@@ -562,8 +562,8 @@ def build_conv2d_connection(model, conn):
 
     pre_cx = model.objs[conn.pre_obj]['out']
     post_cx = model.objs[conn.post_obj]['in']
-    assert isinstance(pre_cx, (CxGroup, CxSpikeInput))
-    assert isinstance(post_cx, CxGroup)
+    assert isinstance(pre_cx, (CompartmentGroup, SpikeInput))
+    assert isinstance(post_cx, CompartmentGroup)
 
     tau_s = 0.0
     if isinstance(conn.synapse, nengo.synapses.Lowpass):
@@ -603,13 +603,13 @@ def build_conv2d_connection(model, conn):
     weights, indices, axon_to_weight_map, cx_bases = conv2d_loihi_weights(
         conn.transform.copy(weights))
 
-    synapses = CxSynapses(input_shape.n_pixels, label="conv2d_weights")
+    synapses = Synapses(input_shape.n_pixels, label="conv2d_weights")
     synapses.set_population_weights(
         weights, indices, axon_to_weight_map, cx_bases, pop_type=pop_type)
     post_cx.add_synapses(synapses)
     model.objs[conn]['weights'] = synapses
 
-    ax = CxAxons(input_shape.n_pixels, label="conv2d_weights")
+    ax = Axons(input_shape.n_pixels, label="conv2d_weights")
     ax.target = synapses
     ax.cx_to_axon_map = input_shape.pixel_idxs()
     ax.cx_atoms = input_shape.channel_idxs()

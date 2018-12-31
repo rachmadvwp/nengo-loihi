@@ -1,13 +1,13 @@
 import numpy as np
 
 import nengo
-from nengo import Ensemble, Connection, Node, Probe
+from nengo import Ensemble, Connection, Node
 from nengo.connection import LearningRule
 from nengo.ensemble import Neurons
 from nengo.exceptions import BuildError
 
 from nengo_loihi.builder import Builder
-from nengo_loihi.probes import CxProbe
+from nengo_loihi.probes import Probe
 
 
 def conn_probe(model, probe):
@@ -69,7 +69,7 @@ def conn_probe(model, probe):
         scale = probe.target.radius
         w = np.diag(scale * np.ones(d))
         weights = np.vstack([w, -w])
-    cx_probe = CxProbe(key='v', weights=weights, synapse=probe.synapse)
+    cx_probe = Probe(key='v', weights=weights, synapse=probe.synapse)
     model.objs[target]['in'] = cx_probe
     model.objs[target]['out'] = cx_probe
 
@@ -100,12 +100,12 @@ def signal_probe(model, key, probe):
     # Signal probes directly probe a target signal
     target = model.objs[probe.obj]['out']
 
-    cx_probe = CxProbe(
+    loihi_probe = Probe(
         target=target, key=key, slice=probe.slice,
         synapse=probe.synapse, weights=weights)
-    target.add_probe(cx_probe)
+    target.add_probe(loihi_probe)
     model.objs[probe]['in'] = target
-    model.objs[probe]['out'] = cx_probe
+    model.objs[probe]['out'] = loihi_probe
 
 
 probemap = {
@@ -122,7 +122,7 @@ probemap = {
 }
 
 
-@Builder.register(Probe)
+@Builder.register(nengo.Probe)
 def build_probe(model, probe):
     # find the right parent class in `objtypes`, using `isinstance`
     for nengotype, probeables in probemap.items():
