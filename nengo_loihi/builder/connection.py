@@ -14,11 +14,11 @@ from nengo_loihi.builder.ensemble import (
     build_inter_encoders,
     gen_eval_points,
 )
-from nengo_loihi.axons import CxAxons
-from nengo_loihi.compartments import CxGroup
-from nengo_loihi.inputs import ChipReceiveNeurons, CxSpikeInput
-from nengo_loihi.probes import CxProbe
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.axons import Axons
+from nengo_loihi.compartments import CompartmentGroup
+from nengo_loihi.inputs import ChipReceiveNeurons, SpikeInput
+from nengo_loihi.probes import Probe
+from nengo_loihi.synapses import Synapses
 from nengo_loihi.neurons import loihi_rates
 
 
@@ -128,8 +128,8 @@ def build_connection(model, conn):
 
     pre_cx = model.objs[conn.pre_obj]['out']
     post_cx = model.objs[conn.post_obj]['in']
-    assert isinstance(pre_cx, (CxGroup, CxSpikeInput))
-    assert isinstance(post_cx, (CxGroup, CxProbe))
+    assert isinstance(pre_cx, (CompartmentGroup, SpikeInput))
+    assert isinstance(post_cx, (CompartmentGroup, Probe))
 
     weights = None
     eval_points = None
@@ -201,7 +201,7 @@ def build_connection(model, conn):
         assert weights.ndim == 2
         d, n = weights.shape
 
-        if isinstance(post_cx, CxProbe):
+        if isinstance(post_cx, Probe):
             # use non-spiking interneurons for voltage probing
             assert post_cx.target is None
             assert conn.post_slice == slice(None)
@@ -212,13 +212,13 @@ def build_connection(model, conn):
             weights = weights / conn.pre_obj.radius
 
             gain = 1  # model.dt * INTER_RATE(=1000)
-            dec_cx = CxGroup(2 * d, label='%s' % conn, location='core')
+            dec_cx = CompartmentGroup(2 * d, label='%s' % conn, location='core')
             dec_cx.configure_nonspiking(dt=model.dt, vth=model.vth_nonspiking)
             dec_cx.bias[:] = 0
             model.add_group(dec_cx)
             model.objs[conn]['decoded'] = dec_cx
 
-            dec_syn = CxSynapses(n, label="probe_decoders")
+            dec_syn = Synapses(n, label="probe_decoders")
             weights2 = gain * np.vstack([weights, -weights]).T
 
             dec_syn.set_full_weights(weights2)
@@ -237,8 +237,8 @@ def build_connection(model, conn):
                 post_inds, post_d)
 
             target_encoders = 'inter_encoders'
-            dec_cx, dec_syn = model.inter_neurons.get_cx(
-                weights, cx_label="%s" % conn, syn_label="decoders")
+            dec_cx, dec_syn = model.inter_neurons.get_compartments(
+                weights, comp_label="%s" % conn, syn_label="decoders")
 
             model.add_group(dec_cx)
             model.objs[conn]['decoded'] = dec_cx
@@ -248,7 +248,7 @@ def build_connection(model, conn):
         dec_cx.configure_filter(tau_s, dt=model.dt)
         post_tau = model.inter_tau
 
-        dec_ax0 = CxAxons(n, label="decoders")
+        dec_ax0 = Axons(n, label="decoders")
         dec_ax0.target = dec_syn
         pre_cx.add_axons(dec_ax0)
         model.objs[conn]['decode_axons'] = dec_ax0
@@ -294,13 +294,13 @@ def build_connection(model, conn):
 
         mid_cx = dec_cx
 
-    if isinstance(post_cx, CxProbe):
+    if isinstance(post_cx, Probe):
         assert post_cx.target is None
         assert conn.post_slice == slice(None)
         post_cx.target = mid_cx
         mid_cx.add_probe(post_cx)
     elif isinstance(conn.post_obj, Neurons):
-        assert isinstance(post_cx, CxGroup)
+        assert isinstance(post_cx, CompartmentGroup)
         assert conn.post_slice == slice(None)
         if weights is None:
             raise NotImplementedError("Need weights for connection to neurons")
@@ -309,13 +309,13 @@ def build_connection(model, conn):
             n2, n1 = weights.shape
             assert post_cx.n == n2
 
-            syn = CxSynapses(n1, label="neuron_weights")
+            syn = Synapses(n1, label="neuron_weights")
             gain = model.params[conn.post_obj.ensemble].gain
             syn.set_full_weights(weights.T * gain)
             post_cx.add_synapses(syn)
             model.objs[conn]['weights'] = syn
 
-        ax = CxAxons(mid_cx.n, label="neuron_weights")
+        ax = Axons(mid_cx.n, label="neuron_weights")
         ax.target = syn
         mid_cx.add_axons(ax)
 
@@ -324,7 +324,7 @@ def build_connection(model, conn):
         if conn.learning_rule_type is not None:
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble) and conn.solver.weights:
-        assert isinstance(post_cx, CxGroup)
+        assert isinstance(post_cx, CompartmentGroup)
         assert weights.ndim == 2
         n2, n1 = weights.shape
         assert post_cx.n == n2
@@ -332,12 +332,12 @@ def build_connection(model, conn):
         # loihi encoders don't include radius, so handle scaling here
         weights = weights / conn.post_obj.radius
 
-        syn = CxSynapses(n1, label="%s::decoder_weights" % conn)
+        syn = Synapses(n1, label="%s::decoder_weights" % conn)
         syn.set_full_weights(weights.T)
         post_cx.add_synapses(syn)
         model.objs[conn]['weights'] = syn
 
-        ax = CxAxons(n1, label="decoder_weights")
+        ax = Axons(n1, label="decoder_weights")
         ax.target = syn
         mid_cx.add_axons(ax)
 
@@ -350,7 +350,7 @@ def build_connection(model, conn):
         if target_encoders not in post_cx.named_synapses:
             build_inter_encoders(model, conn.post_obj, kind=target_encoders)
 
-        mid_ax = CxAxons(mid_cx.n, label="encoders")
+        mid_ax = Axons(mid_cx.n, label="encoders")
         mid_ax.target = post_cx.named_synapses[target_encoders]
         mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)

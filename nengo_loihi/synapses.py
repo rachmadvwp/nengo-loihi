@@ -159,15 +159,15 @@ class SynapseFmt(Profile):
         return w
 
 
-class CxSynapses(object):
+class Synapses(object):
     """A group of Loihi synapses that share some properties.
 
     Attributes
     ----------
     n_axons : int
         Number of input axons to this group of synapses.
-    group : CxGroup
-        The CxGroup (compartments) that these synapses input into.
+    group : CompartmentGroup
+        The CompartmentGroup (compartments) that these synapses input into.
     synapse_fmt : SynapseFmt
         The synapse format object for these synapses.
     weights : (n_axons,) list of (n_populations, n_compartments) ndarray

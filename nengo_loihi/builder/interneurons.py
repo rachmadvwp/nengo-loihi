@@ -2,8 +2,8 @@ import numpy as np
 
 import nengo
 
-from nengo_loihi.compartments import CxGroup
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.compartments import CompartmentGroup
+from nengo_loihi.synapses import Synapses
 
 
 class Interneurons(object):
@@ -45,7 +45,7 @@ class Interneurons(object):
         """Index into post encoders"""
         raise NotImplementedError()
 
-    def get_cx(self, weights, cx_label=None, syn_label=None):
+    def get_compartments(self, weights, comp_label=None, syn_label=None):
         raise NotImplementedError()
 
 
@@ -97,10 +97,10 @@ class NoisyInterneurons(EqualDecoderInterneurons):
         encoders = encoders * self.inter_scale()
         return np.vstack([encoders.T, -encoders.T])
 
-    def get_cx(self, weights, cx_label=None, syn_label=None):
+    def get_compartments(self, weights, comp_label=None, syn_label=None):
         self.fix_parameters()
         d, n = weights.shape
-        cx = CxGroup(2 * d * self.n, label=cx_label, location='core')
+        cx = CompartmentGroup(2 * d * self.n, label=comp_label, location='core')
         cx.configure_relu(dt=self.dt)
         cx.bias[:] = self.bias * np.ones(d * 2 * self.n)
         if self.inter_noise_exp > -30:
@@ -110,7 +110,7 @@ class NoisyInterneurons(EqualDecoderInterneurons):
 
         # TODO: can eliminate the weight copies (tiling) by using input indices
         # to target input axons
-        syn = CxSynapses(n, label=syn_label)
+        syn = Synapses(n, label=syn_label)
         weights2 = self.gain * np.vstack([weights, -weights] * self.n).T
         syn.set_full_weights(weights2)
         cx.add_synapses(syn)
@@ -130,14 +130,15 @@ class PresetInterneurons(EqualDecoderInterneurons):
         encoders = encoders * self.inter_scale()
         return np.vstack([encoders.T, -encoders.T])
 
-    def get_cx(self, weights, cx_label=None, syn_label=None):
+    def get_compartments(self, weights, comp_label=None, syn_label=None):
         self.fix_parameters()
         d, n = weights.shape
-        cx = CxGroup(self.n * 2 * d, label=cx_label, location='core')
+        cx = CompartmentGroup(self.n * 2 * d, label=comp_label,
+                              location='core')
         cx.configure_relu(dt=self.dt)
         cx.bias[:] = self.bias.repeat(d)
 
-        syn = CxSynapses(n, label=syn_label)
+        syn = Synapses(n, label=syn_label)
         weights2 = []
         for ga, gb in self.gain.reshape(self.n, 2):
             weights2.extend([ga*weights.T, -gb*weights.T])

@@ -1,10 +1,10 @@
 import numpy as np
 
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.synapses import Synapses
 
 
-class CxAxons(object):
-    """A group of axons, targeting a specific CxSynapses object.
+class Axons(object):
+    """A group of axons, targeting a specific Synapses object.
 
     Attributes
     ----------
@@ -12,26 +12,26 @@ class CxAxons(object):
         Atom (weight index) associated with each group compartment.
     cx_to_axon_map : list of length ``group.n``
         Index of the axon in `target` targeted by each group compartment.
-    group : CxGroup
-        Parent CxGroup for this object (set in `CxGroup.add_axons`).
+    group : CompartmentGroup
+        Parent CompartmentGroup for this object (set in `add_axons`).
     n_axons : int
         The number of outgoing axons.
-    target : CxSynapses
+    target : Synapses
         Target synapses for these axons.
     """
 
     class Spike(object):
-        """A spike, targeting a particular axon within a CxSynapses object.
+        """A spike, targeting a particular axon within a Synapses object.
 
-        The CxSynapses target is implicit, given by the CxAxons object that
+        The Synapses target is implicit, given by the Axons object that
         creates this Spike.
 
         Parameters
         ----------
         axon_id : int
-            The index of the axon within the targeted CxSynapses object.
+            The index of the axon within the targeted Synapses object.
         atom : int, optional (Default: 0)
-            An index into the target CxSynapses weights. This allows spikes
+            An index into the target Synapses weights. This allows spikes
             targeting a particular axon to use different weights.
         """
 
@@ -90,7 +90,7 @@ class CxAxons(object):
                 for axon_id, atom in zip(axon_ids, atoms)]
 
     def validate(self):
-        if isinstance(self.target, CxSynapses):
+        if isinstance(self.target, Synapses):
             if self.cx_atoms is not None:
                 cx_idxs = np.arange(len(self.cx_atoms))
                 axon_ids = self.map_cx_axons(cx_idxs)

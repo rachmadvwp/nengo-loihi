@@ -12,8 +12,8 @@ from nengo_loihi.builder.interneurons import (
     Preset10Interneurons,
     OnOffInterneurons,
 )
-from nengo_loihi.compartments import CxGroup
-from nengo_loihi.inputs import CxSpikeInput
+from nengo_loihi.compartments import CompartmentGroup
+from nengo_loihi.inputs import SpikeInput
 
 
 logger = logging.getLogger(__name__)
@@ -66,8 +66,8 @@ class Model(object):
         self.dt = dt
         self.label = label
 
-        self.cx_inputs = collections.OrderedDict()
-        self.cx_groups = collections.OrderedDict()
+        self.inputs = collections.OrderedDict()
+        self.groups = collections.OrderedDict()
 
         self.objs = collections.defaultdict(dict)
         self.params = {}  # Holds data generated when building objects
@@ -118,14 +118,14 @@ class Model(object):
         return "Model: %s" % self.label
 
     def add_input(self, input):
-        assert isinstance(input, CxSpikeInput)
-        assert input not in self.cx_inputs
-        self.cx_inputs[input] = len(self.cx_inputs)
+        assert isinstance(input, SpikeInput)
+        assert input not in self.inputs
+        self.inputs[input] = len(self.inputs)
 
     def add_group(self, group):
-        assert isinstance(group, CxGroup)
-        assert group not in self.cx_groups
-        self.cx_groups[group] = len(self.cx_groups)
+        assert isinstance(group, CompartmentGroup)
+        assert group not in self.groups
+        self.groups[group] = len(self.groups)
 
     def build(self, obj, *args, **kwargs):
         built = self.builder.build(self, obj, *args, **kwargs)
@@ -134,18 +134,18 @@ class Model(object):
         return built
 
     def discretize(self):
-        for group in self.cx_groups:
+        for group in self.groups:
             group.discretize()
 
     def has_built(self, obj):
         return obj in self.params
 
     def validate(self):
-        if len(self.cx_groups) == 0:
+        if len(self.groups) == 0:
             raise BuildError("No neurons marked for execution on-chip. "
                              "Please mark some ensembles as on-chip.")
 
-        for group in self.cx_groups:
+        for group in self.groups:
             group.validate()
 
 

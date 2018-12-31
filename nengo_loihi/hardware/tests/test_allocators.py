@@ -5,14 +5,14 @@ import pytest
 
 from nengo_loihi.hardware.allocators import core_stdp_pre_cfgs
 from nengo_loihi.hardware.api import Board
-from nengo_loihi.synapses import CxSynapses
+from nengo_loihi.synapses import Synapses
 
 
 def test_core_stdp_pre_cfgs():
     core = Board().new_chip().new_core()
 
     def new_syn(tracing_mag=None):
-        syn = CxSynapses(n_axons=1)
+        syn = Synapses(n_axons=1)
         syn.set_full_weights(np.array([[1]]))
         if tracing_mag is not None:
             syn.set_learning(tracing_mag=tracing_mag)

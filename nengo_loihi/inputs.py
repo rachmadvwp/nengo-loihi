@@ -8,7 +8,7 @@ from nengo.exceptions import SimulationError
 from nengo.utils.compat import is_integer
 
 
-class CxSpikeInput(object):
+class SpikeInput(object):
     def __init__(self, n, label=None):
         self.n = n
         self.label = label

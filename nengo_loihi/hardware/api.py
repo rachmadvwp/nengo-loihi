@@ -43,9 +43,9 @@ class Board(object):
     def chip_index(self, chip):
         return self.chip_idxs[chip]
 
-    def map_probe(self, cx_probe, n2probe):
-        assert cx_probe not in self.probe_map
-        self.probe_map[cx_probe] = n2probe
+    def map_probe(self, probe, n2probe):
+        assert probe not in self.probe_map
+        self.probe_map[probe] = n2probe
 
     def index_synapses(self, synapses, chip, core, idxs):
         chip_idx = self.chip_index(chip)
@@ -114,7 +114,7 @@ class Core(object):
         self.synapseFmts = [None]  # keep index 0 unused
         self.stdpPreCfgs = []
 
-        self.synapse_fmt_idxs = {}  # one synfmt per CxSynapses, for now
+        self.synapse_fmt_idxs = {}  # one synfmt per Synapses, for now
         self.synapse_axons = collections.OrderedDict()
         self.synapse_entries = collections.OrderedDict()
 
@@ -232,7 +232,7 @@ class Core(object):
             return len(self.synapseFmts) - 1  # index
 
 
-class SpikeInput(object):
+class LoihiSpikeInput(object):
     class LoihiAxon(object):
         __slots__ = ['chip_id', 'core_id', 'axon_id', 'atom']
 
