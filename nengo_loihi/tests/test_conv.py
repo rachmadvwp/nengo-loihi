@@ -126,7 +126,7 @@ def test_pop_tiny(
         weights, indices, axon_to_weight_map, cx_bases, pop_type=pop_type)
     neurons.add_synapses(synapses)
 
-    out_probe = Probe(target=neurons, key='s')
+    out_probe = Probe(target=neurons, key='spiked')
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses
@@ -266,7 +266,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     neurons.add_synapses(synapses)
 
-    out_probe = Probe(target=neurons, key='s')
+    out_probe = Probe(target=neurons, key='spiked')
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses

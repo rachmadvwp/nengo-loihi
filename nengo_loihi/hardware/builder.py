@@ -110,17 +110,17 @@ def build_core(n2core, core):  # noqa: C901
 
     # --- learning
     firstLearningIndex = None
-    for synapse in core.iterate_synapses():
-        if synapse.tracing and firstLearningIndex is None:
-            firstLearningIndex = core.synapse_axons[synapse][0]
+    for synapses in core.iterate_synapses():
+        if synapses.learning and firstLearningIndex is None:
+            firstLearningIndex = core.synapse_axons[synapses][0]
             core.learning_coreid = n2core.id
             break
 
     numStdp = 0
     if firstLearningIndex is not None:
-        for synapse in core.iterate_synapses():
-            axons = np.array(core.synapse_axons[synapse])
-            if synapse.tracing:
+        for synapses in core.iterate_synapses():
+            axons = np.array(core.synapse_axons[synapses])
+            if synapses.learning:
                 numStdp += len(axons)
                 assert np.all(axons >= firstLearningIndex)
             else:
@@ -333,7 +333,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):  # noqa C901
                         CIdx=cx_idx,
                         Wgt=weights[p, q],
                         synFmtId=synapse_fmt_idx,
-                        LrnEn=int(synapses.tracing),
+                        LrnEn=int(synapses.learning),
                     )
                     target_cxs.add(cx_idx)
                     total_synapse_ptr += 1
@@ -368,7 +368,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):  # noqa C901
         else:
             raise ValueError("Unrecognized pop_type: %d" % (synapses.pop_type))
 
-        if synapses.tracing:
+        if synapses.learning:
             assert core.stdp_pre_profile_idx is not None
             assert stdp_pre_cfg_idx is not None
             n2core.synapseMap[axon_id+1].singleTraceEntry.configure(
@@ -377,7 +377,7 @@ def build_synapses(n2core, core, group, synapses, cx_idxs):  # noqa C901
     assert total_synapse_ptr == core.synapse_entries[synapses][1], (
         "Synapse pointer did not align with precomputed synapses length")
 
-    if synapses.tracing:
+    if synapses.learning:
         assert core.stdp_profile_idx is not None
         for target_cx in target_cxs:
             # TODO: check that no cx gets configured by multiple synapses
@@ -481,9 +481,9 @@ def build_axons(n2core, core, group, all_axons):  # noqa C901
 
 
 def build_probe(n2core, core, group, probe, cx_idxs):
-    assert probe.key in ('u', 'v', 's'), "probe key not found"
-    key_map = {'s': 'spike'}
-    key = key_map.get(probe.key, probe.key)
+    key_map = {'current': 'u', 'voltage': 'v', 'spiked': 'spike'}
+    assert probe.key in key_map, "probe key not found"
+    key = key_map[probe.key]
 
     n2board = n2core.parent.parent
     r = cx_idxs[probe.slice]

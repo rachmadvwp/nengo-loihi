@@ -212,9 +212,9 @@ class Synapses(object):
         self.axon_cx_bases = None
         self.axon_to_weight_map = None
 
+        self.learning = False
         self.learning_rate = 1.
         self.learning_wgt_exp = None
-        self.tracing = False
         self.tracing_tau = None
         self.tracing_mag = None
         self.pop_type = 0  # one of (0, 16, 32) for discrete, pop16, pop32
@@ -246,7 +246,7 @@ class Synapses(object):
         return idxBits
 
     def idxs_per_synapse(self):
-        return 2 if self.tracing else 1
+        return 2 if self.learning else 1
 
     def atom_bits_extra(self):
         atom_bits = self.atom_bits()
@@ -348,7 +348,7 @@ class Synapses(object):
             self, learning_rate=1., tracing_tau=2, tracing_mag=1.0, wgt_exp=4):
         assert tracing_tau == int(tracing_tau), "tracing_tau must be integer"
 
-        self.tracing = True
+        self.learning = True
         self.tracing_tau = int(tracing_tau)
         self.tracing_mag = tracing_mag
         self.format(learningCfg=1, stdpProfile=0)
@@ -417,7 +417,7 @@ class SynapseGroup(object):
     def discretize(self, w_max, w_scale, w_exp):
         for i, synapse in enumerate(self.synapses):
             w_max_i = synapse.max_abs_weight()
-            if synapse.tracing:
+            if synapse.learning:
                 w_exp2 = synapse.learning_wgt_exp
                 dw_exp = w_exp - w_exp2
             elif w_max_i > 1e-16:
@@ -434,7 +434,7 @@ class SynapseGroup(object):
                     w * ws * 2 ** dw_exp))
 
             # discretize learning
-            if synapse.tracing:
+            if synapse.learning:
                 synapse.tracing_tau = int(np.round(synapse.tracing_tau))
 
                 if is_iterable(w_scale):
