@@ -70,7 +70,7 @@ def conn_probe(model, probe):
         raise NotImplementedError(
             "Nodes cannot be onchip, connections not yet probeable")
 
-    cx_probe = Probe(key='v', weights=weights, synapse=probe.synapse)
+    cx_probe = Probe(key='voltage', weights=weights, synapse=probe.synapse)
     model.objs[target]['in'] = cx_probe
     model.objs[target]['out'] = cx_probe
 
@@ -111,11 +111,11 @@ def signal_probe(model, key, probe):
 
 probemap = {
     Ensemble: {'decoded_output': None,
-               'input': 'q'},
-    Neurons: {'output': 's',
-              'spikes': 's',
-              'voltage': 'v',
-              'input': 'u'},
+               'input': 'input'},
+    Neurons: {'output': 'spiked',
+              'spikes': 'spiked',
+              'voltage': 'voltage',
+              'input': 'current'},
     Node: {'output': None},
     Connection: {'output': 'weighted',
                  'input': 'in'},
