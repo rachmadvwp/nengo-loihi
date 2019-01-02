@@ -515,6 +515,9 @@ def build_connection(model, conn):
         # TODO: integrate these into the same function
         conv.build_conv2d_connection(model, conn)
         return
+    elif not isinstance(conn.transform, Dense):
+        raise NotImplementedError(
+            "nengo-loihi does not yet support %s transforms" % conn.transform)
 
     # Create random number generator
     rng = np.random.RandomState(model.seeds[conn])
@@ -530,7 +533,6 @@ def build_connection(model, conn):
     neuron_type = None
 
     # Sample transform if given a distribution
-    assert isinstance(conn.transform, Dense)
     transform = conn.transform.sample(rng=rng)
 
     tau_s = 0.0  # `synapse is None` gets mapped to `tau_s = 0.0`
