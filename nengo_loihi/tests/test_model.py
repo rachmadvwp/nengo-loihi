@@ -21,7 +21,7 @@ def test_simulator_noise(request, plt, seed):
     group.noiseMantOffset0 = 0
     group.noiseAtDendOrVm = 1
 
-    probe = Probe(target=group, key='v')
+    probe = Probe(target=group, key='voltage')
     group.add_probe(probe)
     model.add_group(group)
 

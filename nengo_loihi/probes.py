@@ -31,7 +31,7 @@ class ProbeGroup(object):
 
     def discretize(self, v_scale):
         for p in self.probes:
-            if p.key == 'v' and p.weights is not None:
+            if p.key == 'voltage' and p.weights is not None:
                 p.weights /= v_scale
 
     def validate(self):

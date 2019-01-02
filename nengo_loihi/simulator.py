@@ -575,7 +575,7 @@ class Simulator(object):
                 for probe, t, e in receiver.collect_errors():
                     conn = self.model.probe_conns[probe]
                     synapses = self.model.objs[conn]['decoders']
-                    assert synapses.tracing
+                    assert synapses.learning
                     ti = round(t / self.model.dt)
                     errors_ti = errors.setdefault(ti, OrderedDict())
                     if synapses in errors_ti:
