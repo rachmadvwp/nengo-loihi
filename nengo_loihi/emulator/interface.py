@@ -71,8 +71,7 @@ class EmulatorInterface(object):
 
         self.model = model
         self.inputs = list(self.model.inputs)
-        self.groups = sorted(self.model.groups,
-                             key=lambda g: g.location == 'cpu')
+        self.groups = list(self.model.groups)
         self.probe_outputs = {}
         for obj in self.inputs + self.groups:
             for probe in obj.probes:
@@ -80,18 +79,11 @@ class EmulatorInterface(object):
 
         self.n_cx = sum(group.n for group in self.groups)
         self.group_cxs = {}
-        cx_slice = None
         i0, i1 = 0, 0
         for group in self.groups:
-            if group.location == 'cpu' and cx_slice is None:
-                cx_slice = slice(0, i0)
-
             i1 = i0 + group.n
             self.group_cxs[group] = slice(i0, i1)
             i0 = i1
-
-        self.cx_slice = slice(0, i0) if cx_slice is None else cx_slice
-        self.cpu_slice = slice(self.cx_slice.stop, i1)
 
         # --- allocate group memory
         group_dtype = self.groups[0].vth.dtype
@@ -336,11 +328,11 @@ class EmulatorInterface(object):
 
         # --- synapse spikes use weights to modify compartment input
         for group in self.groups:
-            for synapses in group.synapses:
-                b_slice = self.group_cxs[synapses.group]
-                qb = self.q[:, b_slice]
-                # delays = np.zeros(qb.shape[1], dtype=np.int32)
+            b_slice = self.group_cxs[group]
+            qb = self.q[:, b_slice]
+            # delays = np.zeros(qb.shape[1], dtype=np.int32)
 
+            for synapses in group.synapses:
                 for spike in self.axons_in[synapses]:
                     # qb[0, indices[spike.axon_id]] += weights[spike.axon_id]
                     cx_base = synapses.axon_cx_base(spike.axon_id)
@@ -399,12 +391,7 @@ class EmulatorInterface(object):
         # TODO^: don't zero voltage in case neuron is saving overshoot
 
         self.s[:] = (self.v > self.vth)
-
-        cx = self.cx_slice
-        cpu = self.cpu_slice
-        self.v[cx][self.s[cx]] = 0
-        self.v[cpu][self.s[cpu]] -= self.vth[cpu][self.s[cpu]]
-
+        self.v[self.s] = 0
         self.w[self.s] = self.ref[self.s]
         np.clip(self.w - 1, 0, None, out=self.w)  # decrement w
 

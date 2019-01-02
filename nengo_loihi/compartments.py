@@ -3,20 +3,20 @@ from __future__ import division
 import warnings
 
 from nengo.exceptions import BuildError
-from nengo.utils.compat import is_iterable
 import numpy as np
 
 from nengo_loihi.discretize import (
+    array_to_int,
     BIAS_MAX,
     bias_to_manexp,
     decay_magnitude,
-    learn_overflow_bits,
-    tracing_mag_int_frac,
     Q_BITS,
     VTH_MAX,
     vth_to_manexp,
 )
-from nengo_loihi.synapses import SynapseFmt
+from nengo_loihi.axons import AxonGroup
+from nengo_loihi.probes import ProbeGroup
+from nengo_loihi.synapses import SynapseFmt, SynapseGroup
 
 
 class CompartmentGroup(object):
@@ -66,27 +66,25 @@ class CompartmentGroup(object):
         in units of current or voltage. Integer values are in base 2.
     noiseAtDenOrVm : {0, 1}
         Inject noise into current (0) or voltage (1).
-    synapses : list of Synapses
-        Synapses objects projecting to these compartments.
-    named_synapses : dict
-        Dictionary mapping names to Synapses objects.
-    axons : list of Axons
+    axons : AxonGroup
         Axons objects outputting from these compartments.
-    named_axons : dict
-        Dictionary mapping names to Axons objects.
-    probes : list of Probe
+    synapses : SynapseGroup
+        Synapses objects projecting to these compartments.
+    probes : ProbeGroup
         Probes recording information from these compartments.
-    location : {"core", "cpu"}
-        Whether these compartments are on a Loihi core
-        or handled by the Loihi x86 processor (CPU).
     """
     # threshold at which U/V scaling is allowed
     DECAY_SCALE_TH = 0.5 / 2**12  # half of one decay scaling unit
 
-    def __init__(self, n, label=None, location='core'):
+    def __init__(self, n, label=None):
         self.n = n
         self.label = label
 
+        self.axons = AxonGroup()
+        self.synapses = SynapseGroup()
+        self.probes = ProbeGroup()
+
+        # parameters specific to compartments/group
         self.decayU = np.ones(n, dtype=np.float32)  # default to no filter
         self.decayV = np.zeros(n, dtype=np.float32)  # default to integration
         self.tau_s = None
@@ -105,45 +103,18 @@ class CompartmentGroup(object):
         self.noiseExp0 = 0
         self.noiseAtDendOrVm = 0
 
-        self.synapses = []
-        self.named_synapses = {}
-        self.axons = []
-        self.named_axons = {}
-        self.probes = []
-
-        assert location in ('core', 'cpu')
-        self.location = location
-
     def __str__(self):
         return "%s(%s)" % (
             type(self).__name__, self.label if self.label else '')
 
     def add_synapses(self, synapses, name=None):
-        """Add a Synapses object to ensemble."""
-
-        assert synapses.group is None
-        synapses.group = self
-        self.synapses.append(synapses)
-        if name is not None:
-            assert name not in self.named_synapses
-            self.named_synapses[name] = synapses
+        self.synapses.add(synapses, name=name)
 
     def add_axons(self, axons, name=None):
-        """Add a Axons object to ensemble."""
-
-        assert axons.group is None
-        axons.group = self
-        self.axons.append(axons)
-        if name is not None:
-            assert name not in self.named_axons
-            self.named_axons[name] = axons
+        self.axons.add(axons, name=name)
 
     def add_probe(self, probe):
-        """Add a Probe object to ensemble."""
-        if probe.target is None:
-            probe.target = self
-        assert probe.target is self
-        self.probes.append(probe)
+        self.probes.add(probe)
 
     def configure_default_filter(self, tau_s, dt=0.001):
         """Set the default Lowpass synaptic input filter for compartments.
@@ -217,18 +188,11 @@ class CompartmentGroup(object):
         self.scaleV = False
 
     def discretize(self):  # noqa C901
-        def discretize(target, value):
-            assert target.dtype == np.float32
-            # new = np.round(target * scale).astype(np.int32)
-            new = np.round(value).astype(np.int32)
-            target.dtype = np.int32
-            target[:] = new
-
         # --- discretize decayU and decayV
         # subtract 1 from decayU here because it gets added back by the chip
         decayU = self.decayU * (2**12 - 1) - 1
-        discretize(self.decayU, np.clip(decayU, 0, 2**12 - 1))
-        discretize(self.decayV, self.decayV * (2**12 - 1))
+        array_to_int(self.decayU, np.clip(decayU, 0, 2**12 - 1))
+        array_to_int(self.decayV, self.decayV * (2**12 - 1))
 
         # Compute factors for current and voltage decay. These factors
         # counteract the fact that for longer decays, the current (or voltage)
@@ -247,38 +211,38 @@ class CompartmentGroup(object):
         self.vmax = 2**(9 + 2*vmaxe) - 1
 
         # --- discretize weights and vth
-        # To avoid overflow, we can either lower vth_max or lower wgtExp_max.
+        # To avoid overflow, we can either lower vth_max or lower w_exp_max.
         # Lowering vth_max is more robust, but has the downside that it may
-        # force smaller wgtExp on connections than necessary, potentially
+        # force smaller w_exp on connections than necessary, potentially
         # leading to lost weight bits (see SynapseFmt.discretize_weights).
-        # Lowering wgtExp_max can let us keep vth_max higher, but overflow
+        # Lowering w_exp_max can let us keep vth_max higher, but overflow
         # is still be possible on connections with many small inputs (uncommon)
         vth_max = VTH_MAX
-        wgtExp_max = 0
+        w_exp_max = 0
 
         w_maxs = [s.max_abs_weight() for s in self.synapses]
         w_max = max(w_maxs) if len(w_maxs) > 0 else 0
         b_max = np.abs(self.bias).max()
-        wgtExp = 0
+        w_exp = 0
 
         if w_max > 1e-8:
             w_scale = (255. / w_max)
             s_scale = 1. / (u_infactor * v_infactor)
 
-            for wgtExp in range(wgtExp_max, -8, -1):
-                v_scale = s_scale * w_scale * SynapseFmt.get_scale(wgtExp)
+            for w_exp in range(w_exp_max, -8, -1):
+                v_scale = s_scale * w_scale * SynapseFmt.get_scale(w_exp)
                 b_scale = v_scale * v_infactor
                 vth = np.round(self.vth * v_scale)
                 bias = np.round(self.bias * b_scale)
                 if (vth <= vth_max).all() and (np.abs(bias) <= BIAS_MAX).all():
                     break
             else:
-                raise BuildError("Could not find appropriate wgtExp")
+                raise BuildError("Could not find appropriate weight exponent")
         elif b_max > 1e-8:
             b_scale = BIAS_MAX / b_max
             while b_scale*b_max > 1:
                 v_scale = b_scale / v_infactor
-                w_scale = b_scale * u_infactor / SynapseFmt.get_scale(wgtExp)
+                w_scale = b_scale * u_infactor / SynapseFmt.get_scale(w_exp)
                 vth = np.round(self.vth * v_scale)
                 bias = np.round(self.bias * b_scale)
                 if np.all(vth <= vth_max):
@@ -296,70 +260,13 @@ class CompartmentGroup(object):
             b_scale = v_scale * v_infactor
             bias = np.round(self.bias * b_scale)
             w_scale = (v_scale * v_infactor * u_infactor
-                       / SynapseFmt.get_scale(wgtExp))
+                       / SynapseFmt.get_scale(w_exp))
 
         vth_man, vth_exp = vth_to_manexp(vth)
-        discretize(self.vth, vth_man * 2**vth_exp)
+        array_to_int(self.vth, vth_man * 2**vth_exp)
 
         bias_man, bias_exp = bias_to_manexp(bias)
-        discretize(self.bias, bias_man * 2**bias_exp)
-
-        for i, synapse in enumerate(self.synapses):
-            if synapse.tracing:
-                wgtExp2 = synapse.learning_wgt_exp
-                dWgtExp = wgtExp - wgtExp2
-            elif w_maxs[i] > 1e-16:
-                dWgtExp = int(np.floor(np.log2(w_max / w_maxs[i])))
-                assert dWgtExp >= 0
-                wgtExp2 = max(wgtExp - dWgtExp, -6)
-            else:
-                wgtExp2 = -6
-                dWgtExp = wgtExp - wgtExp2
-            synapse.format(wgtExp=wgtExp2)
-            for w, idxs in zip(synapse.weights, synapse.indices):
-                ws = w_scale[idxs] if is_iterable(w_scale) else w_scale
-                discretize(w, synapse.synapse_fmt.discretize_weights(
-                    w * ws * 2**dWgtExp))
-
-            # discretize learning
-            if synapse.tracing:
-                synapse.tracing_tau = int(np.round(synapse.tracing_tau))
-
-                if is_iterable(w_scale):
-                    assert np.all(w_scale == w_scale[0])
-                w_scale_i = w_scale[0] if is_iterable(w_scale) else w_scale
-
-                # incorporate weight scale and difference in weight exponents
-                # to learning rate, since these affect speed at which we learn
-                ws = w_scale_i * 2**dWgtExp
-                synapse.learning_rate *= ws
-
-                # Loihi down-scales learning factors based on the number of
-                # overflow bits. Increasing learning rate maintains true rate.
-                synapse.learning_rate *= 2**learn_overflow_bits(2)
-
-                # TODO: Currently, Loihi learning rate fixed at 2**-7.
-                # We should explore adjusting it for better performance.
-                lscale = 2**-7 / synapse.learning_rate
-                synapse.learning_rate *= lscale
-                synapse.tracing_mag /= lscale
-
-                # discretize learning rate into mantissa and exponent
-                lr_exp = int(np.floor(np.log2(synapse.learning_rate)))
-                lr_int = int(np.round(synapse.learning_rate * 2**(-lr_exp)))
-                synapse.learning_rate = lr_int * 2**lr_exp
-                synapse._lr_int = lr_int
-                synapse._lr_exp = lr_exp
-                assert lr_exp >= -7
-
-                # discretize tracing mag into integer and fractional components
-                mag_int, mag_frac = tracing_mag_int_frac(synapse.tracing_mag)
-                if mag_int > 127:
-                    warnings.warn("Trace increment exceeds upper limit "
-                                  "(learning rate may be too large)")
-                    mag_int = 127
-                    mag_frac = 127
-                synapse.tracing_mag = mag_int + mag_frac / 128.
+        array_to_int(self.bias, bias_man * 2**bias_exp)
 
         # --- noise
         assert (v_scale[0] == v_scale).all()
@@ -372,42 +279,16 @@ class CompartmentGroup(object):
         self.noiseExp0 = int(np.clip(noiseExp0, 0, 23))
         self.noiseMantOffset0 = int(np.round(2*self.noiseMantOffset0))
 
-        for p in self.probes:
-            if p.key == 'v' and p.weights is not None:
-                p.weights /= v_scale[0]
+        # --- discretize constituents
+        self.synapses.discretize(w_max, w_scale, w_exp)
+        self.probes.discretize(v_scale[0])
 
     def validate(self):
-        if self.location == 'cpu':
-            return  # none of these checks currently apply to Lakemont
-
         N_CX_MAX = 1024
         if self.n > N_CX_MAX:
             raise BuildError("Number of compartments (%d) exceeded max (%d)" %
                              (self.n, N_CX_MAX))
 
-        IN_AXONS_MAX = 4096
-        n_axons = sum(s.n_axons for s in self.synapses)
-        if n_axons > IN_AXONS_MAX:
-            raise BuildError("Input axons (%d) exceeded max (%d)" % (
-                n_axons, IN_AXONS_MAX))
-
-        MAX_SYNAPSE_BITS = 16384*64
-        synapse_bits = sum(s.bits() for s in self.synapses)
-        if synapse_bits > MAX_SYNAPSE_BITS:
-            raise BuildError("Total synapse bits (%d) exceeded max (%d)" % (
-                synapse_bits, MAX_SYNAPSE_BITS))
-
-        OUT_AXONS_MAX = 4096
-        n_axons = sum(a.axon_slots() for a in self.axons)
-        if n_axons > OUT_AXONS_MAX:
-            raise BuildError("Output axons (%d) exceeded max (%d)" % (
-                n_axons, OUT_AXONS_MAX))
-
-        for synapses in self.synapses:
-            synapses.validate()
-
-        for axons in self.axons:
-            axons.validate()
-
-        for probe in self.probes:
-            probe.validate()
+        self.axons.validate()
+        self.synapses.validate()
+        self.probes.validate()

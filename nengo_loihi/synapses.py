@@ -2,9 +2,16 @@ from __future__ import division
 
 import warnings
 
+from nengo.exceptions import BuildError
+from nengo.utils.compat import is_iterable
 import numpy as np
 
-from nengo_loihi.discretize import shift
+from nengo_loihi.discretize import (
+    array_to_int,
+    learn_overflow_bits,
+    tracing_mag_int_frac,
+    shift,
+)
 
 
 class Profile(object):
@@ -365,3 +372,121 @@ class Synapses(object):
         if self.pop_type == 16:
             if self.axon_cx_bases is not None:
                 assert np.all(self.axon_cx_bases % 4 == 0)
+
+
+class SynapseGroup(object):
+    """A group of synapses, typically belonging to a NeuronGroup.
+
+    Attributes
+    ----------
+    named_synapses : {string: Synapses}
+        Maps names for synapses to the synapses themselves.
+    synapses : list of Synapses
+        A list of all synapses in this group.
+    """
+
+    def __init__(self):
+        self.synapses = []
+        self.named_synapses = {}
+
+    def __iter__(self):
+        return iter(self.synapses)
+
+    def __len__(self):
+        return len(self.synapses)
+
+    def by_name(self, name):
+        return self.named_synapses[name]
+
+    def has_name(self, name):
+        return name in self.named_synapses
+
+    def add(self, synapses, name=None):
+        """Add a Synapses object to this group."""
+        self.synapses.append(synapses)
+        if name is not None:
+            assert name not in self.named_synapses
+            self.named_synapses[name] = synapses
+
+        self._validate_structure()
+
+    def max_weight(self):
+        w_maxs = [s.max_abs_weight() for s in self.synapses]
+        return max(w_maxs) if len(w_maxs) > 0 else 0
+
+    def discretize(self, w_max, w_scale, w_exp):
+        for i, synapse in enumerate(self.synapses):
+            w_max_i = synapse.max_abs_weight()
+            if synapse.tracing:
+                w_exp2 = synapse.learning_wgt_exp
+                dw_exp = w_exp - w_exp2
+            elif w_max_i > 1e-16:
+                dw_exp = int(np.floor(np.log2(w_max / w_max_i)))
+                assert dw_exp >= 0
+                w_exp2 = max(w_exp - dw_exp, -6)
+            else:
+                w_exp2 = -6
+                dw_exp = w_exp - w_exp2
+            synapse.format(wgtExp=w_exp2)
+            for w, idxs in zip(synapse.weights, synapse.indices):
+                ws = w_scale[idxs] if is_iterable(w_scale) else w_scale
+                array_to_int(w, synapse.synapse_fmt.discretize_weights(
+                    w * ws * 2 ** dw_exp))
+
+            # discretize learning
+            if synapse.tracing:
+                synapse.tracing_tau = int(np.round(synapse.tracing_tau))
+
+                if is_iterable(w_scale):
+                    assert np.all(w_scale == w_scale[0])
+                w_scale_i = w_scale[0] if is_iterable(w_scale) else w_scale
+
+                # incorporate weight scale and difference in weight exponents
+                # to learning rate, since these affect speed at which we learn
+                ws = w_scale_i * 2 ** dw_exp
+                synapse.learning_rate *= ws
+
+                # Loihi down-scales learning factors based on the number of
+                # overflow bits. Increasing learning rate maintains true rate.
+                synapse.learning_rate *= 2 ** learn_overflow_bits(2)
+
+                # TODO: Currently, Loihi learning rate fixed at 2**-7.
+                # We should explore adjusting it for better performance.
+                lscale = 2 ** -7 / synapse.learning_rate
+                synapse.learning_rate *= lscale
+                synapse.tracing_mag /= lscale
+
+                # discretize learning rate into mantissa and exponent
+                lr_exp = int(np.floor(np.log2(synapse.learning_rate)))
+                lr_int = int(np.round(synapse.learning_rate * 2 ** (-lr_exp)))
+                synapse.learning_rate = lr_int * 2 ** lr_exp
+                synapse._lr_int = lr_int
+                synapse._lr_exp = lr_exp
+                assert lr_exp >= -7
+
+                # discretize tracing mag into integer and fractional components
+                mag_int, mag_frac = tracing_mag_int_frac(synapse.tracing_mag)
+                if mag_int > 127:
+                    warnings.warn("Trace increment exceeds upper limit "
+                                  "(learning rate may be too large)")
+                    mag_int = 127
+                    mag_frac = 127
+                synapse.tracing_mag = mag_int + mag_frac / 128.
+
+    def _validate_structure(self):
+        IN_AXONS_MAX = 4096
+        n_axons = sum(s.n_axons for s in self)
+        if n_axons > IN_AXONS_MAX:
+            raise BuildError("Input axons (%d) exceeded max (%d)" % (
+                n_axons, IN_AXONS_MAX))
+
+        MAX_SYNAPSE_BITS = 16384*64
+        synapse_bits = sum(s.bits() for s in self)
+        if synapse_bits > MAX_SYNAPSE_BITS:
+            raise BuildError("Total synapse bits (%d) exceeded max (%d)" % (
+                synapse_bits, MAX_SYNAPSE_BITS))
+
+    def validate(self):
+        self._validate_structure()
+        for synapses in self:
+            synapses.validate()

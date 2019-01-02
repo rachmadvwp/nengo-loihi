@@ -211,7 +211,7 @@ def build_connection(model, conn):
             weights = weights / conn.pre_obj.radius
 
             gain = 1
-            dec_cx = CompartmentGroup(2 * d, label='%s' % conn, location='core')
+            dec_cx = CompartmentGroup(2 * d, label='%s' % conn)
             dec_cx.configure_nonspiking(dt=model.dt, vth=model.vth_nonspiking)
             dec_cx.bias[:] = 0
             model.add_group(dec_cx)
@@ -346,12 +346,12 @@ def build_connection(model, conn):
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble):
         assert target_encoders is not None
-        if target_encoders not in post_cx.named_synapses:
+        if not post_cx.synapses.has_name(target_encoders):
             build_decode_neuron_encoders(
                 model, conn.post_obj, kind=target_encoders)
 
         mid_ax = Axons(mid_cx.n, label="encoders")
-        mid_ax.target = post_cx.named_synapses[target_encoders]
+        mid_ax.target = post_cx.synapses.by_name(target_encoders)
         mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax

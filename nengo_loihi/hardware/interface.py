@@ -245,7 +245,7 @@ class HardwareInterface(object):
             coreid = None
             for core in self.board.chips[0].cores:
                 for group in core.groups:
-                    if group is synapses.group:
+                    if synapses in group.synapses.synapses:
                         # TODO: assumes one group per core
                         coreid = core.learning_coreid
                         break
