@@ -1,5 +1,7 @@
 import numpy as np
 
+from nengo.exceptions import BuildError
+
 from nengo_loihi.synapses import Synapses
 
 
@@ -97,3 +99,31 @@ class Axons(object):
                 for atom, axon_id in zip(self.cx_atoms, axon_ids):
                     n_populations = self.target.axon_populations(axon_id)
                     assert 0 <= atom < n_populations
+
+
+class AxonGroup(object):
+    def __init__(self):
+        self.axons = []
+        self.named_axons = {}
+
+    def __iter__(self):
+        return iter(self.axons)
+
+    def add(self, axons, name=None):
+        """Add an Axons object to this group."""
+        self.axons.append(axons)
+        if name is not None:
+            assert name not in self.named_axons
+            self.named_axons[name] = axons
+
+    def _validate_structure(self):
+        OUT_AXONS_MAX = 4096
+        n_axons = sum(a.axon_slots() for a in self.axons)
+        if n_axons > OUT_AXONS_MAX:
+            raise BuildError("Output axons (%d) exceeded max (%d)" % (
+                n_axons, OUT_AXONS_MAX))
+
+    def validate(self):
+        self._validate_structure()
+        for axons in self:
+            axons.validate()

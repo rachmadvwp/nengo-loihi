@@ -20,6 +20,13 @@ LEARN_BITS = 15  # number of bits in learning accumulator (not incl. sign)
 LEARN_FRAC = 7  # extra least-significant bits added to weights for learning
 
 
+def array_to_int(array, value):
+    assert array.dtype == np.float32
+    new = np.round(value).astype(np.int32)
+    array.dtype = np.int32
+    array[:] = new
+
+
 def learn_overflow_bits(n_factors):
     """Compute number of by which learning will overflow.
 

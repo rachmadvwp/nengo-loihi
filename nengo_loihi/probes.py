@@ -13,3 +13,27 @@ class Probe(object):
 
     def validate(self):
         pass
+
+
+class ProbeGroup(object):
+    def __init__(self):
+        self.probes = []
+
+    def __iter__(self):
+        return iter(self.probes)
+
+    def add(self, probe):
+        """Add a Probe object to ensemble."""
+        # if probe.target is None:
+        #     probe.target = self
+        # assert probe.target is self
+        self.probes.append(probe)
+
+    def discretize(self, v_scale):
+        for p in self.probes:
+            if p.key == 'v' and p.weights is not None:
+                p.weights /= v_scale
+
+    def validate(self):
+        for probe in self:
+            probe.validate()

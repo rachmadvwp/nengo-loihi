@@ -100,7 +100,7 @@ class NoisyInterneurons(EqualDecoderInterneurons):
     def get_compartments(self, weights, comp_label=None, syn_label=None):
         self.fix_parameters()
         d, n = weights.shape
-        cx = CompartmentGroup(2 * d * self.n, label=comp_label, location='core')
+        cx = CompartmentGroup(2 * d * self.n, label=comp_label)
         cx.configure_relu(dt=self.dt)
         cx.bias[:] = self.bias * np.ones(d * 2 * self.n)
         if self.inter_noise_exp > -30:
@@ -133,8 +133,7 @@ class PresetInterneurons(EqualDecoderInterneurons):
     def get_compartments(self, weights, comp_label=None, syn_label=None):
         self.fix_parameters()
         d, n = weights.shape
-        cx = CompartmentGroup(self.n * 2 * d, label=comp_label,
-                              location='core')
+        cx = CompartmentGroup(self.n * 2 * d, label=comp_label)
         cx.configure_relu(dt=self.dt)
         cx.bias[:] = self.bias.repeat(d)
 
