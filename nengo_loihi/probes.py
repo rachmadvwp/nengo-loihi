@@ -13,3 +13,34 @@ class Probe(object):
 
     def validate(self):
         pass
+
+
+class ProbeGroup(object):
+    """A group of probes, typically belonging to a NeuronGroup.
+
+    Attributes
+    ----------
+    probes : list of Probes
+        A list of all probes in this group.
+    """
+
+    def __init__(self):
+        self.probes = []
+
+    def __iter__(self):
+        return iter(self.probes)
+
+    def __len__(self):
+        return len(self.probes)
+
+    def add(self, probe):
+        self.probes.append(probe)
+
+    def discretize(self, v_scale):
+        for p in self.probes:
+            if p.key == 'v' and p.weights is not None:
+                p.weights /= v_scale
+
+    def validate(self):
+        for probe in self:
+            probe.validate()

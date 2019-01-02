@@ -153,7 +153,7 @@ class OnOffDecodeNeurons(DecodeNeurons):
 
         d, n = weights.shape
         n_neurons = 2 * d * self.pairs_per_dim
-        cx = CompartmentGroup(n_neurons, label=comp_label, location='core')
+        cx = CompartmentGroup(n_neurons, label=comp_label)
         cx.configure_relu(dt=self.dt)
         cx.bias[:] = bias.repeat(d)
 

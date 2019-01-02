@@ -4,8 +4,6 @@ import collections
 
 import numpy as np
 
-from nengo.exceptions import BuildError
-
 from nengo_loihi.discretize import VTH_MAN_MAX
 from nengo_loihi.utils import Profile
 
@@ -53,13 +51,7 @@ class Board(object):
         self.synapses_index[synapses] = (chip_idx, core_idx, idxs)
 
     def find_synapses(self, synapses):
-        group = synapses.group
-        if group.location == 'core':
-            return self.synapses_index[synapses]
-        elif group.location == 'cpu':
-            raise NotImplementedError("CPU neurons not implemented")
-        else:
-            raise BuildError("Unrecognized location %r" % group.location)
+        return self.synapses_index[synapses]
 
     def cores(self):
         return (core for chip in self.chips for core in chip.cores)
