@@ -156,7 +156,11 @@ def build_conv2d_connection(model, conn):
     assert conn.post_slice == slice(None)
 
     gain = model.params[conn.post_obj.ensemble].gain
-    assert np.all(gain == gain[0]), "All gains must be the same"
+    if not np.all(gain == gain[0]):
+        # TODO: support this
+        raise NotImplementedError(
+            "nengo-loihi currently requires that all Ensemble neurons "
+            "targeted by a Convolution connection have the same gain")
     weights = weights * gain[0]
 
     pop_type = 32  # TODO: pick this
