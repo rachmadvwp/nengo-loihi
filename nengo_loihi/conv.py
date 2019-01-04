@@ -6,6 +6,7 @@ import numpy as np
 import nengo
 from nengo.builder.connection import BuiltConnection
 from nengo.ensemble import Neurons
+from nengo.exceptions import ValidationError
 from nengo.transforms import ChannelShape
 
 try:
@@ -157,10 +158,10 @@ def build_conv2d_connection(model, conn):
 
     gain = model.params[conn.post_obj.ensemble].gain
     if not np.all(gain == gain[0]):
-        # TODO: support this
-        raise NotImplementedError(
-            "nengo-loihi currently requires that all Ensemble neurons "
-            "targeted by a Convolution connection have the same gain")
+        # TODO: support this?
+        raise ValidationError(
+            "All neurons targeted by a Convolution connection must "
+            "have the same gain", "gain", obj=conn.post_obj.ensemble)
     weights = weights * gain[0]
 
     pop_type = 32  # TODO: pick this

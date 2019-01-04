@@ -3,9 +3,10 @@ import pickle
 
 import nengo
 from nengo.dists import Uniform
+from nengo.exceptions import ValidationError
+from nengo.transforms import ChannelShape
 from nengo_extras.matplotlib import tile, imshow
 from nengo_extras.vision import Gabor
-from nengo.transforms import ChannelShape
 import numpy as np
 import pytest
 import scipy.signal
@@ -611,3 +612,15 @@ def test_conv_split(Simulator, rng, plt, allclose):
     tile(loihi_out, vmin=0, vmax=out_max, cols=8, ax=ax)
 
     assert allclose(loihi_out, nengo_out, atol=0.05*out_max, rtol=0.15)
+
+
+def test_conv_gain(Simulator):
+    with nengo.Network() as net:
+        a = nengo.Ensemble(16, 1)
+        b = nengo.Ensemble(4, 1)
+        nengo.Connection(a.neurons, b.neurons,
+                         transform=nengo.Convolution(1, (4, 4, 1)))
+
+    with pytest.raises(ValidationError):
+        with Simulator(net):
+            pass
