@@ -14,9 +14,7 @@ from nengo_loihi.discretize import (
     VTH_MAX,
     vth_to_manexp,
 )
-from nengo_loihi.axons import AxonGroup
-from nengo_loihi.probes import ProbeGroup
-from nengo_loihi.synapses import SynapseFmt, SynapseGroup
+from nengo_loihi.synapses import SynapseFmt
 
 
 class CompartmentGroup(object):
@@ -31,7 +29,7 @@ class CompartmentGroup(object):
 
     Attributes
     ----------
-    n : int
+    n_compartments : int
         The number of compartments in the group.
     label : string
         A label for the group (for debugging purposes).
@@ -66,35 +64,27 @@ class CompartmentGroup(object):
         in units of current or voltage. Integer values are in base 2.
     noiseAtDenOrVm : {0, 1}
         Inject noise into current (0) or voltage (1).
-    axons : AxonGroup
-        Axons objects outputting from these compartments.
-    synapses : SynapseGroup
-        Synapses objects projecting to these compartments.
-    probes : ProbeGroup
-        Probes recording information from these compartments.
     """
     # threshold at which U/V scaling is allowed
     DECAY_SCALE_TH = 0.5 / 2**12  # half of one decay scaling unit
 
-    def __init__(self, n, label=None):
-        self.n = n
+    def __init__(self, n_compartments, label=None):
+        self.n_compartments = n_compartments
         self.label = label
 
-        self.axons = AxonGroup()
-        self.synapses = SynapseGroup()
-        self.probes = ProbeGroup()
-
         # parameters specific to compartments/group
-        self.decayU = np.ones(n, dtype=np.float32)  # default to no filter
-        self.decayV = np.zeros(n, dtype=np.float32)  # default to integration
+        self.decayU = np.ones(n_compartments, dtype=np.float32)
+        # ^ default to no filter
+        self.decayV = np.zeros(n_compartments, dtype=np.float32)
+        # ^ default to integration
         self.tau_s = None
         self.scaleU = True
         self.scaleV = False
 
-        self.refractDelay = np.zeros(n, dtype=np.int32)
-        self.vth = np.zeros(n, dtype=np.float32)
-        self.bias = np.zeros(n, dtype=np.float32)
-        self.enableNoise = np.zeros(n, dtype=bool)
+        self.refractDelay = np.zeros(n_compartments, dtype=np.int32)
+        self.vth = np.zeros(n_compartments, dtype=np.float32)
+        self.bias = np.zeros(n_compartments, dtype=np.float32)
+        self.enableNoise = np.zeros(n_compartments, dtype=bool)
 
         # parameters common to core
         self.vmin = 0
@@ -178,7 +168,7 @@ class CompartmentGroup(object):
         self.vmax = np.inf
         self.scaleV = False
 
-    def discretize(self):  # noqa C901
+    def discretize(self, w_max):
         # --- discretize decayU and decayV
         # subtract 1 from decayU here because it gets added back by the chip
         decayU = self.decayU * (2**12 - 1) - 1
@@ -211,8 +201,6 @@ class CompartmentGroup(object):
         vth_max = VTH_MAX
         w_exp_max = 0
 
-        w_maxs = [s.max_abs_weight() for s in self.synapses]
-        w_max = max(w_maxs) if len(w_maxs) > 0 else 0
         b_max = np.abs(self.bias).max()
         w_exp = 0
 
@@ -270,16 +258,13 @@ class CompartmentGroup(object):
         self.noiseExp0 = int(np.clip(noiseExp0, 0, 23))
         self.noiseMantOffset0 = int(np.round(2*self.noiseMantOffset0))
 
-        # --- discretize constituents
-        self.synapses.discretize(w_max, w_scale, w_exp)
-        self.probes.discretize(v_scale[0])
+        return dict(w_max=w_max,
+                    w_scale=w_scale,
+                    w_exp=w_exp,
+                    v_scale=v_scale)
 
     def validate(self):
         N_CX_MAX = 1024
-        if self.n > N_CX_MAX:
+        if self.n_compartments > N_CX_MAX:
             raise BuildError("Number of compartments (%d) exceeded max (%d)" %
-                             (self.n, N_CX_MAX))
-
-        self.axons.validate()
-        self.synapses.validate()
-        self.probes.validate()
+                             (self.n_compartments, N_CX_MAX))
