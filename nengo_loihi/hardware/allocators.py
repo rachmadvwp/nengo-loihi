@@ -32,12 +32,12 @@ def core_cx_profiles(core):
     """Compute all cxProfiles needed for a core"""
     def list_cx_profiles(group):
         profiles = []
-        for i in range(group.n):
+        for i in range(group.compartments.n_compartments):
             profiles.append(CxProfile(
-                decayU=group.decayU[i],
-                decayV=group.decayV[i],
-                refractDelay=group.refractDelay[i],
-                enableNoise=group.enableNoise[i],
+                decayU=group.compartments.decayU[i],
+                decayV=group.compartments.decayV[i],
+                refractDelay=group.compartments.refractDelay[i],
+                enableNoise=group.compartments.enableNoise[i],
             ))
 
         return profiles
@@ -49,8 +49,8 @@ def core_vth_profiles(core):
     """Compute all vthProfiles needed for a core"""
     def list_vth_profiles(group):
         profiles = []
-        vth, _ = vth_to_manexp(group.vth)
-        for i in range(group.n):
+        vth, _ = vth_to_manexp(group.compartments.vth)
+        for i in range(group.compartments.n_compartments):
             profiles.append(VthProfile(
                 vth=vth[i],
             ))
@@ -88,7 +88,7 @@ def one_to_one_allocator(model):
     chip = board.new_chip()
 
     for group in model.groups:
-        if group.n > 1024:
+        if group.compartments.n_compartments > 1024:
             raise ValidationError("Group does not fit on one chip",
                                   "n_neurons")
 

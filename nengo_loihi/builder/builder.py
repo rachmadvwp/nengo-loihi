@@ -8,8 +8,8 @@ from nengo_loihi.builder.decode_neurons import (
     Preset10DecodeNeurons,
     OnOffDecodeNeurons,
 )
-from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.io_objects import SpikeInput
+from nengo_loihi.neurongroup import NeuronGroup
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class Model(object):
         self.inputs[input] = len(self.inputs)
 
     def add_group(self, group):
-        assert isinstance(group, CompartmentGroup)
+        assert isinstance(group, NeuronGroup)
         assert group not in self.groups
         self.groups[group] = len(self.groups)
 

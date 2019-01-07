@@ -10,7 +10,6 @@ import jinja2
 from nengo.exceptions import SimulationError
 import numpy as np
 
-from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.discretize import scale_pes_errors
 from nengo_loihi.hardware.allocators import one_to_one_allocator
 from nengo_loihi.hardware.builder import build_board
@@ -19,6 +18,7 @@ from nengo_loihi.hardware.nxsdk_shim import (
     nxsdk,
     N2SpikeProbe,
 )
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.probes import Probe
 
 logger = logging.getLogger(__name__)
@@ -174,8 +174,8 @@ class HardwareInterface(object):
             x = data[snip_range[probe]]
             assert x.ndim == 1
             if probe.key == 'spiked':
-                if isinstance(probe.target, CompartmentGroup):
-                    refract_delays = probe.target.refractDelay
+                if isinstance(probe.target, NeuronGroup):
+                    refract_delays = probe.target.compartments.refractDelay
                 else:
                     refract_delays = 1
 
@@ -356,7 +356,7 @@ class HardwareInterface(object):
         max_error_len = 0
         for core in self.board.chips[0].cores:  # TODO: don't assume 1 chip
             if core.learning_coreid:
-                error_len = core.groups[0].n // 2
+                error_len = core.groups[0].n_neurons // 2
                 max_error_len = max(error_len, max_error_len)
                 n_errors += 1
                 total_error_len += 2 + error_len

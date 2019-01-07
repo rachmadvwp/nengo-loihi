@@ -16,7 +16,6 @@ except ImportError:
 import nengo_loihi
 from nengo_loihi.axons import Axons
 from nengo_loihi.builder import Model
-from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.conv import (
     Conv2D,
     conv2d_loihi_weights,
@@ -26,6 +25,7 @@ from nengo_loihi.conv import (
 )
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.neurons import (
     loihi_rates,
     LoihiLIF,
@@ -98,10 +98,10 @@ def test_pop_tiny(
     model = Model()
 
     # input group
-    inp = CompartmentGroup(ni * nj * nk, label='inp')
-    assert inp.n <= 1024
-    inp.configure_relu()
-    inp.bias[:] = inp_biases.ravel()
+    inp = NeuronGroup(ni * nj * nk, label='inp')
+    assert inp.n_neurons <= 1024
+    inp.compartments.configure_relu()
+    inp.compartments.bias[:] = inp_biases.ravel()
 
     inp_ax = Axons(nij, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
@@ -110,11 +110,11 @@ def test_pop_tiny(
     model.add_group(inp)
 
     # conv group
-    neurons = CompartmentGroup(out_size, label='neurons')
-    assert neurons.n <= 1024
-    neurons.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
-    neurons.configure_filter(tau_s, dt=dt)
-    neurons.bias[:] = neuron_bias
+    neurons = NeuronGroup(out_size, label='neurons')
+    assert neurons.n_neurons <= 1024
+    neurons.compartments.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
+    neurons.compartments.configure_filter(tau_s, dt=dt)
+    neurons.compartments.bias[:] = neuron_bias
 
     synapses = Synapses(inp_shape.n_pixels, label='synapses')
     conv2d_transform = Conv2D.from_kernel(
@@ -240,10 +240,10 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     model = Model()
 
     # input group
-    inp = CompartmentGroup(inp_shape.size, label='inp')
-    assert inp.n <= 1024
-    inp.configure_relu()
-    inp.bias[:] = inp_biases.ravel()
+    inp = NeuronGroup(inp_shape.size, label='inp')
+    assert inp.n_neurons <= 1024
+    inp.compartments.configure_relu()
+    inp.compartments.bias[:] = inp_biases.ravel()
 
     inp_ax = Axons(inp_shape.n_pixels, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
@@ -252,11 +252,11 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     model.add_group(inp)
 
     # conv group
-    neurons = CompartmentGroup(out_size, label='neurons')
-    assert neurons.n <= 1024
-    neurons.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
-    neurons.configure_filter(tau_s, dt=dt)
-    neurons.bias[:] = neuron_bias
+    neurons = NeuronGroup(out_size, label='neurons')
+    assert neurons.n_neurons <= 1024
+    neurons.compartments.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
+    neurons.compartments.configure_filter(tau_s, dt=dt)
+    neurons.compartments.bias[:] = neuron_bias
 
     synapses = Synapses(inp_shape.n_pixels, label='synapses')
     weights, indices, axon_to_weight_map, cx_bases = conv2d_loihi_weights(

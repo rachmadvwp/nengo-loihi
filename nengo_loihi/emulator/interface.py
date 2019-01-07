@@ -151,17 +151,17 @@ class GroupInfo(object):
 
         start_ix = end_ix = 0
         for group in self.groups:
-            end_ix += group.n
+            end_ix += group.n_neurons
             self.slices[group] = slice(start_ix, end_ix)
-            assert group.vth.dtype == self.dtype
-            assert group.bias.dtype == self.dtype
+            assert group.compartments.vth.dtype == self.dtype
+            assert group.compartments.bias.dtype == self.dtype
             start_ix = end_ix
 
         self.n_compartments = end_ix
 
     @property
     def dtype(self):
-        return self.groups[0].vth.dtype
+        return self.groups[0].compartments.vth.dtype
 
 
 class IterableState(object):
@@ -190,23 +190,21 @@ class IterableState(object):
         self.dtype = group_info.dtype
         self.strict = strict
 
-        if group_key == "compartments":
-            self.group_map = {group: group for group in group_info.groups}
-            self.slices = {
-                group: group_info.slices[group]
-                for group in group_info.groups
-            }
-        else:
-            self.group_map = {
-                item: group
-                for group in group_info.groups
-                for item in getattr(group, group_key)
-            }
-            self.slices = {
-                item: group_info.slices[group]
-                for group in group_info.groups
-                for item in getattr(group, group_key)
-            }
+        groups_items = list(self._groups_items(group_info.groups, group_key))
+        self.group_map = {item: group for group, item in groups_items}
+        self.slices = {item: group_info.slices[group]
+                       for group, item in groups_items}
+
+    @staticmethod
+    def _groups_items(groups, group_key):
+        for group in groups:
+            if group_key == "compartments":
+                # one item per group
+                yield group, getattr(group, group_key)
+            else:
+                # multiple items per group (attribute is iterable)
+                for item in getattr(group, group_key):
+                    yield group, item
 
     def __contains__(self, item):
         return item in self.slices
@@ -436,7 +434,7 @@ class SynapseState(IterableState):
                 self.traces[synapses] = np.zeros(n, dtype=self.dtype)
                 self.trace_spikes[synapses] = set()
                 self.pes_errors[synapses] = np.zeros(
-                    self.group_map[synapses].n // 2, dtype=self.dtype)
+                    self.group_map[synapses].n_neurons // 2, dtype=self.dtype)
                 # ^ Currently, PES learning only happens on Nodes, where we
                 # have pairs of on/off neurons. Therefore, the number of error
                 # dimensions is half the number of neurons.

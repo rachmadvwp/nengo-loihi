@@ -18,11 +18,11 @@ except ImportError:
     nengo_dl = None
 
 from nengo_loihi.axons import Axons
-from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.io_objects import (
     ChipReceiveNeurons,
     SpikeInput,
 )
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.synapses import Synapses
 
 
@@ -561,8 +561,8 @@ def build_conv2d_connection(model, conn):
 
     pre_cx = model.objs[conn.pre_obj]['out']
     post_cx = model.objs[conn.post_obj]['in']
-    assert isinstance(pre_cx, (CompartmentGroup, SpikeInput))
-    assert isinstance(post_cx, CompartmentGroup)
+    assert isinstance(pre_cx, (NeuronGroup, SpikeInput))
+    assert isinstance(post_cx, NeuronGroup)
 
     tau_s = 0.0
     if isinstance(conn.synapse, nengo.synapses.Lowpass):
@@ -614,7 +614,7 @@ def build_conv2d_connection(model, conn):
     ax.cx_atoms = input_shape.channel_idxs()
     pre_cx.add_axons(ax)
 
-    post_cx.configure_filter(tau_s, dt=model.dt)
+    post_cx.compartments.configure_filter(tau_s, dt=model.dt)
 
     model.params[conn] = BuiltConnection(
         eval_points=None,

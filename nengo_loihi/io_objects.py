@@ -9,8 +9,8 @@ import numpy as np
 
 
 class SpikeInput(object):
-    def __init__(self, n, label=None):
-        self.n = n
+    def __init__(self, n_neurons, label=None):
+        self.n_neurons = n_neurons
         self.label = label
 
         self.spikes = {}  # map sim timestep index to list of spike inds

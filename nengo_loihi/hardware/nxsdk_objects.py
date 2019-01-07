@@ -147,7 +147,7 @@ class Core(object):
         i0 = 0
         a0 = 0
         for group in self.groups:
-            i1 = i0 + group.n
+            i1 = i0 + group.compartments.n_compartments
             a1 = a0 + sum(ax.n_axons for ax in group.axons)
             cx_idxs = list(range(i0, i1))
             ax_range = (a0, a1)
@@ -158,7 +158,7 @@ class Core(object):
     def iterate_inputs(self):
         i0 = 0
         for inp in self.inputs:
-            i1 = i0 + inp.n
+            i1 = i0 + inp.n_neurons
             cx_idxs = list(range(i0, i1))
             yield inp, cx_idxs
             i0 = i1
@@ -258,7 +258,7 @@ class LoihiSpikeInput(object):
 
     def set_axons(self, board, n2board, cx_spike_input):
         assert len(self.axon_map) == 0
-        cx_idxs = np.arange(cx_spike_input.n)
+        cx_idxs = np.arange(cx_spike_input.n_neurons)
         for axons in cx_spike_input.axons:
             assert (axons.cx_atoms is None or np.all(axons.cx_atoms == 0)), (
                 "Cannot send pop spikes to board")
