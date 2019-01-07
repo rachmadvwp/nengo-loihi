@@ -189,16 +189,25 @@ class Synapses(object):
         can have a different number of target compartments.
     indices : (population, axon, compartment) ndarray
         The synapse indices.
+    axon_cx_bases : list or None
+        List providing ax cx_base (compartment offset) for each input axon.
+    axon_to_weight_map : dict or None
+        Map from input axon index to weight index, to allow weights to be
+        re-used by axons. If None, the weight index for an input axon is the
+        axon index.
+    learning : bool
+        Whether synaptic tracing and learning is enabled for these synapses.
     learning_rate : float
         The learning rate.
     learning_wgt_exp : int
         The weight exponent used on this connection if learning is enabled.
-    tracing : bool
-        Whether synaptic tracing is enabled for these synapses.
     tracing_tau : int
         Decay time constant for the learning trace, in timesteps (not seconds).
     tracing_mag : float
         Magnitude by which the learning trace is increased for each spike.
+    pop_type : int (0, 16, 32)
+        Whether these synapses are discrete (0), pop16, or pop32. This
+        determines the type of axons these synapses can connect to.
     """
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
