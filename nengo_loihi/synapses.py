@@ -173,8 +173,6 @@ class Synapses(object):
     ----------
     n_axons : int
         Number of input axons to this group of synapses.
-    group : CompartmentGroup
-        The CompartmentGroup (compartments) that these synapses input into.
     synapse_fmt : SynapseFmt
         The synapse format object for these synapses.
     weights : (n_axons,) list of (n_populations, n_compartments) ndarray
@@ -196,7 +194,6 @@ class Synapses(object):
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
         self.label = label
-        self.group = None
         self.synapse_fmt = None
         self.weights = None
         self.indices = None
