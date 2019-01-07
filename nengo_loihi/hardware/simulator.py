@@ -11,7 +11,6 @@ import numpy as np
 
 from nengo.exceptions import SimulationError
 
-from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.discretize import scale_pes_errors
 from nengo_loihi.hardware.allocators import one_to_one_allocator
 from nengo_loihi.hardware.builder import build_board
@@ -20,6 +19,7 @@ from nengo_loihi.hardware.nxsdk_shim import (
     nxsdk,
     N2SpikeProbe,
 )
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.probes import Probe
 
 logger = logging.getLogger(__name__)
@@ -175,8 +175,8 @@ class LoihiSimulator(object):
             x = data[snip_range[probe]]
             assert x.ndim == 1
             if probe.key == 's':
-                if isinstance(probe.target, CompartmentGroup):
-                    refract_delays = probe.target.refractDelay
+                if isinstance(probe.target, NeuronGroup):
+                    refract_delays = probe.target.compartments.refractDelay
                 else:
                     refract_delays = 1
 

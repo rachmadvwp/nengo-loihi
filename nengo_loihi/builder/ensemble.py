@@ -11,7 +11,7 @@ from nengo.utils.builder import default_n_eval_points
 import nengo.utils.numpy as npext
 
 from nengo_loihi.builder import Builder
-from nengo_loihi.compartments import CompartmentGroup
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.synapses import Synapses
 
 
@@ -114,12 +114,12 @@ def build_ensemble(model, ens):
     gain, bias, max_rates, intercepts = get_gain_bias(
         ens, rng, model.intercept_limit)
 
-    group = CompartmentGroup(ens.n_neurons, label='%s' % ens)
-    group.bias[:] = bias
+    group = NeuronGroup(ens.n_neurons, label='%s' % ens)
+    group.compartments.bias[:] = bias
     model.build(ens.neuron_type, ens.neurons, group)
 
     # set default filter just in case no other filter gets set
-    group.configure_default_filter(model.inter_tau, dt=model.dt)
+    group.compartments.configure_default_filter(model.inter_tau, dt=model.dt)
 
     if ens.noise is not None:
         raise NotImplementedError("Ensemble noise not implemented")
@@ -177,7 +177,7 @@ def build_neurons(model, neurontype, neurons, group):
 
 @Builder.register(nengo.LIF)
 def build_lif(model, lif, neurons, group):
-    group.configure_lif(
+    group.compartments.configure_lif(
         tau_rc=lif.tau_rc,
         tau_ref=lif.tau_ref,
         dt=model.dt)
@@ -185,6 +185,6 @@ def build_lif(model, lif, neurons, group):
 
 @Builder.register(nengo.SpikingRectifiedLinear)
 def build_relu(model, relu, neurons, group):
-    group.configure_relu(
+    group.compartments.configure_relu(
         vth=1./model.dt,  # so input == 1 -> neuron fires 1/dt steps -> 1 Hz
         dt=model.dt)

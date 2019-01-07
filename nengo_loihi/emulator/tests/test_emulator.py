@@ -5,11 +5,11 @@ import pytest
 
 from nengo_loihi.axons import Axons
 from nengo_loihi.builder import Model
-from nengo_loihi.compartments import CompartmentGroup
 from nengo_loihi.discretize import VTH_MAX
 from nengo_loihi.emulator import Emulator
 from nengo_loihi.inputs import SpikeInput
 from nengo_loihi.hardware import LoihiSimulator
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.probes import Probe
 from nengo_loihi.synapses import Synapses
 
@@ -46,10 +46,10 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
         input.add_spikes(t, np.arange(n_axons))  # send spikes to all axons
     model.add_input(input)
 
-    group = CompartmentGroup(1)
-    group.configure_relu()
-    group.configure_filter(0.1)
-    group.vmin = -2**22
+    group = NeuronGroup(1)
+    group.compartments.configure_relu()
+    group.compartments.configure_filter(0.1)
+    group.compartments.vmin = -2**22
 
     synapses = Synapses(n_axons)
     synapses.set_full_weights(np.ones((n_axons, 1)))
@@ -69,7 +69,7 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
     model.add_group(group)
     model.discretize()
 
-    group.vth[:] = VTH_MAX  # must set after `discretize`
+    group.compartments.vth[:] = VTH_MAX  # must set after `discretize`
 
     assert Emulator.strict  # Tests should be run in strict mode
     Emulator.strict = False

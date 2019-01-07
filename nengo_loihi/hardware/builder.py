@@ -198,13 +198,14 @@ def build_core(n2core, core):  # noqa: C901
         assert int(negVmLimit) == negVmLimit
         assert int(posVmLimit) == posVmLimit
 
-        noiseExp0 = group0.noiseExp0
-        noiseMantOffset0 = group0.noiseMantOffset0
-        noiseAtDendOrVm = group0.noiseAtDendOrVm
-        assert all(group.noiseExp0 == noiseExp0 for group in core.groups)
-        assert all(group.noiseMantOffset0 == noiseMantOffset0
+        noiseExp0 = group0.compartments.noiseExp0
+        noiseMantOffset0 = group0.compartments.noiseMantOffset0
+        noiseAtDendOrVm = group0.compartments.noiseAtDendOrVm
+        assert all(group.compartments.noiseExp0 == noiseExp0
                    for group in core.groups)
-        assert all(group.noiseAtDendOrVm == noiseAtDendOrVm
+        assert all(group.compartments.noiseMantOffset0 == noiseMantOffset0
+                   for group in core.groups)
+        assert all(group.compartments.noiseAtDendOrVm == noiseAtDendOrVm
                    for group in core.groups)
 
         n2core.dendriteSharedCfg.configure(
@@ -237,12 +238,12 @@ def build_core(n2core, core):  # noqa: C901
 
 
 def build_group(n2core, core, group, cx_idxs, ax_range):
-    assert group.scaleU is False
-    assert group.scaleV is False
+    assert group.compartments.scaleU is False
+    assert group.compartments.scaleV is False
 
     logger.debug("Building %s on core.id=%d", group, n2core.id)
 
-    for i, bias in enumerate(group.bias):
+    for i, bias in enumerate(group.compartments.bias):
         bman, bexp = bias_to_manexp(bias)
         icx = core.cx_profile_idxs[group][i]
         ivth = core.vth_profile_idxs[group][i]

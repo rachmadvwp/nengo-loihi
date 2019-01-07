@@ -2,7 +2,7 @@ import numpy as np
 
 import nengo
 
-from nengo_loihi.compartments import CompartmentGroup
+from nengo_loihi.neurongroup import NeuronGroup
 from nengo_loihi.synapses import Synapses
 
 
@@ -100,13 +100,13 @@ class NoisyInterneurons(EqualDecoderInterneurons):
     def get_compartments(self, weights, comp_label=None, syn_label=None):
         self.fix_parameters()
         d, n = weights.shape
-        cx = CompartmentGroup(2 * d * self.n, label=comp_label)
-        cx.configure_relu(dt=self.dt)
-        cx.bias[:] = self.bias * np.ones(d * 2 * self.n)
+        cx = NeuronGroup(2 * d * self.n, label=comp_label)
+        cx.compartments.configure_relu(dt=self.dt)
+        cx.compartments.bias[:] = self.bias * np.ones(d * 2 * self.n)
         if self.inter_noise_exp > -30:
-            cx.enableNoise[:] = 1
-            cx.noiseExp0 = self.inter_noise_exp
-            cx.noiseAtDendOrVm = 1
+            cx.compartments.enableNoise[:] = 1
+            cx.compartments.noiseExp0 = self.inter_noise_exp
+            cx.compartments.noiseAtDendOrVm = 1
 
         # TODO: can eliminate the weight copies (tiling) by using input indices
         # to target input axons
@@ -133,9 +133,9 @@ class PresetInterneurons(EqualDecoderInterneurons):
     def get_compartments(self, weights, comp_label=None, syn_label=None):
         self.fix_parameters()
         d, n = weights.shape
-        cx = CompartmentGroup(self.n * 2 * d, label=comp_label)
-        cx.configure_relu(dt=self.dt)
-        cx.bias[:] = self.bias.repeat(d)
+        cx = NeuronGroup(self.n * 2 * d, label=comp_label)
+        cx.compartments.configure_relu(dt=self.dt)
+        cx.compartments.bias[:] = self.bias.repeat(d)
 
         syn = Synapses(n, label=syn_label)
         weights2 = []
