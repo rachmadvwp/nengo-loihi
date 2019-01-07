@@ -13,8 +13,6 @@ class Axons(object):
         Atom (weight index) associated with each group compartment.
     cx_to_axon_map : list of length ``group.n``
         Index of the axon in `target` targeted by each group compartment.
-    group : CompartmentGroup
-        Parent CompartmentGroup for this object (set in `add_axons`).
     n_axons : int
         The number of outgoing axons.
     target : Synapses
@@ -49,7 +47,6 @@ class Axons(object):
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
         self.label = label
-        self.group = None
 
         self.target = None
         self.cx_to_axon_map = None

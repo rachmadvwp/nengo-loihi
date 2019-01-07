@@ -18,8 +18,6 @@ class SpikeInput(object):
         self.probes = []
 
     def add_axons(self, axons):
-        assert axons.group is None
-        axons.group = self
         self.axons.append(axons)
 
     def add_probe(self, probe):
