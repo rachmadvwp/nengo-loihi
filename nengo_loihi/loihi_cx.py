@@ -308,8 +308,7 @@ class CxGroup(object):
 
         for i, synapse in enumerate(self.synapses):
             if synapse.tracing:
-                # TODO: scale this properly, hardcoded for now
-                wgtExp2 = 4
+                wgtExp2 = synapse.learning_wgt_exp
                 dWgtExp = wgtExp - wgtExp2
             elif w_maxs[i] > 1e-16:
                 dWgtExp = int(np.floor(np.log2(w_max / w_maxs[i])))
@@ -430,6 +429,10 @@ class CxSynapses(object):
         can have a different number of target compartments.
     indices : (population, axon, compartment) ndarray
         The synapse indices.
+    learning_rate : float
+        The learning rate.
+    learning_wgt_exp : int
+        The weight exponent used on this connection if learning is enabled.
     tracing : bool
         Whether synaptic tracing is enabled for these synapses.
     tracing_tau : int
@@ -448,6 +451,7 @@ class CxSynapses(object):
         self.axon_to_weight_map = None
 
         self.learning_rate = 1.
+        self.learning_wgt_exp = None
         self.tracing = False
         self.tracing_tau = None
         self.tracing_mag = None
@@ -578,7 +582,8 @@ class CxSynapses(object):
                     numSynapses=63,
                     wgtBits=7)
 
-    def set_learning(self, learning_rate=1., tracing_tau=2, tracing_mag=1.0):
+    def set_learning(self, learning_rate=1., tracing_tau=2, tracing_mag=1.0,
+                     wgt_exp=4):
         assert tracing_tau == int(tracing_tau), "tracing_tau must be integer"
 
         self.tracing = True
@@ -592,6 +597,7 @@ class CxSynapses(object):
         self.learn_epoch = self.train_epoch * 2**self.learn_epoch_k
 
         self.learning_rate = learning_rate * self.learn_epoch
+        self.learning_wgt_exp = wgt_exp
 
     def format(self, **kwargs):
         if self.synapse_fmt is None:
