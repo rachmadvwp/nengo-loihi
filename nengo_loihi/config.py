@@ -25,10 +25,15 @@ def add_params(network):
     """
     config = network.config
 
-    cfg = config[nengo.Ensemble]
-    if 'on_chip' not in cfg._extra_params:
-        cfg.set_param("on_chip",
-                      Parameter('on_chip', default=None, optional=True))
+    ens_cfg = config[nengo.Ensemble]
+    if 'on_chip' not in ens_cfg._extra_params:
+        ens_cfg.set_param("on_chip",
+                          Parameter('on_chip', default=None, optional=True))
+
+    conn_cfg = config[nengo.Connection]
+    if 'learning_wgt_exp' not in conn_cfg._extra_params:
+        conn_cfg.set_param('learning_wgt_exp',
+                           Parameter('learning_wgt_exp', default=4))
 
 
 def set_defaults():
