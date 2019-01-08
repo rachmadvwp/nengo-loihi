@@ -113,6 +113,10 @@ class Model(CxModel):
         # scaling for PES errors, before rounding and clipping to -127..127
         self.pes_error_scale = 100.
 
+        # learning weight exponent for PES (controls the maximum weight
+        # magnitude/weight resolution)
+        self.pes_wgt_exp = 4
+
         # Will be provided by Simulator
         self.chip2host_params = {}
 
@@ -681,10 +685,16 @@ def build_connection(model, conn):
                 # Maybe the fact that post interneurons have `vth = 1/dt`?
                 tracing_mag = -np.expm1(-1. / tracing_tau) / model.dt**2
 
+                # learning weight exponent controls the maximum weight
+                # magnitude/weight resolution
+                wgt_exp = model.pes_wgt_exp
+
                 dec_syn.set_learning(
                     learning_rate=learning_rate,
                     tracing_mag=tracing_mag,
-                    tracing_tau=tracing_tau)
+                    tracing_tau=tracing_tau,
+                    wgt_exp=wgt_exp,
+                )
             else:
                 raise NotImplementedError()
 
