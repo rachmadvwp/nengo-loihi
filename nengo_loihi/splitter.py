@@ -39,11 +39,6 @@ class SplitNetworks(object):
 
         self.targets = ("host", "chip", "host_pre")
 
-        # reference original config params so builder can use them if needed
-        self.host._config = self.original.config
-        self.chip._config = self.original.config
-        self.host_pre._config = self.original.config
-
         # Interactions between rules
         self.needs_sender = {}
 
@@ -89,6 +84,8 @@ class SplitNetworks(object):
         for obj, target in self.adds.items():
             _add(obj, getattr(self, target))
 
+        self.copy_config()
+
     def location(self, obj, default=None):
         obj = base_obj(obj)
         return self.moves.get(obj, self.adds.get(obj, default))
@@ -112,6 +109,44 @@ class SplitNetworks(object):
             del self.adds[obj]
         elif obj in self.moves:
             del self.moves[obj]
+
+    def copy_config(self):
+        """Copy config parameters from original network to target networks.
+
+        So the builder can use them if needed, particularly for Loihi-specific
+        parameters.
+        """
+        illegal_instance_params = ('learning_wgt_exp',)
+
+        targets = [getattr(self, target_key) for target_key in self.targets]
+        for target in targets:
+            add_params(target)
+
+        for obj, config in self.original.config.params.items():
+            target_configs = [target.config[obj] for target in targets]
+
+            if isinstance(config, nengo.config.InstanceParams):
+                for attr in config._clsparams.params:
+                    param = config._clsparams.get_param(attr)
+                    if config in param:
+                        if attr in illegal_instance_params:
+                            raise ValueError(
+                                "Parameter %r cannot be set on a %s instance" % (
+                                    attr, type(obj).__name__))
+
+                        value = param.__get__(config, type(config))
+                        for config2 in target_configs:
+                            config2._clsparams.get_param(attr).__set__(
+                                config2, value)
+            elif isinstance(config, nengo.config.ClassParams):
+                for attr in config.params:
+                    param = config.get_param(attr)
+                    if param.configurable:
+                        value = param.get_default(config)
+                        for config2 in target_configs:
+                            config2.get_param(attr).set_default(config2, value)
+            else:
+                raise ValueError("Cannot copy config object %r" % config)
 
 
 def split(net, precompute, max_rate, inter_tau, remove_passthrough=False):
