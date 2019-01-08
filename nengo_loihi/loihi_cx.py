@@ -251,7 +251,7 @@ class CxGroup(object):
         # --- discretize weights and vth
         # To avoid overflow, we can either lower vth_max or lower wgtExp_max.
         # Lowering vth_max is more robust, but has the downside that it may
-        # force smaller wgtExp on connections than necessary, potenially
+        # force smaller wgtExp on connections than necessary, potentially
         # leading to lost weight bits (see SynapseFmt.discretize_weights).
         # Lowering wgtExp_max can let us keep vth_max higher, but overflow
         # is still be possible on connections with many small inputs (uncommon)
