@@ -100,9 +100,8 @@ def test_pes_overflow(allclose, plt, seed, Simulator):
         p_post = nengo.Probe(post, synapse=0.02)
 
     simtime = 3.0
-    with pytest.warns(UserWarning, match="Clipping .*weights"):
-        with Simulator(model) as loihi_sim:
-            loihi_sim.run(simtime)
+    with Simulator(model) as loihi_sim:
+        loihi_sim.run(simtime)
 
     t = loihi_sim.trange()
     post_tmask = t > simtime - 1.0
