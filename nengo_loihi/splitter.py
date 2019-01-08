@@ -6,6 +6,7 @@ import nengo
 from nengo.exceptions import BuildError
 import numpy as np
 
+from nengo_loihi.config import add_params
 from nengo_loihi.conv import Conv2D
 from nengo_loihi.loihi_cx import (
     ChipReceiveNode, ChipReceiveNeurons, HostSendNode, HostReceiveNode,
@@ -37,6 +38,21 @@ class SplitNetworks(object):
         self.host_pre = nengo.Network(seed=original.seed)
 
         self.targets = ("host", "chip", "host_pre")
+
+        # copy config params so builder can use them if needed
+        targets = [getattr(self, target_key) for target_key in self.targets]
+        for target in targets:
+            add_params(target)
+
+        for obj, config in self.original.config.params.items():
+            target_configs = [target.config[obj] for target in targets]
+
+            for attr in config.params:
+                param = config.get_param(attr)
+                if param.configurable:
+                    value = param.get_default(config)
+                    for config2 in target_configs:
+                        config2.get_param(attr).set_default(config2, value)
 
         # Interactions between rules
         self.needs_sender = {}

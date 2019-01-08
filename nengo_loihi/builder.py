@@ -88,6 +88,8 @@ class Model(CxModel):
         self.builder = Builder() if builder is None else builder
         self.build_callback = None
 
+        self.config = None  # set in build_network
+
         # --- other (typically standard) parameters
         # Filter on intermediary neurons
         self.inter_tau = 0.005
@@ -197,9 +199,9 @@ def build_network(model, network):
         model.seeded[network] = getattr(network, 'seed', None) is not None
         model.seeds[network] = get_seed(network, np.random)
 
-    # # Set config
-    # old_config = model.config
-    # model.config = network.config
+    # Set config
+    old_config = model.config
+    model.config = network.config
 
     # assign seeds to children
     rng = np.random.RandomState(model.seeds[network])
@@ -228,8 +230,9 @@ def build_network(model, network):
     for probe in network.probes:
         model.build(probe)
 
-    # # Unset config
-    # model.config = old_config
+    # Unset config
+    model.config = old_config
+
     model.params[network] = None
 
 
