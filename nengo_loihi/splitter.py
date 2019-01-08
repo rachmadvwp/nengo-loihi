@@ -39,20 +39,10 @@ class SplitNetworks(object):
 
         self.targets = ("host", "chip", "host_pre")
 
-        # copy config params so builder can use them if needed
-        targets = [getattr(self, target_key) for target_key in self.targets]
-        for target in targets:
-            add_params(target)
-
-        for obj, config in self.original.config.params.items():
-            target_configs = [target.config[obj] for target in targets]
-
-            for attr in config.params:
-                param = config.get_param(attr)
-                if param.configurable:
-                    value = param.get_default(config)
-                    for config2 in target_configs:
-                        config2.get_param(attr).set_default(config2, value)
+        # reference original config params so builder can use them if needed
+        self.host._config = self.original.config
+        self.chip._config = self.original.config
+        self.host_pre._config = self.original.config
 
         # Interactions between rules
         self.needs_sender = {}
