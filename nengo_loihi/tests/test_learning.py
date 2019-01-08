@@ -66,6 +66,69 @@ def test_pes_comm_channel(allclose, plt, seed, Simulator, n_per_dim, dims):
     assert allclose(y_loihi, y_nengo, atol=0.15, rtol=0.1)
 
 
+def test_pes_overflow(allclose, plt, seed, Simulator):
+    dims = 1
+    n_per_dim = 200
+
+    scale = np.linspace(1, 0, dims + 1)[:-1]
+    input_fn = lambda t: np.sin(t * 2 * np.pi) * scale
+
+    tau = 0.01
+    with nengo.Network(seed=seed) as model:
+        nengo_loihi.add_params(model)
+
+        # set learning_wgt_exp low to create overflow in weight values
+        model.config[nengo.Connection].learning_wgt_exp = -1
+
+        stim = nengo.Node(input_fn)
+
+        pre = nengo.Ensemble(n_per_dim * dims, dims)
+        post = nengo.Node(size_in=dims)
+
+        nengo.Connection(stim, pre, synapse=None)
+        conn = nengo.Connection(
+            pre, post,
+            function=lambda x: np.zeros(dims),
+            synapse=tau,
+            learning_rule_type=nengo.PES(learning_rate=1e-3))
+
+        nengo.Connection(post, conn.learning_rule)
+        nengo.Connection(stim, conn.learning_rule, transform=-1)
+
+        p_stim = nengo.Probe(stim, synapse=0.02)
+        p_pre = nengo.Probe(pre, synapse=0.02)
+        p_post = nengo.Probe(post, synapse=0.02)
+
+    simtime = 3.0
+    with pytest.warns(UserWarning, match="Clipping .*weights"):
+        with Simulator(model) as loihi_sim:
+            loihi_sim.run(simtime)
+
+    t = loihi_sim.trange()
+    post_tmask = t > simtime - 1.0
+
+    inter_tau = loihi_sim.model.inter_tau
+    y = loihi_sim.data[p_stim]
+    y_dpre = nengo.Lowpass(inter_tau).filt(y)
+    y_dpost = nengo.Lowpass(tau).combine(nengo.Lowpass(inter_tau)).filt(y_dpre)
+    y_loihi = loihi_sim.data[p_post]
+
+    plt.plot(t, y_dpost, 'k', label='target')
+    plt.plot(t, y_loihi, 'g', label='loihi')
+
+    # --- fit output to scaled version of target output
+    y1ref = y_dpost[post_tmask][:, 0]
+    y1loihi = y_loihi[post_tmask][:, 0]
+    scale = np.linspace(0, 1, 50)
+    errors = np.abs(y1loihi - scale[:, None]*y1ref).mean(axis=1)
+    i = np.argmin(errors)
+    assert errors[i] < 0.1, ("Learning output did not match any scaled version"
+                             " of the target output")
+    assert scale[i] > 0.3, "Learning output is too small"
+    assert scale[i] < 0.6, ("Learning output is too large (weights or traces "
+                            "not clipping as expected)")
+
+
 @pytest.mark.parametrize('init_function', [None, lambda x: 0])
 def test_multiple_pes(init_function, allclose, plt, seed, Simulator):
     n_errors = 5
