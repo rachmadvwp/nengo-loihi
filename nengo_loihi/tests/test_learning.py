@@ -2,6 +2,8 @@ import nengo
 import numpy as np
 import pytest
 
+import nengo_loihi
+
 
 @pytest.mark.parametrize('n_per_dim', [120, 200])
 @pytest.mark.parametrize('dims', [1, 3])
@@ -100,3 +102,16 @@ def test_multiple_pes(init_function, allclose, plt, seed, Simulator):
     for i, target in enumerate(targets):
         assert allclose(sim.data[probe][tmask, i], target,
                         atol=0.05, rtol=0.05), "Target %d not close" % i
+
+
+def test_learning_wgt_exp_instance_error(Simulator):
+    with nengo.Network() as model:
+        nengo_loihi.add_params(model)
+        conn = nengo.Connection(
+            pre=nengo.Ensemble(10, 1), post=nengo.Node(size_in=1),
+            learning_rule_type=nengo.PES(learning_rate=1e-3))
+        model.config[conn].learning_wgt_exp = 0
+
+    with pytest.raises(ValueError):
+        with Simulator(model) as loihi_sim:
+            pass
