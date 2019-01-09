@@ -96,7 +96,6 @@ def test_pes_overflow(allclose, plt, seed, Simulator):
         nengo.Connection(stim, conn.learning_rule, transform=-1)
 
         p_stim = nengo.Probe(stim, synapse=0.02)
-        p_pre = nengo.Probe(pre, synapse=0.02)
         p_post = nengo.Probe(post, synapse=0.02)
 
     simtime = 3.0
