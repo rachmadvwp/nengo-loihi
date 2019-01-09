@@ -175,5 +175,5 @@ def test_learning_wgt_exp_instance_error(Simulator):
         model.config[conn].learning_wgt_exp = 0
 
     with pytest.raises(ValueError):
-        with Simulator(model) as loihi_sim:
+        with Simulator(model):
             pass
