@@ -125,28 +125,33 @@ class SplitNetworks(object):
         for obj, config in self.original.config.params.items():
             target_configs = [target.config[obj] for target in targets]
 
-            if isinstance(config, nengo.config.InstanceParams):
-                for attr in config._clsparams.params:
-                    param = config._clsparams.get_param(attr)
-                    if config in param:
-                        if attr in illegal_instance_params:
-                            raise ValueError(
-                                "Parameter %r cannot be set on a %s instance" % (
-                                    attr, type(obj).__name__))
-
-                        value = param.__get__(config, type(config))
-                        for config2 in target_configs:
-                            config2._clsparams.get_param(attr).__set__(
-                                config2, value)
-            elif isinstance(config, nengo.config.ClassParams):
-                for attr in config.params:
-                    param = config.get_param(attr)
-                    if param.configurable:
-                        value = param.get_default(config)
-                        for config2 in target_configs:
-                            config2.get_param(attr).set_default(config2, value)
+            is_instanceparams = isinstance(config, nengo.config.InstanceParams)
+            if is_instanceparams:
+                attrs = config._clsparams.params
+                get_param = lambda config, attr: (
+                    config._clsparams.get_param(attr))
+                get_value = lambda config, param: (
+                    param.__get__(config, type(config)))
+                set_param = lambda config, attr, value: (
+                    get_param(config, attr).__set__(config, value))
             else:
-                raise ValueError("Cannot copy config object %r" % config)
+                attrs = config.params
+                get_param = lambda config, attr: config.get_param(attr)
+                get_value = lambda config, param: param.get_default(config)
+                set_param = lambda config, attr, value: (
+                    get_param(config, attr).set_default(config, value))
+
+            for attr in attrs:
+                param = get_param(config, attr)
+                if config in param:
+                    if is_instanceparams and attr in illegal_instance_params:
+                        raise ValueError(
+                            "Parameter %r cannot be set on a %s instance" % (
+                                attr, type(obj).__name__))
+
+                    value = get_value(config, param)
+                    for config2 in target_configs:
+                        set_param(config2, attr, value)
 
 
 def split(net, precompute, max_rate, inter_tau, remove_passthrough=False):
