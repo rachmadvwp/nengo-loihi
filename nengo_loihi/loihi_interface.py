@@ -170,6 +170,10 @@ def build_core(n2core, core):  # noqa: C901
             requireY=1,
             usesXepoch=1,
         )
+
+        # Microcode for the learning rule. `u1` evaluates the learning rule
+        # every 2**1 timesteps, `x1` is the pre-trace, `y1` is the post-trace,
+        # and 2^-7 is the learning rate. See `help(ruleToUCode)` for more info.
         ucode = microcodegen_uci.ruleToUCode(['dw = u1*x1*y1*(2^-7)'],
                                              doOptimize=False)
         assert ucode.numUCodes == 1
@@ -183,6 +187,7 @@ def build_core(n2core, core):  # noqa: C901
             requireY=1,
             usesXepoch=1,
         )
+        # use negative version of above microcode rule
         ucode = microcodegen_uci.ruleToUCode(['dw = -u1*x1*y1*(2^-7)'],
                                              doOptimize=False)
         assert ucode.numUCodes == 1
