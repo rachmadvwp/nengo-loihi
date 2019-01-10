@@ -588,6 +588,14 @@ class SynapseFmt(Profile):
         ----------
         w : float ndarray
             Weights to be discretized, in range -255 to 255.
+        dtype : np.dtype (default: np.int32)
+            Data type for discretized weights.
+        lossy_shift : bool (default: True)
+            Whether to mimic the two-part weight shift that currently happens
+            on the chip, which can lose information for small wgtExp.
+        check_results : bool (default: True)
+            Whether to check that the discretized weights fall in
+            the valid range for weights on the chip (-256 to 255).
         """
         s = self.shift_bits
         m = 2**(8 - s) - 1

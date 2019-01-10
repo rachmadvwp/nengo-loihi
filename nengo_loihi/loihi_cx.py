@@ -331,8 +331,13 @@ class CxGroup(object):
                     assert np.all(w_scale == w_scale[0])
                 w_scale_i = w_scale[0] if is_iterable(w_scale) else w_scale
 
+                # incorporate weight scale and difference in weight exponents
+                # to learning rate, since these affect speed at which we learn
                 ws = w_scale_i * 2**dWgtExp
                 synapse.learning_rate *= ws
+
+                # Loihi down-scales learning factors based on the number of
+                # overflow bits. Increasing learning rate maintains true rate.
                 synapse.learning_rate *= 2**learn_overflow_bits(2)
 
                 # TODO: Currently, Loihi learning rate fixed at 2**-7, but
@@ -341,6 +346,7 @@ class CxGroup(object):
                 synapse.learning_rate *= lscale
                 synapse.tracing_mag /= lscale
 
+                # discretize learning rate into mantissa and exponent
                 lr_exp = int(np.floor(np.log2(synapse.learning_rate)))
                 lr_int = int(np.round(synapse.learning_rate * 2**(-lr_exp)))
                 synapse.learning_rate = lr_int * 2**lr_exp
@@ -348,6 +354,7 @@ class CxGroup(object):
                 synapse._lr_exp = lr_exp
                 assert lr_exp >= -7
 
+                # discretize tracing mag into integer and fractional components
                 mag_int, mag_frac = tracing_mag_int_frac(synapse.tracing_mag)
                 if mag_int > 127:
                     mag_int = 127
@@ -428,10 +435,10 @@ class CxSynapses(object):
         The weight exponent used on this connection if learning is enabled.
     tracing : bool
         Whether synaptic tracing is enabled for these synapses.
-    tracing_tau : float
-        The tracing time constant.
+    tracing_tau : int
+        Decay time constant for the learning trace, in timesteps (not seconds).
     tracing_mag : float
-        The tracing increment magnitude.
+        Magnitude by which the learning trace is increased for each spike.
     """
     def __init__(self, n_axons, label=None):
         self.n_axons = n_axons
