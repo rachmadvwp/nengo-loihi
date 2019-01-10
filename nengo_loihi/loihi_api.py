@@ -123,11 +123,13 @@ def scale_pes_errors(error, scale=1.):
     error = np.round(error).astype(np.int32)
     q = error > 127
     if np.any(q):
-        warnings.warn("PES error > 127, clipping (max %s)" % (error.max()))
+        warnings.warn("PES error (max %0.2e) greater than chip max (%0.2e), "
+                      "clipping" % (error.max() / scale, 127. / scale))
         error[q] = 127
     q = error < -127
     if np.any(q):
-        warnings.warn("PES error < -127, clipping (min %s)" % (error.min()))
+        warnings.warn("PES error (max %0.2e) less than chip min (%0.2e), "
+                      "clipping" % (error.min() / scale, -127. / scale))
         error[q] = -127
     return error
 
