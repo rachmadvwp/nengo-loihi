@@ -68,10 +68,10 @@ def test_pes_comm_channel(allclose, plt, seed, Simulator, n_per_dim, dims):
 
 
 def test_pes_overflow(allclose, plt, seed, Simulator):
-    dims = 1
-    n_per_dim = 200
+    dims = 3
+    n_per_dim = 120
 
-    scale = np.linspace(1, 0, dims + 1)[:-1]
+    scale = np.linspace(1, 0.6, dims + 1)[:-1]
     input_fn = lambda t: np.sin(t * 2 * np.pi) * scale
 
     tau = 0.01
@@ -115,16 +115,21 @@ def test_pes_overflow(allclose, plt, seed, Simulator):
     plt.plot(t, y_loihi, 'g', label='loihi')
 
     # --- fit output to scaled version of target output
-    y1ref = y_dpost[post_tmask][:, 0]
-    y1loihi = y_loihi[post_tmask][:, 0]
+    z_ref0 = y_dpost[post_tmask][:, 0]
+    z_loihi = y_loihi[post_tmask]
     scale = np.linspace(0, 1, 50)
-    errors = np.abs(y1loihi - scale[:, None]*y1ref).mean(axis=1)
-    i = np.argmin(errors)
-    assert errors[i] < 0.1, ("Learning output did not match any scaled version"
-                             " of the target output")
-    assert scale[i] > 0.3, "Learning output is too small"
-    assert scale[i] < 0.6, ("Learning output is too large (weights or traces "
-                            "not clipping as expected)")
+    E = np.abs(z_loihi - scale[:, None, None]*z_ref0[:, None])
+    errors = E.mean(axis=1)  # average over time (errors is: scales x dims)
+    for j in range(dims):
+        errors_j = errors[:, j]
+        i = np.argmin(errors_j)
+        assert errors_j[i] < 0.1, ("Learning output for dim %d did not match "
+                                   "any scaled version of the target output"
+                                   % j)
+        assert scale[i] > 0.4, "Learning output for dim %d is too small" % j
+        assert scale[i] < 0.7, ("Learning output for dim %d is too large "
+                                "(weights or traces not clipping as expected)"
+                                % j)
 
 
 @pytest.mark.parametrize('init_function', [None, lambda x: 0])
