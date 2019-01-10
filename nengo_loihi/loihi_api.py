@@ -27,8 +27,15 @@ LEARN_FRAC = 7  # extra least-significant bits added to weights for learning
 
 
 def learn_overflow_bits(n_factors):
-    factor_bits = 7
-    mantissa_bits = 3
+    """Compute number of by which learning will overflow.
+
+    Parameters
+    ----------
+    n_factors : int
+        The number of learning factors (pre/post terms in the learning rule).
+    """
+    factor_bits = 7  # number of bits per factor
+    mantissa_bits = 3  # number of bits for learning rate mantissa
     return factor_bits*n_factors + mantissa_bits - LEARN_BITS - 1
     # TODO: Where does this extra magic -1 come from? Need it to match chip
 
@@ -97,6 +104,7 @@ def bias_to_manexp(bias):
 
 
 def tracing_mag_int_frac(mag):
+    """Split trace magnitude into integer and fractional components for chip"""
     mag_int = int(mag)
     mag_frac = int(128 * (mag - mag_int))
     return mag_int, mag_frac
@@ -110,6 +118,7 @@ def shift(x, s, **kwargs):
 
 
 def scale_pes_errors(error, scale=1.):
+    """Scale PES errors based on a scaling factor, round and clip."""
     error = scale * error
     error = np.round(error).astype(np.int32)
     q = error > 127
