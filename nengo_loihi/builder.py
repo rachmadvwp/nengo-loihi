@@ -10,7 +10,7 @@ from nengo.builder.connection import BuiltConnection
 from nengo.dists import Distribution, get_samples
 from nengo.connection import LearningRule
 from nengo.ensemble import Neurons
-from nengo.exceptions import BuildError
+from nengo.exceptions import BuildError, ValidationError
 from nengo.solvers import NoSolver, Solver
 from nengo.utils.builder import default_n_eval_points
 import nengo.utils.numpy as npext
@@ -666,8 +666,12 @@ def build_connection(model, conn):
         if conn.learning_rule_type is not None:
             rule_type = conn.learning_rule_type
             if isinstance(rule_type, nengo.PES):
-                assert isinstance(rule_type.pre_synapse,
-                                  nengo.synapses.Lowpass)
+                if not isinstance(rule_type.pre_synapse,
+                                  nengo.synapses.Lowpass):
+                    raise ValidationError(
+                        "Loihi only supports `Lowpass` pre-synapses for "
+                        "learning rules", 'pre_synapse', obj=rule_type)
+
                 tracing_tau = rule_type.pre_synapse.tau / model.dt
 
                 # Nengo builder scales PES learning rate by `dt / n_neurons`,
