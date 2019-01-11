@@ -258,7 +258,7 @@ class LoihiSpikeInput(object):
 
     def set_axons(self, board, n2board, cx_spike_input):
         assert len(self.axon_map) == 0
-        cx_idxs = np.arange(cx_spike_input.n)
+        cx_idxs = np.arange(cx_spike_input.n_neurons)
         for axons in cx_spike_input.axons:
             assert (axons.cx_atoms is None or np.all(axons.cx_atoms == 0)), (
                 "Cannot send pop spikes to board")
