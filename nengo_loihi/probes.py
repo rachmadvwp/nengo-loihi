@@ -22,6 +22,9 @@ class ProbeGroup(object):
     def __iter__(self):
         return iter(self.probes)
 
+    def __len__(self):
+        return len(self.probes)
+
     def add(self, probe):
         """Add a Probe object to ensemble."""
         # if probe.target is None:

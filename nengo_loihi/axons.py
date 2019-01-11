@@ -106,6 +106,9 @@ class AxonGroup(object):
     def __iter__(self):
         return iter(self.axons)
 
+    def __len__(self):
+        return len(self.axons)
+
     def add(self, axons, name=None):
         """Add an Axons object to this group."""
         self.axons.append(axons)

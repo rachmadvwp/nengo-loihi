@@ -386,6 +386,9 @@ class SynapseGroup(object):
     def __iter__(self):
         return iter(self.synapses)
 
+    def __len__(self):
+        return len(self.synapses)
+
     def by_name(self, name):
         return self.named_synapses[name]
 
