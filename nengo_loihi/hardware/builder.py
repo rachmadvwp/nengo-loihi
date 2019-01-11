@@ -190,9 +190,9 @@ def build_core(n2core, core):  # noqa: C901
     n_cx = 0
     if len(core.groups) > 0:
         group0 = core.groups[0]
-        vmin, vmax = group0.vmin, group0.vmax
-        assert all(group.vmin == vmin for group in core.groups)
-        assert all(group.vmax == vmax for group in core.groups)
+        vmin, vmax = group0.compartments.vmin, group0.compartments.vmax
+        assert all(group.compartments.vmin == vmin for group in core.groups)
+        assert all(group.compartments.vmax == vmax for group in core.groups)
         negVmLimit = np.log2(-vmin + 1)
         posVmLimit = (np.log2(vmax + 1) - 9) * 0.5
         assert int(negVmLimit) == negVmLimit
