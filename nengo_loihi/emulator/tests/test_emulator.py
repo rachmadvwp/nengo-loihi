@@ -38,7 +38,7 @@ def test_strict_mode(strict, monkeypatch):
 @pytest.mark.skipif(pytest.config.getoption("--target") != "loihi",
                     reason="need Loihi as comparison")
 @pytest.mark.parametrize('n_axons', [200, 1000])
-def test_uv_overflow(n_axons, Simulator, plt, allclose):
+def test_uv_overflow(n_axons, plt, allclose, monkeypatch):
     # TODO: Currently this is not testing the V overflow, since it is higher
     #  and I haven't been able to figure out a way to make it overflow.
     nt = 15
@@ -64,11 +64,11 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
     axons.target = synapses
     input.add_axons(axons)
 
-    probe_u = Probe(target=group, key='u')
+    probe_u = Probe(target=group, key='current')
     group.add_probe(probe_u)
-    probe_v = Probe(target=group, key='v')
+    probe_v = Probe(target=group, key='voltage')
     group.add_probe(probe_v)
-    probe_s = Probe(target=group, key='s')
+    probe_s = Probe(target=group, key='spiked')
     group.add_probe(probe_s)
 
     model.add_group(group)
@@ -77,16 +77,13 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
     group.compartments.vth[:] = VTH_MAX  # must set after `discretize`
 
     assert Emulator.strict  # Tests should be run in strict mode
-    Emulator.strict = False
-    try:
-        with Emulator(model) as emu:
-            with pytest.warns(UserWarning):
-                emu.run_steps(nt)
-            emu_u = emu.get_probe_output(probe_u)
-            emu_v = emu.get_probe_output(probe_v)
-            emu_s = emu.get_probe_output(probe_s)
-    finally:
-        Emulator.strict = True  # change back to True for subsequent tests
+    monkeypatch.setattr(Emulator, "strict", False)
+    with Emulator(model) as emu:
+        with pytest.warns(UserWarning):
+            emu.run_steps(nt)
+        emu_u = emu.get_probe_output(probe_u)
+        emu_v = emu.get_probe_output(probe_v)
+        emu_s = emu.get_probe_output(probe_s)
 
     with LoihiSimulator(model, use_snips=False) as sim:
         sim.run_steps(nt)
