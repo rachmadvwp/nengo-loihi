@@ -15,29 +15,24 @@ from nengo_loihi.synapses import Synapses
 
 
 @pytest.mark.parametrize("strict", (True, False))
-def test_strict_mode(strict):
+def test_strict_mode(strict, monkeypatch):
     # Tests should be run in strict mode
     assert Emulator.strict
 
     model = Model()
     model.add_group(NeuronGroup(1))
 
-    try:
-        Emulator.strict = strict
-        emu = Emulator(model)
-        assert emu.strict == strict
+    monkeypatch.setattr(Emulator, "strict", strict)
+    emu = Emulator(model)
+    assert emu.strict == strict
 
-        if strict:
-            check = pytest.raises(SimulationError)
-        else:
-            check = pytest.warns(UserWarning)
+    if strict:
+        check = pytest.raises(SimulationError)
+    else:
+        check = pytest.warns(UserWarning)
 
-        with check:
-            emu.compartments.error("Error in emulator")
-    finally:
-        # Strict mode is a global setting so we set it back to True
-        # for subsequent test runs.
-        Emulator.strict = True
+    with check:
+        emu.compartments.error("Error in emulator")
 
 
 @pytest.mark.skipif(pytest.config.getoption("--target") != "loihi",
