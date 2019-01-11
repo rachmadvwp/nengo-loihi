@@ -64,7 +64,7 @@ def test_pes_comm_channel(allclose, plt, seed, Simulator, n_per_dim, dims):
                     atol=0.1, rtol=0.05)
     assert allclose(y_loihi[post_tmask], y_dpost[post_tmask],
                     atol=0.1, rtol=0.05)
-    assert allclose(y_loihi, y_nengo, atol=0.15, rtol=0.1)
+    assert allclose(y_loihi, y_nengo, atol=0.2, rtol=0.2)
 
 
 def test_pes_overflow(allclose, plt, seed, Simulator):
