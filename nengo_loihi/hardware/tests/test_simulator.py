@@ -23,6 +23,7 @@ def test_no_warn_on_current_version(monkeypatch):
     mock.__version__ = "0.7.0"
 
     monkeypatch.setattr(hardware_simulator, 'nxsdk', mock)
+    monkeypatch.setattr(hardware_simulator, 'assert_nxsdk', lambda: True)
     with pytest.warns(None) as record:
         LoihiSimulator.check_nxsdk_version()
     assert len(record) == 0
@@ -33,5 +34,6 @@ def test_warn_on_future_version(monkeypatch):
     mock.__version__ = "0.7.1"
 
     monkeypatch.setattr(hardware_simulator, 'nxsdk', mock)
+    monkeypatch.setattr(hardware_simulator, 'assert_nxsdk', lambda: True)
     with pytest.warns(UserWarning):
         LoihiSimulator.check_nxsdk_version()
