@@ -36,8 +36,7 @@ def learn_overflow_bits(n_factors):
     """
     factor_bits = 7  # number of bits per factor
     mantissa_bits = 3  # number of bits for learning rate mantissa
-    return factor_bits*n_factors + mantissa_bits - LEARN_BITS - 1
-    # TODO: Where does this extra magic -1 come from? Need it to match chip
+    return factor_bits*n_factors + mantissa_bits - LEARN_BITS
 
 
 def overflow_signed(x, bits=7, out=None):
