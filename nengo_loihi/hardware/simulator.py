@@ -342,7 +342,7 @@ class LoihiSimulator(object):
         assert not self.is_connected(), "still connected"
 
         snips_dir = os.path.join(
-            os.path.dirname(__file__), "hardware", "snips")
+            os.path.dirname(__file__), "snips")
         env = jinja2.Environment(
             trim_blocks=True,
             loader=jinja2.FileSystemLoader(snips_dir),
