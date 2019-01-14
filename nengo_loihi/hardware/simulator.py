@@ -174,7 +174,7 @@ class LoihiSimulator(object):
             assert probe.use_snip
             x = data[snip_range[probe]]
             assert x.ndim == 1
-            if probe.key == 's':
+            if probe.key == 'spiked':
                 if isinstance(probe.target, NeuronGroup):
                     refract_delays = probe.target.compartments.refractDelay
                 else:
