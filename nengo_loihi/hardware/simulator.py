@@ -357,7 +357,7 @@ class LoihiSimulator(object):
         max_error_len = 0
         for core in self.board.chips[0].cores:  # TODO: don't assume 1 chip
             if core.learning_coreid:
-                error_len = core.groups[0].n // 2
+                error_len = core.groups[0].n_neurons // 2
                 max_error_len = max(error_len, max_error_len)
                 n_errors += 1
                 total_error_len += 2 + error_len
