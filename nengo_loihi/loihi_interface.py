@@ -800,7 +800,7 @@ class LoihiSimulator(object):
             shape = data[0].shape
             synapse = cx_probe.synapse
             rng = None
-            step = (synapse.make_step(shape, shape, dt, rng, dtype=data.dtype)
+            step = (synapse.make_step(shape, shape, dt, rng, dtype=np.float32)
                     if synapse is not None else None)
             self._probe_filters[cx_probe] = step
         else:
@@ -822,6 +822,7 @@ class LoihiSimulator(object):
         if cx_probe.use_snip:
             data = self._snip_probe_data[cx_probe]
             if cx_probe.synapse is not None:
+                data = np.asarray(data, dtype=np.float32)
                 return cx_probe.synapse.filt(data, dt=self.model.dt, y0=0)
             else:
                 return data
