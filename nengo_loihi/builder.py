@@ -228,9 +228,14 @@ class NoisyDecodeNeurons(OnOffDecodeNeurons):
     population average is a better representation of the encoded value
     than can be achieved with a single on/off neuron pair (if the magnitude
     of the noise is correctly calibrated).
+
+    Parameters
+    ----------
+    noise_exp : float
+        Base-10 exponent for noise added to neuron voltages.
     """
 
-    def __init__(self, pairs_per_dim, dt=0.001, rate=None, noise_exp=-2):
+    def __init__(self, pairs_per_dim, dt=0.001, rate=None, noise_exp=-2.):
         super(NoisyDecodeNeurons, self).__init__(
             pairs_per_dim=pairs_per_dim, dt=dt, rate=rate)
         self.noise_exp = noise_exp  # noise exponent for added voltage noise
