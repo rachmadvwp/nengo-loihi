@@ -110,9 +110,14 @@ def test_neurons2node(Simulator, seed, plt):
                             size_in=a.n_neurons, size_out=0)
         nengo.Connection(a.neurons, output, synapse=None)
 
+        vp = nengo.Probe(a.neurons, 'voltage')
+        up = nengo.Probe(a.neurons, 'input')
+
     with Simulator(model) as sim:
         sim.run(1.0)
 
+    plt.figure(figsize=(8, 12))
+    plt.subplot(311)
     rasterplot(sim.trange(), np.array(data), ax=plt.gca())
     plt.twinx()
     plt.plot(sim.trange(), sim.data[p_stim])
@@ -121,6 +126,14 @@ def test_neurons2node(Simulator, seed, plt):
     pre = np.asarray(data[:len(data) // 2 - 100])
     post = np.asarray(data[len(data) // 2 + 100:])
     on_neurons = np.squeeze(sim.data[a].encoders == 1)
+    bad_neurons = [36, 39]
+
+    plt.subplot(312)
+    plt.plot(sim.trange(), sim.data[vp][:, bad_neurons])
+
+    plt.subplot(313)
+    plt.plot(sim.trange(), sim.data[up][:, bad_neurons])
+
     assert np.sum(pre[:, on_neurons]) > 0
     assert np.sum(post[:, on_neurons]) == 0
     assert np.sum(pre[:, np.logical_not(on_neurons)]) == 0
