@@ -373,6 +373,7 @@ class Synapses(object):
         self.synapse_fmt.set(**kwargs)
 
     def validate(self):
+        self.synapse_fmt.validate()
         if self.axon_cx_bases is not None:
             assert np.all(self.axon_cx_bases < 256), "CxBase cannot be > 256"
         if self.pop_type == 16:
