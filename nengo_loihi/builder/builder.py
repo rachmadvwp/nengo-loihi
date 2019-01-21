@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class Model(object):
-    """The data structure for the chip/simulator.
+    """The data structure for the emulator/hardware simulator.
 
-    Defines methods for adding compartments/axons/synapses and discretizing.
+    Defines methods for adding inputs and neuron groups, and discretizing.
     Also handles build functions, and information associated with building
     the Nengo model.
 
@@ -37,13 +37,35 @@ class Model(object):
         The build functions used by this model.
     dt : float
         The length of a simulator timestep, in seconds.
+    chip2host_params : dict
+        Mapping from Nengo objects to any additional parameters associated
+        with those objects for use during the build process.
+    decode_neurons : DecodeNeurons
+        Type of neurons used to facilitate decoded (NEF-style) connections.
+    decode_tau : float
+        Time constant of lowpass synaptic filter used with decode neurons.
+    groups : list of NeuronGroup
+        List of neuron groups simulated by this model.
+    inputs : list of SpikeInput
+        List of inputs to this model.
+    intercept_limit : float
+        Limit for clipping intercepts, to avoid neurons with high gains.
     label : str or None
         A name or description to differentiate models.
+    node_neurons : DecodeNeurons
+        Type of neurons used to convert real-valued node outputs to spikes
+        for the chip.
     objs : dict
         Dictionary mapping from Nengo objects to Nengo Loihi objects.
     params : dict
         Mapping from objects to namedtuples containing parameters generated
         in the build process.
+    pes_error_scale : float
+        Scaling for PES errors, before rounding and clipping to -127..127.
+    pes_wgt_exp : int
+        Learning weight exponent (base 2) for PES learning connections. This
+        controls the maximum weight magnitude (where a larger exponent means
+        larger potential weights, but lower weight resolution).
     probes : list
         List of all probes. Probes must be added to this list in the build
         process, as this list is used by Simulator.
@@ -56,6 +78,8 @@ class Model(object):
         ancestor network of the network in which the object resides.
     seeds : dict
         Mapping from objects to the integer seed assigned to that object.
+    vth_nonspiking : float
+        Voltage threshold for non-spiking neurons (i.e. voltage decoders).
     """
     def __init__(self, dt=0.001, label=None, builder=None):
         self.dt = dt
