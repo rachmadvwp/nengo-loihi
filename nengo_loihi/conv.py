@@ -606,14 +606,14 @@ def build_conv2d_connection(model, conn):
     synapses = Synapses(input_shape.n_pixels, label="conv2d_weights")
     synapses.set_population_weights(
         weights, indices, axon_to_weight_map, cx_bases, pop_type=pop_type)
-    post_cx.add_synapses(synapses)
+    post_cx.synapses.add(synapses)
     model.objs[conn]['weights'] = synapses
 
     ax = Axons(input_shape.n_pixels, label="conv2d_weights")
     ax.target = synapses
     ax.cx_to_axon_map = input_shape.pixel_idxs()
     ax.cx_atoms = input_shape.channel_idxs()
-    pre_cx.add_axons(ax)
+    pre_cx.axons.add(ax)
 
     post_cx.configure_filter(tau_s, dt=model.dt)
 

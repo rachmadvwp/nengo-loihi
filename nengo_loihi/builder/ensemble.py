@@ -160,7 +160,7 @@ def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
 
     synapses = Synapses(encoders.shape[0], label=kind)
     synapses.set_full_weights(encoders)
-    group.add_synapses(synapses, name=kind)
+    group.synapses.add(synapses, name=kind)
 
 
 @Builder.register(nengo.neurons.NeuronType)

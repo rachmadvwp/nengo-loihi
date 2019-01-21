@@ -107,15 +107,6 @@ class CompartmentGroup(object):
         return "%s(%s)" % (
             type(self).__name__, self.label if self.label else '')
 
-    def add_synapses(self, synapses, name=None):
-        self.synapses.add(synapses, name=name)
-
-    def add_axons(self, axons, name=None):
-        self.axons.add(axons, name=name)
-
-    def add_probe(self, probe):
-        self.probes.add(probe)
-
     def configure_default_filter(self, tau_s, dt=0.001):
         """Set the default Lowpass synaptic input filter for compartments.
 

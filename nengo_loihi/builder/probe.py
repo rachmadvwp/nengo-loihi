@@ -104,7 +104,7 @@ def signal_probe(model, key, probe):
     loihi_probe = Probe(
         target=target, key=key, slice=probe.slice,
         synapse=probe.synapse, weights=weights)
-    target.add_probe(loihi_probe)
+    target.probes.add(loihi_probe)
     model.objs[probe]['in'] = target
     model.objs[probe]['out'] = loihi_probe
 

@@ -22,7 +22,7 @@ def test_simulator_noise(request, plt, seed):
     group.noiseAtDendOrVm = 1
 
     probe = Probe(target=group, key='v')
-    group.add_probe(probe)
+    group.probes.add(probe)
     model.add_group(group)
 
     model.discretize()

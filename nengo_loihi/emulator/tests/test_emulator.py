@@ -53,18 +53,18 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
 
     synapses = Synapses(n_axons)
     synapses.set_full_weights(np.ones((n_axons, 1)))
-    group.add_synapses(synapses)
+    group.synapses.add(synapses)
 
     axons = Axons(n_axons)
     axons.target = synapses
     input.add_axons(axons)
 
     probe_u = Probe(target=group, key='u')
-    group.add_probe(probe_u)
+    group.probes.add(probe_u)
     probe_v = Probe(target=group, key='v')
-    group.add_probe(probe_v)
+    group.probes.add(probe_v)
     probe_s = Probe(target=group, key='s')
-    group.add_probe(probe_s)
+    group.probes.add(probe_s)
 
     model.add_group(group)
     model.discretize()

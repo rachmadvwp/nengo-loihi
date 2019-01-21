@@ -222,7 +222,7 @@ def build_connection(model, conn):
             weights2 = gain * np.vstack([weights, -weights]).T
 
             dec_syn.set_full_weights(weights2)
-            dec_cx.add_synapses(dec_syn)
+            dec_cx.synapses.add(dec_syn)
             model.objs[conn]['decoders'] = dec_syn
         else:
             # use spiking decode neurons for on-chip connection
@@ -250,7 +250,7 @@ def build_connection(model, conn):
 
         dec_ax0 = Axons(n, label="decoders")
         dec_ax0.target = dec_syn
-        pre_cx.add_axons(dec_ax0)
+        pre_cx.axons.add(dec_ax0)
         model.objs[conn]['decode_axons'] = dec_ax0
 
         if conn.learning_rule_type is not None:
@@ -298,7 +298,7 @@ def build_connection(model, conn):
         assert post_cx.target is None
         assert conn.post_slice == slice(None)
         post_cx.target = mid_cx
-        mid_cx.add_probe(post_cx)
+        mid_cx.probes.add(post_cx)
     elif isinstance(conn.post_obj, Neurons):
         assert isinstance(post_cx, CompartmentGroup)
         assert conn.post_slice == slice(None)
@@ -312,12 +312,12 @@ def build_connection(model, conn):
             syn = Synapses(n1, label="neuron_weights")
             gain = model.params[conn.post_obj.ensemble].gain
             syn.set_full_weights(weights.T * gain)
-            post_cx.add_synapses(syn)
+            post_cx.synapses.add(syn)
             model.objs[conn]['weights'] = syn
 
         ax = Axons(mid_cx.n, label="neuron_weights")
         ax.target = syn
-        mid_cx.add_axons(ax)
+        mid_cx.axons.add(ax)
 
         post_cx.configure_filter(post_tau, dt=model.dt)
 
@@ -334,12 +334,12 @@ def build_connection(model, conn):
 
         syn = Synapses(n1, label="%s::decoder_weights" % conn)
         syn.set_full_weights(weights.T)
-        post_cx.add_synapses(syn)
+        post_cx.synapses.add(syn)
         model.objs[conn]['weights'] = syn
 
         ax = Axons(n1, label="decoder_weights")
         ax.target = syn
-        mid_cx.add_axons(ax)
+        mid_cx.axons.add(ax)
 
         post_cx.configure_filter(post_tau, dt=model.dt)
 
@@ -354,7 +354,7 @@ def build_connection(model, conn):
         mid_ax = Axons(mid_cx.n, label="encoders")
         mid_ax.target = post_cx.synapses.by_name(target_encoders)
         mid_ax.set_axon_map(mid_axon_inds)
-        mid_cx.add_axons(mid_ax)
+        mid_cx.axons.add(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax
 
         post_cx.configure_filter(post_tau, dt=model.dt)
