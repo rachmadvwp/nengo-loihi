@@ -1,7 +1,7 @@
 import collections
 import logging
-import warnings
 
+from nengo.builder.builder import Builder as NengoBuilder
 from nengo.exceptions import BuildError
 
 from nengo_loihi.builder.decode_neurons import (
@@ -166,34 +166,13 @@ class Model(object):
             group.validate()
 
 
-class Builder(object):
-    """Fills in the Loihi Model object based on the Nengo Network."""
+class Builder(NengoBuilder):
+    """Fills in the Loihi Model object based on the Nengo Network.
 
-    builders = {}  # Methods that build different components
+    We cannot use the Nengo builder as is because we make normal Nengo
+    networks for host-to-chip and chip-to-host communication. To keep
+    Nengo and Nengo Loihi builders separate, we make a blank subclass,
+    which effectively copies the class.
+    """
 
-    @classmethod
-    def build(cls, model, obj, *args, **kwargs):
-        if model.has_built(obj):
-            warnings.warn("Object %s has already been built." % obj)
-            return None
-
-        for obj_cls in type(obj).__mro__:
-            if obj_cls in cls.builders:
-                break
-        else:
-            raise BuildError(
-                "Cannot build object of type %r" % type(obj).__name__)
-
-        return cls.builders[obj_cls](model, obj, *args, **kwargs)
-
-    @classmethod
-    def register(cls, nengo_class):
-        """Register methods to build Nengo objects into Model."""
-
-        def register_builder(build_fn):
-            if nengo_class in cls.builders:
-                warnings.warn("Type '%s' already has a builder. Overwriting."
-                              % nengo_class)
-            cls.builders[nengo_class] = build_fn
-            return build_fn
-        return register_builder
+    builders = {}
