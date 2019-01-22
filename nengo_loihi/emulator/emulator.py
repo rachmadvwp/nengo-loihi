@@ -1,14 +1,10 @@
 from __future__ import division
 
-# import collections
 import logging
 import warnings
 
-import numpy as np
-# import nengo
 from nengo.exceptions import SimulationError
-# from nengo.utils.compat import is_integer, is_iterable
-
+import numpy as np
 
 from nengo_loihi.discretize import (
     decay_int,

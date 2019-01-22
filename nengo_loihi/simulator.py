@@ -3,8 +3,6 @@ import logging
 import traceback
 import warnings
 
-import numpy as np
-
 import nengo
 import nengo.utils.numpy as npext
 from nengo.exceptions import (
@@ -13,6 +11,7 @@ from nengo.exceptions import (
     ValidationError,
 )
 from nengo.simulator import ProbeDict as NengoProbeDict
+import numpy as np
 
 from nengo_loihi.builder import Model
 from nengo_loihi.emulator import CxSimulator

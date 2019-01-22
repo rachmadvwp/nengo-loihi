@@ -2,9 +2,8 @@ from __future__ import division
 
 import collections
 
-import numpy as np
-
 from nengo.exceptions import BuildError
+import numpy as np
 
 from nengo_loihi.discretize import VTH_MAN_MAX
 from nengo_loihi.utils import Profile

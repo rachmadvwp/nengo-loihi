@@ -1,5 +1,6 @@
-from nengo_loihi.synapses import CxSynapses
 import numpy as np
+
+from nengo_loihi.synapses import CxSynapses
 
 
 class CxAxons(object):

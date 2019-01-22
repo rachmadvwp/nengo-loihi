@@ -8,9 +8,8 @@ import time
 import warnings
 
 import jinja2
-import numpy as np
-
 from nengo.exceptions import SimulationError
+import numpy as np
 
 try:
     import nxsdk

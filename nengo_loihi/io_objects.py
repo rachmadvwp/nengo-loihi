@@ -2,10 +2,10 @@ from __future__ import division
 
 import collections
 
-import numpy as np
 import nengo
 from nengo.exceptions import SimulationError
 from nengo.utils.compat import is_integer
+import numpy as np
 
 
 class CxSpikeInput(object):

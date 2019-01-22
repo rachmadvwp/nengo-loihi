@@ -3,9 +3,8 @@ from __future__ import division
 import logging
 import sys
 
-import numpy as np
-
 from nengo.utils.stdlib import groupby
+import numpy as np
 
 try:
     import nxsdk.arch.n2a.compiler.microcodegen.interface as microcodegen_uci

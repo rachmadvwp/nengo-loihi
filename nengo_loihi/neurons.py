@@ -1,11 +1,10 @@
 import warnings
 
-import numpy as np
-
 import nengo
 from nengo.exceptions import ValidationError
 from nengo.neurons import NeuronType
 from nengo.params import NumberParam
+import numpy as np
 
 
 def loihi_lif_rates(neuron_type, x, gain, bias, dt):
