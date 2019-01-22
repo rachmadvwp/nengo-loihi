@@ -50,8 +50,6 @@ def test_repeated_probes(Simulator):
 
 @pytest.mark.parametrize('precompute', [True, False])
 @pytest.mark.parametrize('probe_target', ['input', 'voltage'])
-# @pytest.mark.parametrize('probe_target', ['input'])
-# @pytest.mark.parametrize('probe_target', ['voltage'])
 def test_neuron_probes(precompute, probe_target, Simulator, seed, plt,
                        allclose):
     with nengo.Network(seed=seed) as model:
