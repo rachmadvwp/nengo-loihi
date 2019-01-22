@@ -169,3 +169,10 @@ def scale_pes_errors(error, scale=1.):
                       "Clipping." % (error.min() / scale, -127. / scale))
         error[q] = -127
     return error
+
+
+def shift(x, s, **kwargs):
+    if s < 0:
+        return np.right_shift(x, -s, **kwargs)
+    else:
+        return np.left_shift(x, s, **kwargs)

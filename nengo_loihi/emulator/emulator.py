@@ -12,12 +12,11 @@ from nengo_loihi.discretize import (
     learn_overflow_bits,
     overflow_signed,
     scale_pes_errors,
+    shift,
     Q_BITS,
     U_BITS,
 )
 from nengo_loihi.probes import CxProbe
-from nengo_loihi.utils import shift
-
 
 logger = logging.getLogger(__name__)
 

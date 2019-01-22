@@ -4,7 +4,16 @@ import warnings
 
 import numpy as np
 
-from nengo_loihi.utils import Profile, shift
+from nengo_loihi.discretize import shift
+
+
+class Profile(object):
+    def __eq__(self, obj):
+        return isinstance(obj, type(self)) and all(
+            self.__dict__[key] == obj.__dict__[key] for key in self.params)
+
+    def __hash__(self):
+        return hash(tuple(self.__dict__[key] for key in self.params))
 
 
 class SynapseFmt(Profile):
