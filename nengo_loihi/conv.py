@@ -19,7 +19,7 @@ except ImportError:
 
 from nengo_loihi.axons import CxAxons
 from nengo_loihi.compartments import CxGroup
-from nengo_loihi.inputs import (
+from nengo_loihi.io_objects import (
     ChipReceiveNeurons,
     CxSpikeInput,
 )

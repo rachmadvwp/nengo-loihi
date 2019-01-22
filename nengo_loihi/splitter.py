@@ -7,7 +7,7 @@ from nengo.exceptions import BuildError
 import numpy as np
 
 from nengo_loihi.conv import Conv2D
-from nengo_loihi.inputs import (
+from nengo_loihi.io_objects import (
     ChipReceiveNode,
     ChipReceiveNeurons,
     HostSendNode,

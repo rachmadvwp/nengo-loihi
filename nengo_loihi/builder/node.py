@@ -1,7 +1,7 @@
 from nengo import Node
 
 from nengo_loihi.builder.builder import Builder
-from nengo_loihi.inputs import (
+from nengo_loihi.io_objects import (
     ChipReceiveNode,
     CxSpikeInput,
 )

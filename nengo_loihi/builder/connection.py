@@ -15,7 +15,7 @@ from nengo_loihi.builder.ensemble import (
 )
 from nengo_loihi.axons import CxAxons
 from nengo_loihi.compartments import CxGroup
-from nengo_loihi.inputs import ChipReceiveNeurons, CxSpikeInput
+from nengo_loihi.io_objects import ChipReceiveNeurons, CxSpikeInput
 from nengo_loihi.probes import CxProbe
 from nengo_loihi.synapses import CxSynapses
 from nengo_loihi.neurons import loihi_rates

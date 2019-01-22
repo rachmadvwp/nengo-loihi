@@ -22,7 +22,7 @@ except ImportError:
         no_nxsdk)
 
 from nengo_loihi.discretize import bias_to_manexp
-from nengo_loihi.inputs import CxSpikeInput
+from nengo_loihi.io_objects import CxSpikeInput
 from nengo_loihi.hardware.api import (
     CX_PROFILES_MAX,
     SpikeInput,

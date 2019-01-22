@@ -9,7 +9,7 @@ from nengo_loihi.builder.decode_neurons import (
     OnOffDecodeNeurons,
 )
 from nengo_loihi.compartments import CxGroup
-from nengo_loihi.inputs import CxSpikeInput
+from nengo_loihi.io_objects import CxSpikeInput
 
 logger = logging.getLogger(__name__)
 
