@@ -15,10 +15,7 @@ import numpy as np
 
 from nengo_loihi import conv
 from nengo_loihi.builder.builder import Builder
-from nengo_loihi.builder.ensemble import (
-    build_decode_neuron_encoders,
-    gen_eval_points,
-)
+from nengo_loihi.builder.ensemble import build_decode_neuron_encoders
 from nengo_loihi.axons import Axons
 from nengo_loihi.io_objects import ChipReceiveNeurons, SpikeInput
 from nengo_loihi.neurongroup import NeuronGroup
