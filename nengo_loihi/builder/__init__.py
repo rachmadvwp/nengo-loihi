@@ -1,2 +1,2 @@
 from .builder import Builder, Model
-from . import connection, decode_neurons, ensemble, network, node, probe
+from . import connection, decode_neurons, ensemble, node, probe

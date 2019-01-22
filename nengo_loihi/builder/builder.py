@@ -1,7 +1,10 @@
 import collections
 import logging
 
+from nengo import Network
 from nengo.builder.builder import Builder as NengoBuilder
+from nengo.builder.network import build_network
+from nengo.cache import NoDecoderCache
 from nengo.exceptions import BuildError
 
 from nengo_loihi.builder.decode_neurons import (
@@ -84,20 +87,25 @@ class Model(object):
     def __init__(self, dt=0.001, label=None, builder=None):
         self.dt = dt
         self.label = label
+        self.builder = Builder() if builder is None else builder
+        self.build_callback = None
+        self.decoder_cache = NoDecoderCache()
 
+        # Objects created by the model for simulation on Loihi
         self.inputs = collections.OrderedDict()
         self.groups = collections.OrderedDict()
 
+        # Will be filled in by the network builder
+        self.toplevel = None
+        self.config = None
+
+        # Resources used by the build process
         self.objs = collections.defaultdict(dict)
         self.params = {}  # Holds data generated when building objects
         self.probes = []
         self.probe_conns = {}
-
         self.seeds = {}
         self.seeded = {}
-
-        self.builder = Builder() if builder is None else builder
-        self.build_callback = None
 
         # --- other (typically standard) parameters
         # Filter on decode neurons
@@ -176,3 +184,6 @@ class Builder(NengoBuilder):
     """
 
     builders = {}
+
+
+Builder.register(Network)(build_network)
