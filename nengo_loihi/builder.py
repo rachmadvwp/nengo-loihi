@@ -682,6 +682,7 @@ def build_lif(model, lif, neurons, group):
     group.configure_lif(
         tau_rc=lif.tau_rc,
         tau_ref=lif.tau_ref,
+        min_voltage=lif.min_voltage,
         dt=model.dt)
 
 

@@ -66,9 +66,9 @@ class CxGroup(object):
     enableNoise : (n,) ndarray
         Whether to enable noise for each compartment.
     vmin : float or int (range [-2**23 + 1, 0])
-        Minimum voltage for all compartments, in Loihi voltage units.
+        Minimum voltage for all compartments, in the same units as ``vth``.
     vmax : float or int (range [2**9 - 1, 2**23 - 1])
-        Maximum voltage for all compartments, in Loihi voltage units.
+        Maximum voltage for all compartments, in the same units as ``vth``.
     noiseMantOffset0 : float or int
         Offset for noise generation.
     noiseExp0 : float or int
@@ -198,11 +198,12 @@ class CxGroup(object):
                 "Current (U) scaling is required. Perhaps a synapse time "
                 "constant is too large in your model.")
 
-    def configure_lif(self, tau_rc=0.02, tau_ref=0.001, vth=1, dt=0.001):
+    def configure_lif(self, tau_rc=0.02, tau_ref=0.001, vth=1, dt=0.001,
+                      min_voltage=0):
         self.decayV[:] = -np.expm1(-dt/np.asarray(tau_rc))
         self.refractDelay[:] = np.round(tau_ref / dt) + 1
         self.vth[:] = vth
-        self.vmin = 0
+        self.vmin = min_voltage
         self.vmax = np.inf
         self.scaleV = np.all(self.decayV > self.DECAY_SCALE_TH)
         if not self.scaleV:
@@ -249,12 +250,6 @@ class CxGroup(object):
                       if self.scaleV else np.ones(self.decayV.shape))
         self.scaleU = False
         self.scaleV = False
-
-        # --- vmin and vmax
-        vmine = np.clip(np.round(np.log2(-self.vmin + 1)), 0, 2**5-1)
-        self.vmin = -2**vmine + 1
-        vmaxe = np.clip(np.round((np.log2(self.vmax + 1) - 9)*0.5), 0, 2**3-1)
-        self.vmax = 2**(9 + 2*vmaxe) - 1
 
         # --- discretize weights and vth
         # To avoid overflow, we can either lower vth_max or lower wgtExp_max.
@@ -314,6 +309,16 @@ class CxGroup(object):
         bias_man, bias_exp = bias_to_manexp(bias)
         discretize(self.bias, bias_man * 2**bias_exp)
 
+        # --- vmin and vmax
+        assert (v_scale[0] == v_scale).all()
+        vmin = v_scale[0] * self.vmin
+        vmax = v_scale[0] * self.vmax
+        vmine = np.clip(np.round(np.log2(-vmin + 1)), 0, 2**5-1)
+        self.vmin = -2**vmine + 1
+        vmaxe = np.clip(np.round((np.log2(vmax + 1) - 9)*0.5), 0, 2**3-1)
+        self.vmax = 2**(9 + 2*vmaxe) - 1
+
+        # --- synapses
         for i, synapse in enumerate(self.synapses):
             if synapse.tracing:
                 wgtExp2 = synapse.learning_wgt_exp
