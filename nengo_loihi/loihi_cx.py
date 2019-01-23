@@ -200,6 +200,21 @@ class CxGroup(object):
 
     def configure_lif(self, tau_rc=0.02, tau_ref=0.001, vth=1, dt=0.001,
                       min_voltage=0):
+        """Configure these compartments as individual LIF neurons.
+
+        Parameters
+        ----------
+        tau_rc : float
+            Membrane time constant (in seconds) of the neurons.
+        tau_ref : float
+            Refractory period (in seconds) of the neurons.
+        vth : float
+            Voltage firing threshold of the neurons.
+        dt : float
+            Simulator time step length (in seconds).
+        min_voltage : float
+            The minimum voltage for the neurons.
+        """
         self.decayV[:] = -np.expm1(-dt/np.asarray(tau_rc))
         self.refractDelay[:] = np.round(tau_ref / dt) + 1
         self.vth[:] = vth
@@ -212,6 +227,20 @@ class CxGroup(object):
                 "the neuron tau_rc time constant is too large.")
 
     def configure_relu(self, tau_ref=0.0, vth=1, dt=0.001):
+        """Configure these compartments as individual Rectified Linear neurons.
+
+        These are also known as non-leaky integrate-and-fire neurons. The
+        voltage is the integral of the input current.
+
+        Parameters
+        ----------
+        tau_ref : float
+            Refractory period (in seconds) of the neurons.
+        vth : float
+            Voltage firing threshold of the neurons.
+        dt : float
+            Simulator time step length (in seconds).
+        """
         self.decayV[:] = 0.
         self.refractDelay[:] = np.round(tau_ref / dt) + 1
         self.vth[:] = vth
@@ -220,6 +249,17 @@ class CxGroup(object):
         self.scaleV = False
 
     def configure_nonspiking(self, tau_ref=0.0, vth=1, dt=0.001):
+        """Configure these compartments as individual non-spiking neurons.
+
+        Parameters
+        ----------
+        tau_ref : float
+            Refractory period (in seconds) of the neurons.
+        vth : float
+            Voltage firing threshold of the neurons.
+        dt : float
+            Simulator time step length (in seconds).
+        """
         self.decayV[:] = 1.
         self.refractDelay[:] = 1
         self.vth[:] = vth
