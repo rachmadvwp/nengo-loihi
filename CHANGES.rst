@@ -41,6 +41,12 @@ Release history
   like integrators.
   (`#124 <https://github.com/nengo/nengo-loihi/pull/124>`_,
   `#114 <https://github.com/nengo/nengo-loihi/issues/114>`_)
+- Probes that use snips on the chip (when running with ``precompute=False``)
+  now deal with negative values correctly. Filtering for probes on the chip
+  are also guaranteed to use floating-point now (so that the filtered output
+  is correct, even if the underlying values are integers).
+  (`#169 <https://github.com/nengo/nengo-loihi/pull/124>`_,
+  `#141 <https://github.com/nengo/nengo-loihi/issues/141>`_)
 
 0.4.0 (December 6, 2018)
 ========================
