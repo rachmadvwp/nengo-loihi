@@ -1,1 +1,1 @@
-from .simulator import LoihiSimulator
+from .interface import LoihiSimulator

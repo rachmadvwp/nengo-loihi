@@ -4,9 +4,10 @@ import numpy as np
 import pytest
 
 from nengo_loihi.axons import CxAxons
+from nengo_loihi.builder import CxModel
 from nengo_loihi.compartments import CxGroup
 from nengo_loihi.discretize import VTH_MAX
-from nengo_loihi.emulator import CxModel, CxSimulator
+from nengo_loihi.emulator import CxSimulator
 from nengo_loihi.io_objects import CxSpikeInput
 from nengo_loihi.hardware import LoihiSimulator
 from nengo_loihi.probes import CxProbe
