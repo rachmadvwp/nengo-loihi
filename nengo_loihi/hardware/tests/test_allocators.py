@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from nengo_loihi.hardware.allocators import core_stdp_pre_cfgs
-from nengo_loihi.hardware.api import Board
+from nengo_loihi.hardware.nxsdk_objects import Board
 from nengo_loihi.synapses import CxSynapses
 
 

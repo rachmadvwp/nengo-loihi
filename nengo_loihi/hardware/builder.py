@@ -21,13 +21,12 @@ except ImportError:
         no_nxsdk)
 
 from nengo_loihi.discretize import bias_to_manexp
-from nengo_loihi.io_objects import CxSpikeInput
-from nengo_loihi.hardware.api import (
+from nengo_loihi.hardware.nxsdk_objects import (
     CX_PROFILES_MAX,
     SpikeInput,
     VTH_PROFILES_MAX,
 )
-
+from nengo_loihi.io_objects import CxSpikeInput
 
 logger = logging.getLogger(__name__)
 

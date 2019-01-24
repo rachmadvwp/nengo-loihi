@@ -5,7 +5,7 @@ from nengo_loihi.discretize import (
     tracing_mag_int_frac,
     vth_to_manexp,
 )
-from nengo_loihi.hardware.api import (
+from nengo_loihi.hardware.nxsdk_objects import (
     Board,
     CxProfile,
     TraceCfg,
