@@ -1,6 +1,6 @@
 import pytest
 
-from nengo_loihi.hardware import LoihiSimulator
+from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.hardware import interface as hardware_interface
 
 
@@ -15,7 +15,7 @@ def test_error_on_old_version(monkeypatch):
 
     monkeypatch.setattr(hardware_interface, 'nxsdk', mock)
     with pytest.raises(ImportError):
-        LoihiSimulator.check_nxsdk_version()
+        HardwareInterface.check_nxsdk_version()
 
 
 def test_no_warn_on_current_version(monkeypatch):
@@ -25,7 +25,7 @@ def test_no_warn_on_current_version(monkeypatch):
     monkeypatch.setattr(hardware_interface, 'nxsdk', mock)
     monkeypatch.setattr(hardware_interface, 'assert_nxsdk', lambda: True)
     with pytest.warns(None) as record:
-        LoihiSimulator.check_nxsdk_version()
+        HardwareInterface.check_nxsdk_version()
     assert len(record) == 0
 
 
@@ -36,4 +36,4 @@ def test_warn_on_future_version(monkeypatch):
     monkeypatch.setattr(hardware_interface, 'nxsdk', mock)
     monkeypatch.setattr(hardware_interface, 'assert_nxsdk', lambda: True)
     with pytest.warns(UserWarning):
-        LoihiSimulator.check_nxsdk_version()
+        HardwareInterface.check_nxsdk_version()

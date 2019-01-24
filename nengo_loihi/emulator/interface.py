@@ -21,7 +21,7 @@ from nengo_loihi.probes import CxProbe
 logger = logging.getLogger(__name__)
 
 
-class CxSimulator(object):
+class EmulatorInterface(object):
     """Software emulator for Loihi chip.
 
     Parameters
@@ -63,7 +63,7 @@ class CxSimulator(object):
         if seed is None:
             seed = np.random.randint(2**31 - 1)
 
-        logger.debug("CxSimulator seed: %d", seed)
+        logger.debug("EmulatorInterface seed: %d", seed)
         self.seed = seed
         self.rng = np.random.RandomState(seed)
 
@@ -100,7 +100,7 @@ class CxSimulator(object):
             assert group.vth.dtype == group_dtype
             assert group.bias.dtype == group_dtype
 
-        logger.debug("CxSimulator dtype: %s", group_dtype)
+        logger.debug("EmulatorInterface dtype: %s", group_dtype)
 
         MAX_DELAY = 1  # don't do delay yet
         self.q = np.zeros((MAX_DELAY, self.n_cx), dtype=group_dtype)

@@ -24,8 +24,8 @@ from nengo_loihi.conv import (
     ImageSlice,
     split_transform
 )
-from nengo_loihi.emulator import CxSimulator
-from nengo_loihi.hardware import LoihiSimulator
+from nengo_loihi.emulator import EmulatorInterface
+from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.neurons import (
     loihi_rates,
     LoihiLIF,
@@ -138,11 +138,11 @@ def test_pop_tiny(
     n_steps = int(pres_time / dt)
     target = request.config.getoption("--target")
     if target == 'loihi':
-        with LoihiSimulator(model, use_snips=False, seed=seed) as sim:
+        with HardwareInterface(model, use_snips=False, seed=seed) as sim:
             sim.run_steps(n_steps)
             sim_out = sim.get_probe_output(out_probe)
     else:
-        with CxSimulator(model, seed=seed) as sim:
+        with EmulatorInterface(model, seed=seed) as sim:
             sim.run_steps(n_steps)
             sim_out = sim.get_probe_output(out_probe)
 
@@ -278,11 +278,11 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     n_steps = int(pres_time / dt)
     target = request.config.getoption("--target")
     if target == 'loihi':
-        with LoihiSimulator(model, use_snips=False, seed=seed) as sim:
+        with HardwareInterface(model, use_snips=False, seed=seed) as sim:
             sim.run_steps(n_steps)
             sim_out = sim.get_probe_output(out_probe)
     else:
-        with CxSimulator(model, seed=seed) as sim:
+        with EmulatorInterface(model, seed=seed) as sim:
             sim.run_steps(n_steps)
             sim_out = sim.get_probe_output(out_probe)
 

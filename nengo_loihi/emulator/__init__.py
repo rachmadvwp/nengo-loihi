@@ -1,1 +1,1 @@
-from .interface import CxSimulator
+from .interface import EmulatorInterface

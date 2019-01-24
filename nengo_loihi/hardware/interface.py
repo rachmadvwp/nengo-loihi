@@ -24,7 +24,7 @@ from nengo_loihi.probes import CxProbe
 logger = logging.getLogger(__name__)
 
 
-class LoihiSimulator(object):
+class HardwareInterface(object):
     """Simulator to place a Model onto a Loihi board and run it.
 
     Parameters

@@ -14,8 +14,8 @@ from nengo.simulator import ProbeDict as NengoProbeDict
 import numpy as np
 
 from nengo_loihi.builder import Model
-from nengo_loihi.emulator import CxSimulator
-from nengo_loihi.hardware import HAS_NXSDK, LoihiSimulator
+from nengo_loihi.emulator import EmulatorInterface
+from nengo_loihi.hardware import HAS_NXSDK, HardwareInterface
 from nengo_loihi.splitter import split
 import nengo_loihi.config as config
 
@@ -408,10 +408,10 @@ class Simulator(object):
             self.model.discretize()
 
         if target in ("simreal", "sim"):
-            self.sims["emulator"] = CxSimulator(self.model, seed=seed)
+            self.sims["emulator"] = EmulatorInterface(self.model, seed=seed)
         elif target == 'loihi':
             assert HAS_NXSDK, "Must have NxSDK installed to use Loihi hardware"
-            self.sims["loihi"] = LoihiSimulator(
+            self.sims["loihi"] = HardwareInterface(
                 self.model, use_snips=not self.precompute, seed=seed)
         else:
             raise ValidationError("Must be 'simreal', 'sim', or 'loihi'",

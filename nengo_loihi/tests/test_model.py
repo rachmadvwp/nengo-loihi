@@ -2,8 +2,8 @@ import numpy as np
 
 from nengo_loihi.builder import CxModel
 from nengo_loihi.compartments import CxGroup
-from nengo_loihi.emulator import CxSimulator
-from nengo_loihi.hardware import LoihiSimulator
+from nengo_loihi.emulator import EmulatorInterface
+from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.probes import CxProbe
 
 
@@ -28,11 +28,11 @@ def test_simulator_noise(request, plt, seed):
     model.discretize()
 
     if target == 'loihi':
-        with LoihiSimulator(model, use_snips=False, seed=seed) as sim:
+        with HardwareInterface(model, use_snips=False, seed=seed) as sim:
             sim.run_steps(1000)
             y = sim.get_probe_output(probe)
     else:
-        with CxSimulator(model, seed=seed) as sim:
+        with EmulatorInterface(model, seed=seed) as sim:
             sim.run_steps(1000)
             y = sim.get_probe_output(probe)
 

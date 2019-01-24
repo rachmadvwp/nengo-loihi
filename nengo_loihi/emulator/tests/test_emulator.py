@@ -7,27 +7,27 @@ from nengo_loihi.axons import CxAxons
 from nengo_loihi.builder import CxModel
 from nengo_loihi.compartments import CxGroup
 from nengo_loihi.discretize import VTH_MAX
-from nengo_loihi.emulator import CxSimulator
+from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.io_objects import CxSpikeInput
-from nengo_loihi.hardware import LoihiSimulator
+from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.probes import CxProbe
 from nengo_loihi.synapses import CxSynapses
 
 
 def test_strict_mode():
     # Tests should be run in strict mode
-    assert CxSimulator.strict
+    assert EmulatorInterface.strict
 
     try:
         with pytest.raises(SimulationError):
-            CxSimulator.error("Error in emulator")
-        CxSimulator.strict = False
+            EmulatorInterface.error("Error in emulator")
+        EmulatorInterface.strict = False
         with pytest.warns(UserWarning):
-            CxSimulator.error("Error in emulator")
+            EmulatorInterface.error("Error in emulator")
     finally:
         # Strict mode is a global setting so we set it back to True
         # for subsequent test runs.
-        CxSimulator.strict = True
+        EmulatorInterface.strict = True
 
 
 @pytest.mark.skipif(pytest.config.getoption("--target") != "loihi",
@@ -71,19 +71,19 @@ def test_uv_overflow(n_axons, Simulator, plt, allclose):
 
     group.vth[:] = VTH_MAX  # must set after `discretize`
 
-    assert CxSimulator.strict  # Tests should be run in strict mode
-    CxSimulator.strict = False
+    assert EmulatorInterface.strict  # Tests should be run in strict mode
+    EmulatorInterface.strict = False
     try:
-        with CxSimulator(model) as emu:
+        with EmulatorInterface(model) as emu:
             with pytest.warns(UserWarning):
                 emu.run_steps(nt)
             emu_u = emu.get_probe_output(probe_u)
             emu_v = emu.get_probe_output(probe_v)
             emu_s = emu.get_probe_output(probe_s)
     finally:
-        CxSimulator.strict = True  # change back to True for subsequent tests
+        EmulatorInterface.strict = True  # back to True for subsequent tests
 
-    with LoihiSimulator(model, use_snips=False) as sim:
+    with HardwareInterface(model, use_snips=False) as sim:
         sim.run_steps(nt)
         sim_u = sim.get_probe_output(probe_u)
         sim_v = sim.get_probe_output(probe_v)
