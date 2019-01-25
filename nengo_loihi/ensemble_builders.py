@@ -165,8 +165,6 @@ def build_relu(model, relu, neurons, group):
         dt=model.dt)
 
 
-
-
 class CompartmentGroup(object):
     """Class holding Loihi objects that can be placed on the chip or Lakemont.
 
@@ -419,6 +417,7 @@ class CompartmentGroup(object):
             raise BuildError("Number of compartments (%d) exceeded max (%d)" %
                              (self.n_compartments, N_CX_MAX))
 
+
 class NeuronGroup(object):
     """Class holding Loihi objects that can be placed on the chip.
 
@@ -477,6 +476,7 @@ class NeuronGroup(object):
         self.axons.validate()
         self.synapses.validate()
         self.probes.validate()
+
 
 class Profile(object):
     def __eq__(self, obj):

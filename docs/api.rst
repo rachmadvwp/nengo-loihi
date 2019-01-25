@@ -20,7 +20,7 @@ API reference
 
 .. autoclass:: nengo_loihi.Simulator
 
-.. autoclass:: nengo_loihi.builder.Model
+.. autoclass:: nengo_loihi.simulator.Model
 
 .. autoclass:: nengo_loihi.builder.Builder
 
