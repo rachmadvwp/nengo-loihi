@@ -18,8 +18,8 @@ from nengo_loihi.hardware.nxsdk_shim import (
     nxsdk,
     N2SpikeProbe,
 )
-from nengo_loihi.neurongroup import NeuronGroup
-from nengo_loihi.probes import Probe
+from nengo_loihi.ensemble_builders import NeuronGroup
+from nengo_loihi.probe_builders import Probe
 
 logger = logging.getLogger(__name__)
 

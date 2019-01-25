@@ -1,12 +1,12 @@
 import nengo
 import numpy as np
 
-from nengo_loihi.neurongroup import NeuronGroup
+from nengo_loihi.ensemble_builders import NeuronGroup
 from nengo_loihi.neurons import (
     LoihiSpikingRectifiedLinear,
     NIF,
 )
-from nengo_loihi.synapses import Synapses
+from nengo_loihi.connection_builders import Synapses
 
 
 class DecodeNeurons(object):

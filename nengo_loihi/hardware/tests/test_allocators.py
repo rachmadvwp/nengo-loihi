@@ -5,7 +5,7 @@ import pytest
 
 from nengo_loihi.hardware.allocators import core_stdp_pre_cfgs
 from nengo_loihi.hardware.nxsdk_objects import Board
-from nengo_loihi.synapses import Synapses
+from nengo_loihi.ensemble_builders import Synapses
 
 
 def test_core_stdp_pre_cfgs():

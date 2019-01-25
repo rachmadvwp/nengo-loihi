@@ -3,7 +3,7 @@ import nengo
 import numpy as np
 
 import nengo_loihi
-from nengo_loihi.builder.decode_neurons import OnOffDecodeNeurons
+from nengo_loihi.decode_neurons import OnOffDecodeNeurons
 from nengo_loihi import splitter
 
 default_node_neurons = OnOffDecodeNeurons()

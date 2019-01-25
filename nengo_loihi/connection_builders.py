@@ -14,14 +14,12 @@ from nengo.solvers import NoSolver, Solver
 import numpy as np
 
 from nengo_loihi import conv
-from nengo_loihi.builder.builder import Builder
-from nengo_loihi.builder.ensemble import build_decode_neuron_encoders
-from nengo_loihi.axons import Axons
-from nengo_loihi.io_objects import ChipReceiveNeurons, SpikeInput
-from nengo_loihi.neurongroup import NeuronGroup
-from nengo_loihi.probes import Probe
-from nengo_loihi.synapses import Synapses
+from nengo_loihi.builder import Builder
+from nengo_loihi.ensemble_builders import Axons, Synapses, NeuronGroup
+from nengo_loihi.io_objects import ChipReceiveNeurons
 from nengo_loihi.neurons import loihi_rates
+from nengo_loihi.node_builders import SpikeInput
+from nengo_loihi.probe_builders import Probe
 
 
 def build_decoders(model, conn, rng, transform):
@@ -65,6 +63,20 @@ def solve_for_decoders(conn, gain, bias, x, targets, rng, dt, E=None):
 
     decoders, solver_info = conn.solver(activities, targets, rng=rng, E=E)
     return decoders, solver_info
+
+
+def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
+    """Build encoders accepting decode neuron input."""
+    group = model.objs[ens.neurons]['in']
+    scaled_encoders = model.params[ens].scaled_encoders
+    if kind == 'node_encoders':
+        encoders = model.node_neurons.get_post_encoders(scaled_encoders)
+    elif kind == 'decode_neuron_encoders':
+        encoders = model.decode_neurons.get_post_encoders(scaled_encoders)
+
+    synapses = Synapses(encoders.shape[0], label=kind)
+    synapses.set_full_weights(encoders)
+    group.add_synapses(synapses, name=kind)
 
 
 @Builder.register(Solver)

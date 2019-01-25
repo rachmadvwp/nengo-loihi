@@ -1,17 +1,14 @@
-import nengo
 from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 
-from nengo_loihi.axons import Axons
-from nengo_loihi.builder import Model
 from nengo_loihi.discretize import VTH_MAX
 from nengo_loihi.emulator import EmulatorInterface
+from nengo_loihi.ensemble_builders import Axons, NeuronGroup, Synapses
 from nengo_loihi.hardware import HardwareInterface
-from nengo_loihi.io_objects import SpikeInput
-from nengo_loihi.neurongroup import NeuronGroup
-from nengo_loihi.probes import Probe
-from nengo_loihi.synapses import Synapses
+from nengo_loihi.node_builders import SpikeInput
+from nengo_loihi.probe_builders import Probe
+from nengo_loihi.simulator import Model
 
 
 @pytest.mark.parametrize("strict", (True, False))

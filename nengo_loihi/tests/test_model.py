@@ -1,10 +1,10 @@
 import numpy as np
 
-from nengo_loihi.builder import Model
+from nengo_loihi.simulator import Model
 from nengo_loihi.emulator import EmulatorInterface
+from nengo_loihi.ensemble_builders import NeuronGroup
 from nengo_loihi.hardware import HardwareInterface
-from nengo_loihi.neurongroup import NeuronGroup
-from nengo_loihi.probes import Probe
+from nengo_loihi.probe_builders import Probe
 
 
 def test_simulator_noise(request, plt, seed):

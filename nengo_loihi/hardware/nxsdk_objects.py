@@ -5,7 +5,7 @@ import collections
 import numpy as np
 
 from nengo_loihi.discretize import VTH_MAN_MAX
-from nengo_loihi.synapses import Profile
+from nengo_loihi.ensemble_builders import Profile
 
 
 CX_PROFILES_MAX = 32

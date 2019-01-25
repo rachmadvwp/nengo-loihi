@@ -17,7 +17,7 @@ from nengo_loihi.hardware.nxsdk_shim import (
     N2Board,
     TraceCfgGen,
 )
-from nengo_loihi.io_objects import SpikeInput
+from nengo_loihi.node_builders import SpikeInput
 
 logger = logging.getLogger(__name__)
 

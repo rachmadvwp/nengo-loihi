@@ -18,7 +18,7 @@ from nengo_loihi.discretize import (
     Q_BITS,
     U_BITS,
 )
-from nengo_loihi.probes import Probe
+from nengo_loihi.probe_builders import Probe
 
 logger = logging.getLogger(__name__)
 

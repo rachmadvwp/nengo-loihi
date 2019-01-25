@@ -17,13 +17,9 @@ try:
 except ImportError:
     nengo_dl = None
 
-from nengo_loihi.axons import Axons
-from nengo_loihi.io_objects import (
-    ChipReceiveNeurons,
-    SpikeInput,
-)
-from nengo_loihi.neurongroup import NeuronGroup
-from nengo_loihi.synapses import Synapses
+from nengo_loihi.ensemble_builders import NeuronGroup, Synapses, Axons
+from nengo_loihi.io_objects import ChipReceiveNeurons
+from nengo_loihi.node_builders import SpikeInput
 
 
 def numpy_conv2d(x, kernel, strides=(1, 1), mode='valid', channels_last=True):

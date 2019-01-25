@@ -8,7 +8,7 @@ from nengo_loihi.discretize import (
     decay_magnitude,
     overflow_signed,
 )
-from nengo_loihi.synapses import SynapseFmt
+from nengo_loihi.ensemble_builders import SynapseFmt
 
 
 @pytest.mark.parametrize("b", (8, 16, 17, 23))

@@ -14,8 +14,9 @@ except ImportError:
     nengo_dl = None
 
 import nengo_loihi
-from nengo_loihi.axons import Axons
-from nengo_loihi.builder import Model
+from nengo_loihi.ensemble_builders import NeuronGroup
+from nengo_loihi.connection_builders import Axons, Synapses
+
 from nengo_loihi.conv import (
     Conv2D,
     conv2d_loihi_weights,
@@ -25,14 +26,14 @@ from nengo_loihi.conv import (
 )
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
-from nengo_loihi.neurongroup import NeuronGroup
+
 from nengo_loihi.neurons import (
     loihi_rates,
     LoihiLIF,
     LoihiSpikingRectifiedLinear,
 )
-from nengo_loihi.probes import Probe
-from nengo_loihi.synapses import Synapses
+from nengo_loihi.probe_builders import Probe
+from nengo_loihi.simulator import Model
 
 home_dir = os.path.dirname(nengo_loihi.__file__)
 test_dir = os.path.join(home_dir, 'tests')
