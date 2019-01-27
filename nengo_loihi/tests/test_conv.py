@@ -14,9 +14,7 @@ except ImportError:
     nengo_dl = None
 
 import nengo_loihi
-from nengo_loihi.ensemble_builders import NeuronGroup
-from nengo_loihi.connection_builders import Axons, Synapses
-
+from nengo_loihi.builder import Model
 from nengo_loihi.conv import (
     Conv2D,
     conv2d_loihi_weights,
@@ -24,16 +22,15 @@ from nengo_loihi.conv import (
     ImageSlice,
     split_transform
 )
+from nengo_loihi.discretize import discretize_model
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
-
 from nengo_loihi.neurons import (
     loihi_rates,
     LoihiLIF,
     LoihiSpikingRectifiedLinear,
 )
-from nengo_loihi.probe_builders import Probe
-from nengo_loihi.simulator import Model
+from nengo_loihi.segment import Axons, LoihiSegment, Probe, Synapses
 
 home_dir = os.path.dirname(nengo_loihi.__file__)
 test_dir = os.path.join(home_dir, 'tests')
@@ -98,8 +95,8 @@ def test_pop_tiny(
 
     model = Model()
 
-    # input group
-    inp = NeuronGroup(ni * nj * nk, label='inp')
+    # input segment
+    inp = LoihiSegment(ni * nj * nk, label='inp')
     assert inp.n_neurons <= 1024
     inp.compartments.configure_relu()
     inp.compartments.bias[:] = inp_biases.ravel()
@@ -108,10 +105,10 @@ def test_pop_tiny(
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
-    model.add_group(inp)
+    model.add_segment(inp)
 
-    # conv group
-    neurons = NeuronGroup(out_size, label='neurons')
+    # conv segment
+    neurons = LoihiSegment(out_size, label='neurons')
     assert neurons.n_neurons <= 1024
     neurons.compartments.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.compartments.configure_filter(tau_s, dt=dt)
@@ -131,10 +128,10 @@ def test_pop_tiny(
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses
-    model.add_group(neurons)
+    model.add_segment(neurons)
 
     # simulation
-    model.discretize()
+    discretize_model(model)
 
     n_steps = int(pres_time / dt)
     target = request.config.getoption("--target")
@@ -240,8 +237,8 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     model = Model()
 
-    # input group
-    inp = NeuronGroup(inp_shape.size, label='inp')
+    # input segment
+    inp = LoihiSegment(inp_shape.size, label='inp')
     assert inp.n_neurons <= 1024
     inp.compartments.configure_relu()
     inp.compartments.bias[:] = inp_biases.ravel()
@@ -250,10 +247,10 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
-    model.add_group(inp)
+    model.add_segment(inp)
 
-    # conv group
-    neurons = NeuronGroup(out_size, label='neurons')
+    # conv segment
+    neurons = LoihiSegment(out_size, label='neurons')
     assert neurons.n_neurons <= 1024
     neurons.compartments.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.compartments.configure_filter(tau_s, dt=dt)
@@ -271,10 +268,10 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses
-    model.add_group(neurons)
+    model.add_segment(neurons)
 
     # simulation
-    model.discretize()
+    discretize_model(model)
 
     n_steps = int(pres_time / dt)
     target = request.config.getoption("--target")

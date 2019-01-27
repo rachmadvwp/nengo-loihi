@@ -11,33 +11,34 @@ from nengo_loihi.hardware.nxsdk_objects import (
     TraceCfg,
     VthProfile,
 )
+from nengo_loihi.hardware.validate import validate_board
 
 
 def compute_profiles(core, list_profiles):
     profile_lists = []
-    for group in core.groups:
-        profile_lists.append(list_profiles(group))
+    for segment in core.segments:
+        profile_lists.append(list_profiles(segment))
 
     profiles = list(set(p for plist in profile_lists for p in plist))
     profile_idxs = {}
-    for group, plist in zip(core.groups, profile_lists):
-        profile_idxs[group] = np.zeros(len(plist), dtype=int)
+    for segment, plist in zip(core.segments, profile_lists):
+        profile_idxs[segment] = np.zeros(len(plist), dtype=int)
         for k, profile in enumerate(profiles):
-            profile_idxs[group][[p == profile for p in plist]] = k
+            profile_idxs[segment][[p == profile for p in plist]] = k
 
     return profiles, profile_idxs
 
 
 def core_cx_profiles(core):
     """Compute all cxProfiles needed for a core"""
-    def list_cx_profiles(group):
+    def list_cx_profiles(segment):
         profiles = []
-        for i in range(group.compartments.n_compartments):
+        for i in range(segment.compartments.n_compartments):
             profiles.append(CxProfile(
-                decayU=group.compartments.decayU[i],
-                decayV=group.compartments.decayV[i],
-                refractDelay=group.compartments.refractDelay[i],
-                enableNoise=group.compartments.enableNoise[i],
+                decayU=segment.compartments.decayU[i],
+                decayV=segment.compartments.decayV[i],
+                refractDelay=segment.compartments.refractDelay[i],
+                enableNoise=segment.compartments.enableNoise[i],
             ))
 
         return profiles
@@ -47,10 +48,10 @@ def core_cx_profiles(core):
 
 def core_vth_profiles(core):
     """Compute all vthProfiles needed for a core"""
-    def list_vth_profiles(group):
+    def list_vth_profiles(segment):
         profiles = []
-        vth, _ = vth_to_manexp(group.compartments.vth)
-        for i in range(group.compartments.n_compartments):
+        vth, _ = vth_to_manexp(segment.compartments.vth)
+        for i in range(segment.compartments.n_compartments):
             profiles.append(VthProfile(
                 vth=vth[i],
             ))
@@ -87,13 +88,13 @@ def one_to_one_allocator(model):
     board = Board()
     chip = board.new_chip()
 
-    for group in model.groups:
-        if group.compartments.n_compartments > 1024:
-            raise ValidationError("Group does not fit on one chip",
+    for segment in model.segments:
+        if segment.compartments.n_compartments > 1024:
+            raise ValidationError("Segment does not fit on one chip",
                                   "n_neurons")
 
         core = chip.new_core()
-        core.add_group(group)
+        core.add_segment(segment)
 
         cx_profiles, cx_profile_idxs = core_cx_profiles(core)
         [core.add_cx_profile(cx_profile) for cx_profile in cx_profiles]
@@ -103,10 +104,10 @@ def one_to_one_allocator(model):
         [core.add_vth_profile(vth_profile) for vth_profile in vth_profiles]
         core.vth_profile_idxs = vth_profile_idxs
 
-        for syn in group.synapses:
+        for syn in segment.synapses:
             core.add_synapses(syn)
 
-        for axons in group.axons:
+        for axons in segment.axons:
             core.add_axons(axons)
 
         stdp_pre_cfgs, stdp_pre_cfg_idxs = core_stdp_pre_cfgs(core)
@@ -123,5 +124,5 @@ def one_to_one_allocator(model):
         for axons in input.axons:
             core.add_axons(axons)
 
-    board.validate()
+    validate_board(board)
     return board

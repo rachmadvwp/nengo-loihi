@@ -17,9 +17,8 @@ try:
 except ImportError:
     nengo_dl = None
 
-from nengo_loihi.ensemble_builders import NeuronGroup, Synapses, Axons
-from nengo_loihi.io_objects import ChipReceiveNeurons
-from nengo_loihi.node_builders import SpikeInput
+from nengo_loihi.inputs import ChipReceiveNeurons, LoihiInput
+from nengo_loihi.segment import Axons, LoihiSegment, Synapses
 
 
 def numpy_conv2d(x, kernel, strides=(1, 1), mode='valid', channels_last=True):
@@ -557,8 +556,8 @@ def build_conv2d_connection(model, conn):
 
     pre_cx = model.objs[conn.pre_obj]['out']
     post_cx = model.objs[conn.post_obj]['in']
-    assert isinstance(pre_cx, (NeuronGroup, SpikeInput))
-    assert isinstance(post_cx, NeuronGroup)
+    assert isinstance(pre_cx, (LoihiInput, LoihiSegment))
+    assert isinstance(post_cx, LoihiSegment)
 
     tau_s = 0.0
     if isinstance(conn.synapse, nengo.synapses.Lowpass):

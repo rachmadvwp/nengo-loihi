@@ -1,17 +1,18 @@
 import warnings
 
-import nengo
+from nengo.builder import Builder as NengoBuilder
+from nengo.builder.neurons import build_lif
 from nengo.exceptions import ValidationError
-from nengo.neurons import NeuronType
+from nengo.neurons import LIF, NeuronType, SpikingRectifiedLinear
 from nengo.params import NumberParam
 import numpy as np
 
 
 def loihi_lif_rates(neuron_type, x, gain, bias, dt):
-    # discretize tau_ref as per CompartmentGroup.configure_lif
+    # discretize tau_ref as per Compartments.configure_lif
     tau_ref = dt * np.round(neuron_type.tau_ref / dt)
 
-    # discretize tau_rc as per CompartmentGroup.discretize
+    # discretize tau_rc as per Compartments.discretize
     decay_rc = -np.expm1(-dt/neuron_type.tau_rc)
     decay_rc = np.round(decay_rc * (2**12 - 1)) / (2**12 - 1)
     tau_rc = -dt/np.log1p(-decay_rc)
@@ -40,12 +41,12 @@ def loihi_rates(neuron_type, x, gain, bias, dt):
 
 
 loihi_rate_functions = {
-    nengo.LIF: loihi_lif_rates,
-    nengo.SpikingRectifiedLinear: loihi_spikingrectifiedlinear_rates,
+    LIF: loihi_lif_rates,
+    SpikingRectifiedLinear: loihi_spikingrectifiedlinear_rates,
 }
 
 
-class LoihiLIF(nengo.LIF):
+class LoihiLIF(LIF):
     def rates(self, x, gain, bias, dt=0.001):
         return loihi_lif_rates(self, x, gain, bias, dt)
 
@@ -64,7 +65,7 @@ class LoihiLIF(nengo.LIF):
         refractory_time[spiked_mask] = tau_ref + dt
 
 
-class LoihiSpikingRectifiedLinear(nengo.SpikingRectifiedLinear):
+class LoihiSpikingRectifiedLinear(SpikingRectifiedLinear):
     def rates(self, x, gain, bias, dt=0.001):
         return loihi_spikingrectifiedlinear_rates(self, x, gain, bias, dt)
 
@@ -188,11 +189,11 @@ class NIF(NIFRate):
         refractory_time[spiked_mask] = self.tau_ref + dt
 
 
-@nengo.builder.Builder.register(NIFRate)
+@NengoBuilder.register(NIFRate)
 def nengo_build_nif_rate(model, nif_rate, neurons):
-    return nengo.builder.neurons.build_lif(model, nif_rate, neurons)
+    return build_lif(model, nif_rate, neurons)
 
 
-@nengo.builder.Builder.register(NIF)
+@NengoBuilder.register(NIF)
 def nengo_build_nif(model, nif, neurons):
-    return nengo.builder.neurons.build_lif(model, nif, neurons)
+    return build_lif(model, nif, neurons)

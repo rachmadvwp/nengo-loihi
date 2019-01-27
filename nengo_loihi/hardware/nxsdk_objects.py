@@ -4,8 +4,7 @@ import collections
 
 import numpy as np
 
-from nengo_loihi.discretize import VTH_MAN_MAX
-from nengo_loihi.ensemble_builders import Profile
+from nengo_loihi.segment import Profile
 
 
 CX_PROFILES_MAX = 32
@@ -23,10 +22,6 @@ class Board(object):
         self.synapses_index = {}
 
         self.probe_map = {}
-
-    def validate(self):
-        for chip in self.chips:
-            chip.validate()
 
     def _add_chip(self, chip):
         assert chip not in self.chips
@@ -74,10 +69,6 @@ class Chip(object):
         self.cores = []
         self.core_idxs = {}
 
-    def validate(self):
-        for core in self.cores:
-            core.validate()
-
     def _add_core(self, core):
         assert core not in self.cores
         self.core_idxs[core] = len(self.cores)
@@ -98,7 +89,7 @@ class Chip(object):
 class Core(object):
     def __init__(self, chip):
         self.chip = chip
-        self.groups = []
+        self.segments = []
         self.inputs = []
 
         self.cxProfiles = []
@@ -120,38 +111,15 @@ class Core(object):
     def synapses(self):
         return list(self.synapse_axons)
 
-    def validate(self):
-        assert len(self.cxProfiles) <= 32  # TODO: check this number
-        assert len(self.vthProfiles) <= 16  # TODO: check this number
-        assert len(self.synapseFmts) <= 16  # TODO: check this number
-        assert len(self.stdpPreCfgs) <= 3
-
-        for cxProfile in self.cxProfiles:
-            cxProfile.validate(core=self)
-        for vthProfile in self.vthProfiles:
-            vthProfile.validate(core=self)
-        for synapseFmt in self.synapseFmts:
-            if synapseFmt is not None:
-                synapseFmt.validate(core=self)
-        for traceCfg in self.stdpPreCfgs:
-            traceCfg.validate(core=self)
-
-        for synapses in self.synapse_axons:
-            synapseFmt = self.get_synapse_fmt(synapses)
-            idxbits = synapseFmt.realIdxBits
-            for i in synapses.indices:
-                assert np.all(i >= 0)
-                assert np.all(i < 2**idxbits)
-
-    def iterate_groups(self):
+    def iterate_segments(self):
         i0 = 0
         a0 = 0
-        for group in self.groups:
-            i1 = i0 + group.compartments.n_compartments
-            a1 = a0 + sum(ax.n_axons for ax in group.axons)
+        for segment in self.segments:
+            i1 = i0 + segment.compartments.n_compartments
+            a1 = a0 + sum(ax.n_axons for ax in segment.axons)
             cx_idxs = list(range(i0, i1))
             ax_range = (a0, a1)
-            yield group, cx_idxs, ax_range
+            yield segment, cx_idxs, ax_range
             i0 = i1
             a0 = a1
 
@@ -164,12 +132,12 @@ class Core(object):
             i0 = i1
 
     def iterate_synapses(self):
-        for group in self.groups:
-            for synapses in group.synapses:
+        for segment in self.segments:
+            for synapses in segment.synapses:
                 yield synapses
 
-    def add_group(self, group):
-        self.groups.append(group)
+    def add_segment(self, segment):
+        self.segments.append(segment)
 
     def add_input(self, input):
         self.inputs.append(input)
@@ -187,8 +155,8 @@ class Core(object):
         return len(self.stdpPreCfgs) - 1  # index
 
     def n_synapses(self):
-        return sum(synapses.size() for group in self.groups
-                   for synapses in group.synapses)
+        return sum(synapses.size() for segment in self.segments
+                   for synapses in segment.synapses)
 
     def add_synapses(self, synapses):
         synapse_fmt_idx = self.get_synapse_fmt_idx(synapses.synapse_fmt)
@@ -293,15 +261,6 @@ class CxProfile(Profile):
         self.refractDelay = refractDelay
         self.enableNoise = enableNoise
 
-    def validate(self, core=None):
-        assert self.decayU >= 0
-        assert self.decayU <= self.DECAY_U_MAX
-        assert self.decayV >= 0
-        assert self.decayV <= self.DECAY_V_MAX
-        assert self.refractDelay >= 1
-        assert self.refractDelay <= self.REFRACT_DELAY_MAX
-        assert self.enableNoise in (0, 1)
-
 
 class VthProfile(Profile):
     """Represents the VthProfile of a compartment (Cx).
@@ -318,12 +277,6 @@ class VthProfile(Profile):
         super(VthProfile, self).__init__()
         self.vth = vth
 
-    def validate(self, core=None):
-        assert self.vth > 0
-        assert self.vth <= VTH_MAN_MAX
-        # if core is not None:
-        #     assert self.realVth < core.dendrite_shared_cfg.v_max
-
 
 class StdpProfile(Profile):
     params = (
@@ -338,9 +291,6 @@ class StdpProfile(Profile):
         self.requireY = requireY
         self.usesXepoch = usesXepoch
 
-    def validate(self, core=None):
-        pass
-
 
 class StdpPreProfile(Profile):
     params = ('updateAlways', 'numTraces', 'numTraceHist', 'stdpProfile')
@@ -353,9 +303,6 @@ class StdpPreProfile(Profile):
         self.numTraceHist = numTraceHist
         self.stdpProfile = stdpProfile
 
-    def validate(self, core=None):
-        pass
-
 
 class TraceCfg(Profile):
     params = ('tau', 'spikeLevelInt', 'spikeLevelFrac')
@@ -365,6 +312,3 @@ class TraceCfg(Profile):
         self.tau = tau
         self.spikeLevelInt = spikeLevelInt
         self.spikeLevelFrac = spikeLevelFrac
-
-    def validate(self, core=None):
-        pass

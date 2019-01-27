@@ -2,9 +2,49 @@ from __future__ import division
 
 import collections
 
-import nengo
+from nengo import Node
 from nengo.exceptions import SimulationError
+from nengo.utils.compat import is_integer
 import numpy as np
+
+
+class LoihiInput(object):
+    def __init__(self, label=None):
+        self.label = label
+        self.axons = []
+        self.probes = []
+
+    def add_axons(self, axons):
+        self.axons.append(axons)
+
+    def add_probe(self, probe):
+        if probe.target is None:
+            probe.target = self
+        assert probe.target is self
+        self.probes.append(probe)
+
+
+class SpikeInput(LoihiInput):
+    def __init__(self, n_neurons, label=None):
+        super(SpikeInput, self).__init__(label=label)
+        self.n_neurons = n_neurons
+        self.spikes = {}  # map sim timestep index to list of spike inds
+
+    def add_spikes(self, ti, spike_idxs):
+        assert is_integer(ti)
+        ti = int(ti)
+        assert ti > 0, "Spike times must be >= 1 (got %d)" % ti
+        assert ti not in self.spikes
+        self.spikes[ti] = spike_idxs
+
+    def clear_spikes(self):
+        self.spikes.clear()
+
+    def spike_times(self):
+        return sorted(self.spikes)
+
+    def spike_idxs(self, ti):
+        return self.spikes.get(ti, [])
 
 
 class PESModulatoryTarget(object):
@@ -27,7 +67,7 @@ class PESModulatoryTarget(object):
             yield (self.target, t, x)
 
 
-class HostSendNode(nengo.Node):
+class HostSendNode(Node):
     """For sending host->chip messages"""
 
     def __init__(self, dimensions):
@@ -40,7 +80,7 @@ class HostSendNode(nengo.Node):
         self.queue.append((t, x))
 
 
-class HostReceiveNode(nengo.Node):
+class HostReceiveNode(Node):
     """For receiving chip->host messages"""
 
     def __init__(self, dimensions):
@@ -59,7 +99,7 @@ class HostReceiveNode(nengo.Node):
         self.queue.append((t, x))
 
 
-class ChipReceiveNode(nengo.Node):
+class ChipReceiveNode(Node):
     """For receiving host->chip messages"""
 
     def __init__(self, dimensions, size_out, **kwargs):

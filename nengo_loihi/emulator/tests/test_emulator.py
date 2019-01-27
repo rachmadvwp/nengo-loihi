@@ -2,13 +2,12 @@ from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 
-from nengo_loihi.discretize import VTH_MAX
+from nengo_loihi.builder import Model
+from nengo_loihi.discretize import discretize_model, VTH_MAX
 from nengo_loihi.emulator import EmulatorInterface
-from nengo_loihi.ensemble_builders import Axons, NeuronGroup, Synapses
 from nengo_loihi.hardware import HardwareInterface
-from nengo_loihi.node_builders import SpikeInput
-from nengo_loihi.probe_builders import Probe
-from nengo_loihi.simulator import Model
+from nengo_loihi.inputs import SpikeInput
+from nengo_loihi.segment import Axons, LoihiSegment, Synapses, Probe
 
 
 @pytest.mark.parametrize("strict", (True, False))
@@ -17,7 +16,7 @@ def test_strict_mode(strict, monkeypatch):
     assert EmulatorInterface.strict
 
     model = Model()
-    model.add_group(NeuronGroup(1))
+    model.add_segment(LoihiSegment(1))
 
     monkeypatch.setattr(EmulatorInterface, "strict", strict)
     emu = EmulatorInterface(model)
@@ -48,30 +47,30 @@ def test_uv_overflow(n_axons, plt, allclose, monkeypatch):
         input.add_spikes(t, np.arange(n_axons))  # send spikes to all axons
     model.add_input(input)
 
-    group = NeuronGroup(1)
-    group.compartments.configure_relu()
-    group.compartments.configure_filter(0.1)
-    group.compartments.vmin = -2**22
+    segment = LoihiSegment(1)
+    segment.compartments.configure_relu()
+    segment.compartments.configure_filter(0.1)
+    segment.compartments.vmin = -2**22
 
     synapses = Synapses(n_axons)
     synapses.set_full_weights(np.ones((n_axons, 1)))
-    group.add_synapses(synapses)
+    segment.add_synapses(synapses)
 
     axons = Axons(n_axons)
     axons.target = synapses
     input.add_axons(axons)
 
-    probe_u = Probe(target=group, key='current')
-    group.add_probe(probe_u)
-    probe_v = Probe(target=group, key='voltage')
-    group.add_probe(probe_v)
-    probe_s = Probe(target=group, key='spiked')
-    group.add_probe(probe_s)
+    probe_u = Probe(target=segment, key='current')
+    segment.add_probe(probe_u)
+    probe_v = Probe(target=segment, key='voltage')
+    segment.add_probe(probe_v)
+    probe_s = Probe(target=segment, key='spiked')
+    segment.add_probe(probe_s)
 
-    model.add_group(group)
-    model.discretize()
+    model.add_segment(segment)
+    discretize_model(model)
 
-    group.compartments.vth[:] = VTH_MAX  # must set after `discretize`
+    segment.compartments.vth[:] = VTH_MAX  # must set after `discretize`
 
     assert EmulatorInterface.strict  # Tests should be run in strict mode
     monkeypatch.setattr(EmulatorInterface, "strict", False)

@@ -18,8 +18,8 @@ from nengo_loihi.hardware.nxsdk_shim import (
     nxsdk,
     N2SpikeProbe,
 )
-from nengo_loihi.ensemble_builders import NeuronGroup
-from nengo_loihi.probe_builders import Probe
+from nengo_loihi.segment import LoihiSegment, Probe
+from nengo_loihi.validate import validate_model
 
 logger = logging.getLogger(__name__)
 
@@ -94,16 +94,16 @@ class HardwareInterface(object):
                           "version (%s); latest fully supported version is "
                           "%s" % (version, max_tested))
 
-    def _iter_groups(self):
-        return iter(self.model.groups)
+    def _iter_segments(self):
+        return iter(self.model.segments)
 
     def _iter_probes(self):
-        for group in self._iter_groups():
-            for probe in group.probes:
+        for segment in self._iter_segments():
+            for probe in segment.probes:
                 yield probe
 
     def build(self, model, seed=None):
-        model.validate()
+        validate_model(model)
         self.model = model
         self.pes_error_scale = getattr(model, 'pes_error_scale', 1.)
 
@@ -174,7 +174,7 @@ class HardwareInterface(object):
             x = data[snip_range[probe]]
             assert x.ndim == 1
             if probe.key == 'spiked':
-                if isinstance(probe.target, NeuronGroup):
+                if isinstance(probe.target, LoihiSegment):
                     refract_delays = probe.target.compartments.refractDelay
                 else:
                     refract_delays = 1
@@ -244,9 +244,9 @@ class HardwareInterface(object):
         for synapses, t, e in errors:
             coreid = None
             for core in self.board.chips[0].cores:
-                for group in core.groups:
-                    if synapses in group.synapses.synapses:
-                        # TODO: assumes one group per core
+                for segment in core.segments:
+                    if synapses in segment.synapses:
+                        # TODO: assumes one segment per core
                         coreid = core.learning_coreid
                         break
 
@@ -356,7 +356,7 @@ class HardwareInterface(object):
         max_error_len = 0
         for core in self.board.chips[0].cores:  # TODO: don't assume 1 chip
             if core.learning_coreid:
-                error_len = core.groups[0].n_neurons // 2
+                error_len = core.segments[0].n_neurons // 2
                 max_error_len = max(error_len, max_error_len)
                 n_errors += 1
                 total_error_len += 2 + error_len
@@ -366,8 +366,8 @@ class HardwareInterface(object):
         cores = set()
         # TODO: should snip_range be stored on the probe?
         snip_range = {}
-        for group in self.model.groups.keys():
-            for probe in group.probes:
+        for segment in self.model.segments:
+            for probe in segment.probes:
                 if probe.use_snip:
                     info = probe.snip_info
                     assert info['key'] in ('u', 'v', 'spike')

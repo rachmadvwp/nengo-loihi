@@ -18,7 +18,8 @@ from nengo_loihi.discretize import (
     Q_BITS,
     U_BITS,
 )
-from nengo_loihi.probe_builders import Probe
+from nengo_loihi.segment import Probe
+from nengo_loihi.validate import validate_model
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class EmulatorInterface(object):
 
     def __init__(self, model, seed=None):
         self.closed = True
-        model.validate()
+        validate_model(model)
 
         if seed is None:
             seed = np.random.randint(2**31 - 1)
@@ -46,19 +47,19 @@ class EmulatorInterface(object):
         logger.debug("EmulatorInterface seed: %d", seed)
         self.rng = np.random.RandomState(self.seed)
 
-        self.group_info = GroupInfo(model.groups)
+        self.segment_info = SegmentInfo(model.segments)
         self.inputs = list(model.inputs)
-        logger.debug("EmulatorInterface dtype: %s", self.group_info.dtype)
+        logger.debug("EmulatorInterface dtype: %s", self.segment_info.dtype)
 
         self.compartments = CompartmentState(
-            self.group_info, strict=self.strict)
+            self.segment_info, strict=self.strict)
         self.synapses = SynapseState(
-            self.group_info,
+            self.segment_info,
             pes_error_scale=getattr(model, 'pes_error_scale', 1.),
             strict=self.strict,
         )
-        self.axons = AxonState(self.group_info)
-        self.probes = ProbeState(self.group_info, self.inputs, model.dt)
+        self.axons = AxonState(self.segment_info)
+        self.probes = ProbeState(self.segment_info, self.inputs, model.dt)
 
         self.t = 0
         self._chip2host_sent_steps = 0
@@ -74,7 +75,7 @@ class EmulatorInterface(object):
         self.closed = True
 
         # remove references to states to free memory (except probes)
-        self.group_info = None
+        self.segment_info = None
         self.inputs = None
         self.compartments = None
         self.synapses = None
@@ -125,86 +126,89 @@ class EmulatorInterface(object):
         return self.probes[probe]
 
 
-class GroupInfo(object):
-    """Provide information about all the NeuronGroups in the model.
+class SegmentInfo(object):
+    """Provide information about all the LoihiSegments in the model.
 
     Attributes
     ----------
     dtype : dtype
-        Datatype of the groups. Either ``np.float32`` if the groups are not
-        discretized or ``np.int32`` if they are. All groups are the same.
-    groups : list of NeuronGroup
-        List of all the groups in the model.
+        Datatype of the segments. Either ``np.float32`` if the segments are not
+        discretized or ``np.int32`` if they are. All segments are the same.
+    segments : list of LoihiSegment
+        List of all the segments in the model.
     n_compartments : int
-        Total number of compartments across all groups.
-    slices : dict of {NeuronGroup: slice}
-        Maps each group to a slice for that group's compartments with respect
-        to all compartments. Used to slice into any array storing data across
-        all compartments.
+        Total number of compartments across all segments.
+    slices : dict of {LoihiSegment: slice}
+        Maps each segment to a slice for that segment's compartments with
+        respect to all compartments. Used to slice into any array storing
+        data across all compartments.
     """
 
-    def __init__(self, groups):
-        self.groups = list(groups)
+    def __init__(self, segments):
+        self.segments = list(segments)
         self.slices = {}
 
         assert self.dtype in (np.float32, np.int32)
 
         start_ix = end_ix = 0
-        for group in self.groups:
-            end_ix += group.n_neurons
-            self.slices[group] = slice(start_ix, end_ix)
-            assert group.compartments.vth.dtype == self.dtype
-            assert group.compartments.bias.dtype == self.dtype
+        for segment in self.segments:
+            end_ix += segment.n_neurons
+            self.slices[segment] = slice(start_ix, end_ix)
+            assert segment.compartments.vth.dtype == self.dtype
+            assert segment.compartments.bias.dtype == self.dtype
             start_ix = end_ix
 
         self.n_compartments = end_ix
 
     @property
     def dtype(self):
-        return self.groups[0].compartments.vth.dtype
+        return self.segments[0].compartments.vth.dtype
 
 
 class IterableState(object):
     """Base class for aspects of the emulator state.
 
-    This class takes the name of a NeuronGroup attribute as the ``group_key``,
-    and maps these objects to their parent groups and slices.
+    This class takes the name of a LoihiSegment attribute as the
+    ``segment_key`` and maps these objects to their parent segments and slices.
 
     Attributes
     ----------
     dtype : dtype
-        Datatype of the state elements (given by the GroupInfo datatype).
-    group_map : dict of {item: group}
-        Maps an item (determined by ``group_key``) to the group it belongs to.
+        Datatype of the state elements (given by the SegmentInfo datatype).
+    segment_map : dict of {item: segment}
+        Maps an item (determined by ``segment_key``) to the segment
+        it belongs to.
     n_compartments : int
-        The total number of neuron compartments (given by GroupInfo).
+        The total number of neuron compartments (given by SegmentInfo).
     slices : dict of {item: slice}
-        Maps an item to the ``group_info.slice`` for the group it belongs to.
+        Maps an item to the ``segment_info.slice`` for the segment
+        it belongs to.
     strict : bool (Default: True)
         Whether "undesired" chip effects (ex. overflow) raise errors (``True``)
         or whether they only raise warnings (``False``).
     """
 
-    def __init__(self, group_info, group_key, strict=True):
-        self.n_compartments = group_info.n_compartments
-        self.dtype = group_info.dtype
+    def __init__(self, segment_info, segment_key, strict=True):
+        self.n_compartments = segment_info.n_compartments
+        self.dtype = segment_info.dtype
         self.strict = strict
 
-        groups_items = list(self._groups_items(group_info.groups, group_key))
-        self.group_map = {item: group for group, item in groups_items}
-        self.slices = {item: group_info.slices[group]
-                       for group, item in groups_items}
+        segments_items = list(
+            self._segments_items(segment_info.segments, segment_key))
+        self.segment_map = {item: segment for segment, item in segments_items}
+        self.slices = {item: segment_info.slices[segment]
+                       for segment, item in segments_items}
 
     @staticmethod
-    def _groups_items(groups, group_key):
-        for group in groups:
-            if group_key == "compartments":
-                # one item per group
-                yield group, getattr(group, group_key)
+    def _segments_items(segments, segment_key):
+        for segment in segments:
+            if segment_key == "compartments":
+                # one item per segment
+                yield segment, getattr(segment, segment_key)
             else:
-                # multiple items per group (attribute is iterable)
-                for item in getattr(group, group_key):
-                    yield group, item
+                # multiple items per segment (attribute is iterable)
+                for item in getattr(segment, segment_key):
+                    yield segment, item
 
     def __contains__(self, item):
         return item in self.slices
@@ -230,13 +234,13 @@ class IterableState(object):
 
 
 class CompartmentState(IterableState):
-    """State representing the Compartments of all groups."""
+    """State representing the Compartments of all segments."""
 
     MAX_DELAY = 1  # delay not yet implemented
 
-    def __init__(self, group_info, strict=True):
+    def __init__(self, segment_info, strict=True):
         super(CompartmentState, self).__init__(
-            group_info, "compartments", strict=strict)
+            segment_info, "compartments", strict=strict)
 
         # Initialize NumPy arrays to store compartment-related data
         self.input = np.zeros(
@@ -259,7 +263,7 @@ class CompartmentState(IterableState):
         self.bias = np.full(self.n_compartments, np.nan, dtype=self.dtype)
         self.ref = np.full(self.n_compartments, np.nan, dtype=self.dtype)
 
-        # Fill in arrays with parameters from CompartmentGroups
+        # Fill in arrays with parameters from CompartmentSegments
         for compartment, sl in self.items():
             self.decay_u[sl] = compartment.decayU
             self.decay_v[sl] = compartment.decayV
@@ -309,7 +313,7 @@ class CompartmentState(IterableState):
 
         self._overflow = overflow
 
-        self.noise = NoiseState(group_info)
+        self.noise = NoiseState(segment_info)
 
     def advance_input(self):
         self.input[:-1] = self.input[1:]
@@ -348,15 +352,15 @@ class CompartmentState(IterableState):
 class NoiseState(IterableState):
     """State representing the noise parameters for all compartments."""
 
-    def __init__(self, group_info):
-        super(NoiseState, self).__init__(group_info, "compartments")
+    def __init__(self, segment_info):
+        super(NoiseState, self).__init__(segment_info, "compartments")
         self.enabled = np.full(self.n_compartments, np.nan, dtype=bool)
         self.exp = np.full(self.n_compartments, np.nan, dtype=self.dtype)
         self.mant_offset = np.full(self.n_compartments, np.nan,
                                    dtype=self.dtype)
         self.target_u = np.full(self.n_compartments, np.nan, dtype=bool)
 
-        # Fill in arrays with parameters from CompartmentGroups
+        # Fill in arrays with parameters from Compartments
         for compartment, sl in self.items():
             self.enabled[sl] = compartment.enableNoise
             self.exp[sl] = compartment.noiseExp0
@@ -413,12 +417,12 @@ class SynapseState(IterableState):
         synapses traces.
     """
 
-    def __init__(self, group_info,  # noqa: C901
+    def __init__(self, segment_info,  # noqa: C901
                  pes_error_scale=1.,
                  strict=True
              ):
         super(SynapseState, self).__init__(
-            group_info, "synapses", strict=strict)
+            segment_info, "synapses", strict=strict)
 
         self.pes_error_scale = pes_error_scale
 
@@ -434,7 +438,9 @@ class SynapseState(IterableState):
                 self.traces[synapses] = np.zeros(n, dtype=self.dtype)
                 self.trace_spikes[synapses] = set()
                 self.pes_errors[synapses] = np.zeros(
-                    self.group_map[synapses].n_neurons // 2, dtype=self.dtype)
+                    self.segment_map[synapses].n_neurons // 2,
+                    dtype=self.dtype,
+                )
                 # ^ Currently, PES learning only happens on Nodes, where we
                 # have pairs of on/off neurons. Therefore, the number of error
                 # dimensions is half the number of neurons.
@@ -560,8 +566,8 @@ class SynapseState(IterableState):
 class AxonState(IterableState):
     """State representing all (output) Axons."""
 
-    def __init__(self, group_info):
-        super(AxonState, self).__init__(group_info, "axons")
+    def __init__(self, segment_info):
+        super(AxonState, self).__init__(segment_info, "axons")
 
 
 class ProbeState(object):
@@ -575,13 +581,13 @@ class ProbeState(object):
         Maps Probes to the filtering function for that probe.
     filter_pos : {nengo_loihi.Probe: int}
         Maps Probes to the position of their filter in the data.
-    group_probes : {nengo_loihi.Probe: slice}
-        Maps Probes to the GroupInfo slice for the group they are probing.
+    segment_probes : {nengo_loihi.Probe: slice}
+        Maps Probes to the SegmentInfo slice for the segment they are probing.
     input_probes : {nengo_loihi.Probe: SpikeInput}
         Maps Probes to the SpikeInput that they are probing.
     """
 
-    def __init__(self, group_info, inputs, dt):
+    def __init__(self, segment_info, inputs, dt):
         self.dt = dt
         self.input_probes = {}
         for spike_input in inputs:
@@ -589,9 +595,9 @@ class ProbeState(object):
                 assert probe.key == 'spiked'
                 self.input_probes[probe] = spike_input
         self.other_probes = {}
-        for group in group_info.groups:
-            for probe in group.probes.probes:
-                self.other_probes[probe] = group_info.slices[group]
+        for segment in segment_info.segments:
+            for probe in segment.probes:
+                self.other_probes[probe] = segment_info.slices[segment]
 
         self.filters = {}
         self.filter_pos = {}

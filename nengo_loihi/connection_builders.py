@@ -15,11 +15,9 @@ import numpy as np
 
 from nengo_loihi import conv
 from nengo_loihi.builder import Builder
-from nengo_loihi.ensemble_builders import Axons, Synapses, NeuronGroup
-from nengo_loihi.io_objects import ChipReceiveNeurons
 from nengo_loihi.neurons import loihi_rates
-from nengo_loihi.node_builders import SpikeInput
-from nengo_loihi.probe_builders import Probe
+from nengo_loihi.inputs import ChipReceiveNeurons, LoihiInput
+from nengo_loihi.segment import Axons, LoihiSegment, Probe, Synapses
 
 
 def build_decoders(model, conn, rng, transform):
@@ -67,7 +65,7 @@ def solve_for_decoders(conn, gain, bias, x, targets, rng, dt, E=None):
 
 def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
     """Build encoders accepting decode neuron input."""
-    group = model.objs[ens.neurons]['in']
+    segment = model.objs[ens.neurons]['in']
     scaled_encoders = model.params[ens].scaled_encoders
     if kind == 'node_encoders':
         encoders = model.node_neurons.get_post_encoders(scaled_encoders)
@@ -76,7 +74,7 @@ def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
 
     synapses = Synapses(encoders.shape[0], label=kind)
     synapses.set_full_weights(encoders)
-    group.add_synapses(synapses, name=kind)
+    segment.add_synapses(synapses, name=kind)
 
 
 @Builder.register(Solver)
@@ -99,8 +97,8 @@ def build_connection(model, conn):
 
     pre_cx = model.objs[conn.pre_obj]['out']
     post_cx = model.objs[conn.post_obj]['in']
-    assert isinstance(pre_cx, (NeuronGroup, SpikeInput))
-    assert isinstance(post_cx, (NeuronGroup, Probe))
+    assert isinstance(pre_cx, (LoihiSegment, LoihiInput))
+    assert isinstance(post_cx, (LoihiSegment, Probe))
 
     weights = None
     eval_points = None
@@ -183,11 +181,11 @@ def build_connection(model, conn):
             weights = weights / conn.pre_obj.radius
 
             gain = 1
-            dec_cx = NeuronGroup(2 * d, label='%s' % conn)
+            dec_cx = LoihiSegment(2 * d, label='%s' % conn)
             dec_cx.compartments.configure_nonspiking(
                 dt=model.dt, vth=model.vth_nonspiking)
             dec_cx.compartments.bias[:] = 0
-            model.add_group(dec_cx)
+            model.add_segment(dec_cx)
             model.objs[conn]['decoded'] = dec_cx
 
             dec_syn = Synapses(n, label="probe_decoders")
@@ -209,10 +207,10 @@ def build_connection(model, conn):
                 post_inds, post_d)
 
             target_encoders = 'decode_neuron_encoders'
-            dec_cx, dec_syn = model.decode_neurons.get_group(
-                weights, group_label="%s" % conn, syn_label="decoders")
+            dec_cx, dec_syn = model.decode_neurons.get_segment(
+                weights, segment_label="%s" % conn, syn_label="decoders")
 
-            model.add_group(dec_cx)
+            model.add_segment(dec_cx)
             model.objs[conn]['decoded'] = dec_cx
             model.objs[conn]['decoders'] = dec_syn
 
@@ -272,7 +270,7 @@ def build_connection(model, conn):
         post_cx.target = mid_cx
         mid_cx.add_probe(post_cx)
     elif isinstance(conn.post_obj, Neurons):
-        assert isinstance(post_cx, NeuronGroup)
+        assert isinstance(post_cx, LoihiSegment)
         assert conn.post_slice == slice(None)
         if weights is None:
             raise NotImplementedError("Need weights for connection to neurons")
@@ -296,7 +294,7 @@ def build_connection(model, conn):
         if conn.learning_rule_type is not None:
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble) and conn.solver.weights:
-        assert isinstance(post_cx, NeuronGroup)
+        assert isinstance(post_cx, LoihiSegment)
         assert weights.ndim == 2
         n2, n1 = weights.shape
         assert post_cx.n_neurons == n2
@@ -319,12 +317,12 @@ def build_connection(model, conn):
             raise NotImplementedError()
     elif isinstance(conn.post_obj, Ensemble):
         assert target_encoders is not None
-        if not post_cx.synapses.has_name(target_encoders):
+        if target_encoders not in post_cx.named_synapses:
             build_decode_neuron_encoders(
                 model, conn.post_obj, kind=target_encoders)
 
         mid_ax = Axons(mid_cx.n_neurons, label="encoders")
-        mid_ax.target = post_cx.synapses.by_name(target_encoders)
+        mid_ax.target = post_cx.named_synapses[target_encoders]
         mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax

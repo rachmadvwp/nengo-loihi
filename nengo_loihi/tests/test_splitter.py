@@ -5,13 +5,15 @@ import numpy as np
 
 from nengo_loihi.decode_neurons import OnOffDecodeNeurons
 from nengo_loihi.config import add_params
-from nengo_loihi.neurons import NIF
-from nengo_loihi.splitter import (
+from nengo_loihi.inputs import (
     ChipReceiveNeurons,
     ChipReceiveNode,
     HostReceiveNode,
     HostSendNode,
     PESModulatoryTarget,
+)
+from nengo_loihi.neurons import NIF
+from nengo_loihi.splitter import (
     place_ensembles,
     place_internetwork_connections,
     place_nodes,

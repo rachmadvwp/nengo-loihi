@@ -2,7 +2,7 @@ import nengo
 import numpy as np
 import pytest
 
-from nengo_loihi.simulator import Model
+from nengo_loihi.builder import Model
 from nengo_loihi.decode_neurons import (
     NoisyDecodeNeurons,
     OnOffDecodeNeurons,
