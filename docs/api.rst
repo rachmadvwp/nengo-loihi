@@ -9,7 +9,7 @@ API reference
    nengo_loihi.add_params
    nengo_loihi.set_defaults
    nengo_loihi.Simulator
-   nengo_loihi.simulator.Model
+   nengo_loihi.builder.Model
    nengo_loihi.builder.Builder
    nengo_loihi.emulator.EmulatorInterface
    nengo_loihi.hardware.HardwareInterface
