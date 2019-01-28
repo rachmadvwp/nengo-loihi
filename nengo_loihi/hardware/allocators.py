@@ -105,7 +105,7 @@ def one_to_one_allocator(model):
         core.vth_profile_idxs = vth_profile_idxs
 
         for syn in block.synapses:
-            core.add_synapses(syn)
+            core.add_synapse(syn)
 
         for axons in block.axons:
             core.add_axon(axons)

@@ -74,7 +74,7 @@ def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
 
     synapses = Synapse(encoders.shape[0], label=kind)
     synapses.set_full_weights(encoders)
-    block.add_synapses(synapses, name=kind)
+    block.add_synapse(synapses, name=kind)
 
 
 @Builder.register(Solver)
@@ -192,7 +192,7 @@ def build_connection(model, conn):
             weights2 = gain * np.vstack([weights, -weights]).T
 
             dec_syn.set_full_weights(weights2)
-            dec_cx.add_synapses(dec_syn)
+            dec_cx.add_synapse(dec_syn)
             model.objs[conn]['decoders'] = dec_syn
         else:
             # use spiking decode neurons for on-chip connection
@@ -282,7 +282,7 @@ def build_connection(model, conn):
             syn = Synapse(n1, label="neuron_weights")
             gain = model.params[conn.post_obj.ensemble].gain
             syn.set_full_weights(weights.T * gain)
-            post_cx.add_synapses(syn)
+            post_cx.add_synapse(syn)
             model.objs[conn]['weights'] = syn
 
         ax = Axon(mid_cx.n_neurons, label="neuron_weights")
@@ -304,7 +304,7 @@ def build_connection(model, conn):
 
         syn = Synapse(n1, label="%s::decoder_weights" % conn)
         syn.set_full_weights(weights.T)
-        post_cx.add_synapses(syn)
+        post_cx.add_synapse(syn)
         model.objs[conn]['weights'] = syn
 
         ax = Axon(n1, label="decoder_weights")

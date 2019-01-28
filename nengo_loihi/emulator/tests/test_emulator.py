@@ -52,12 +52,12 @@ def test_uv_overflow(n_axons, plt, allclose, monkeypatch):
     block.compartments.configure_filter(0.1)
     block.compartments.vmin = -2**22
 
-    synapses = Synapse(n_axons)
-    synapses.set_full_weights(np.ones((n_axons, 1)))
-    block.add_synapses(synapses)
+    synapse = Synapse(n_axons)
+    synapse.set_full_weights(np.ones((n_axons, 1)))
+    block.add_synapse(synapse)
 
     axons = Axon(n_axons)
-    axons.target = synapses
+    axons.target = synapse
     input.add_axon(axons)
 
     probe_u = Probe(target=block, key='current')

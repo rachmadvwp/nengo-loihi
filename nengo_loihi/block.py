@@ -48,11 +48,11 @@ class LoihiBlock(object):
         return "%s(%s)" % (
             type(self).__name__, self.label if self.label else '')
 
-    def add_synapses(self, synapses, name=None):
-        self.synapses.append(synapses)
+    def add_synapse(self, synapse, name=None):
+        self.synapses.append(synapse)
         if name is not None:
             assert name not in self.named_synapses
-            self.named_synapses[name] = synapses
+            self.named_synapses[name] = synapse
 
     def add_axon(self, axon, name=None):
         self.axons.append(axon)

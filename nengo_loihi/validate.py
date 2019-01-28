@@ -40,8 +40,8 @@ def validate_block(block):
         raise BuildError("Total synapse bits (%d) exceeded max (%d)" % (
             synapse_bits, MAX_SYNAPSE_BITS))
 
-    for synapses in block.synapses:
-        validate_synapses(synapses)
+    for synapse in block.synapses:
+        validate_synapse(synapse)
 
     # -- Probes
     for probe in block.probes:
@@ -65,13 +65,13 @@ def validate_axon(axon):
                 assert 0 <= atom < n_populations
 
 
-def validate_synapses(synapses):
-    validate_synapse_fmt(synapses.synapse_fmt)
-    if synapses.axon_cx_bases is not None:
-        assert np.all(synapses.axon_cx_bases < 256), "CxBase cannot be > 256"
-    if synapses.pop_type == 16:
-        if synapses.axon_cx_bases is not None:
-            assert np.all(synapses.axon_cx_bases % 4 == 0)
+def validate_synapse(synapse):
+    validate_synapse_fmt(synapse.synapse_fmt)
+    if synapse.axon_cx_bases is not None:
+        assert np.all(synapse.axon_cx_bases < 256), "CxBase cannot be > 256"
+    if synapse.pop_type == 16:
+        if synapse.axon_cx_bases is not None:
+            assert np.all(synapse.axon_cx_bases % 4 == 0)
 
 
 def validate_synapse_fmt(synapse_fmt):

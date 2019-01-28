@@ -526,17 +526,17 @@ class Simulator(object):
             if hasattr(receiver, 'collect_errors'):
                 for probe, t, e in receiver.collect_errors():
                     conn = self.model.probe_conns[probe]
-                    synapses = self.model.objs[conn]['decoders']
-                    assert synapses.learning
+                    synapse = self.model.objs[conn]['decoders']
+                    assert synapse.learning
                     ti = round(t / self.model.dt)
                     errors_ti = errors.setdefault(ti, {})
-                    if synapses in errors_ti:
-                        errors_ti[synapses] += e
+                    if synapse in errors_ti:
+                        errors_ti[synapse] += e
                     else:
-                        errors_ti[synapses] = e.copy()
+                        errors_ti[synapse] = e.copy()
 
-        errors = [(synapses, ti, e) for ti, ee in errors.items()
-                  for synapses, e in ee.items()]
+        errors = [(synapse, ti, e) for ti, ee in errors.items()
+                  for synapse, e in ee.items()]
         return spikes, errors
 
     def _host2chip(self, sim):

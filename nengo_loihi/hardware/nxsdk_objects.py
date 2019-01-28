@@ -158,7 +158,7 @@ class Core(object):
         return sum(synapses.size() for block in self.blocks
                    for synapses in block.synapses)
 
-    def add_synapses(self, synapses):
+    def add_synapse(self, synapses):
         synapse_fmt_idx = self.get_synapse_fmt_idx(synapses.synapse_fmt)
         self.synapse_fmt_idxs[synapses] = synapse_fmt_idx
 

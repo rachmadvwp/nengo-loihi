@@ -161,7 +161,7 @@ class OnOffDecodeNeurons(DecodeNeurons):
             weights2.extend([ga*weights.T, -gb*weights.T])
         weights2 = np.hstack(weights2)
         syn.set_full_weights(weights2)
-        block.add_synapses(syn)
+        block.add_synapse(syn)
 
         return block, syn
 

@@ -16,7 +16,7 @@ def test_core_stdp_pre_cfgs():
         syn.set_full_weights(np.array([[1]]))
         if tracing_mag is not None:
             syn.set_learning(tracing_mag=tracing_mag)
-        core.add_synapses(syn)
+        core.add_synapse(syn)
         return syn
 
     profile_idxs = {}
