@@ -1,7 +1,5 @@
 from __future__ import division
 
-import collections
-
 from nengo import Node
 from nengo.exceptions import SimulationError
 from nengo.utils.compat import is_integer
@@ -45,26 +43,6 @@ class SpikeInput(LoihiInput):
 
     def spike_idxs(self, ti):
         return self.spikes.get(ti, [])
-
-
-class PESModulatoryTarget(object):
-    def __init__(self, target):
-        self.target = target
-        self.errors = collections.OrderedDict()
-
-    def clear(self):
-        self.errors.clear()
-
-    def receive(self, t, x):
-        assert len(self.errors) == 0 or t >= next(reversed(self.errors))
-        if t in self.errors:
-            self.errors[t] += x
-        else:
-            self.errors[t] = np.array(x)
-
-    def collect_errors(self):
-        for t, x in self.errors.items():
-            yield (self.target, t, x)
 
 
 class HostSendNode(Node):

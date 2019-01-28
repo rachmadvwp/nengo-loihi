@@ -10,10 +10,10 @@ from nengo_loihi.inputs import (
     ChipReceiveNode,
     HostReceiveNode,
     HostSendNode,
-    PESModulatoryTarget,
 )
 from nengo_loihi.neurons import NIF
 from nengo_loihi.splitter import (
+    PESModulatoryTarget,
     place_ensembles,
     place_internetwork_connections,
     place_nodes,

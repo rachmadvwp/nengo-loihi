@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import logging
 import warnings
 
@@ -16,11 +16,30 @@ from nengo_loihi.inputs import (
     ChipReceiveNeurons,
     HostSendNode,
     HostReceiveNode,
-    PESModulatoryTarget,
 )
 from nengo_loihi.passthrough import convert_passthroughs
 
 logger = logging.getLogger(__name__)
+
+
+class PESModulatoryTarget(object):
+    def __init__(self, target):
+        self.target = target
+        self.errors = OrderedDict()
+
+    def clear(self):
+        self.errors.clear()
+
+    def receive(self, t, x):
+        assert len(self.errors) == 0 or t >= next(reversed(self.errors))
+        if t in self.errors:
+            self.errors[t] += x
+        else:
+            self.errors[t] = np.array(x)
+
+    def collect_errors(self):
+        for t, x in self.errors.items():
+            yield (self.target, t, x)
 
 
 def base_obj(obj):
