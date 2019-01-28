@@ -7,13 +7,7 @@ from .config import add_params, set_defaults
 from .conv import Conv2D
 
 # Import builders so they are registered
-from . import (
-    builder,
-    connection_builders,
-    ensemble_builders,
-    node_builders,
-    probe_builders,
-)
+from . import builder
 
 logger = logging.getLogger(__name__)
 try:

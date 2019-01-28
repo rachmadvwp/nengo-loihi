@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from nengo_loihi.builder import Model
-from nengo_loihi.ensemble_builders import get_gain_bias
+from nengo_loihi.builder.ensemble import get_gain_bias
 
 
 @pytest.mark.parametrize("passed_intercepts", [

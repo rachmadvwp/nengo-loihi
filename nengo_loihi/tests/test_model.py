@@ -1,9 +1,9 @@
 import numpy as np
 
+from nengo_loihi.builder.probe import Probe
 from nengo_loihi.discretize import discretize_model
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
-from nengo_loihi.probe_builders import Probe
 from nengo_loihi.segment import LoihiSegment
 from nengo_loihi.simulator import Model
 
