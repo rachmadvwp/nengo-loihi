@@ -58,7 +58,7 @@ def test_uv_overflow(n_axons, plt, allclose, monkeypatch):
 
     axons = Axon(n_axons)
     axons.target = synapses
-    input.add_axons(axons)
+    input.add_axon(axons)
 
     probe_u = Probe(target=block, key='current')
     block.add_probe(probe_u)

@@ -108,7 +108,7 @@ def one_to_one_allocator(model):
             core.add_synapses(syn)
 
         for axons in block.axons:
-            core.add_axons(axons)
+            core.add_axon(axons)
 
         stdp_pre_cfgs, stdp_pre_cfg_idxs = core_stdp_pre_cfgs(core)
         [core.add_stdp_pre_cfg(stdp_pre_cfg) for stdp_pre_cfg in stdp_pre_cfgs]
@@ -122,7 +122,7 @@ def one_to_one_allocator(model):
         core = chip.new_core()
         core.add_input(input)
         for axons in input.axons:
-            core.add_axons(axons)
+            core.add_axon(axons)
 
     validate_board(board)
     return board

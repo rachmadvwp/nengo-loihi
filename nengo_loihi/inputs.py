@@ -12,7 +12,7 @@ class LoihiInput(object):
         self.axons = []
         self.probes = []
 
-    def add_axons(self, axons):
+    def add_axon(self, axons):
         self.axons.append(axons)
 
     def add_probe(self, probe):

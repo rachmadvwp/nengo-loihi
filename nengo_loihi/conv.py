@@ -607,7 +607,7 @@ def build_conv2d_connection(model, conn):
     ax.target = synapses
     ax.cx_to_axon_map = input_shape.pixel_idxs()
     ax.cx_atoms = input_shape.channel_idxs()
-    pre_cx.add_axons(ax)
+    pre_cx.add_axon(ax)
 
     post_cx.compartments.configure_filter(tau_s, dt=model.dt)
 

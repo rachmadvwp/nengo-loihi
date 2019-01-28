@@ -220,7 +220,7 @@ def build_connection(model, conn):
 
         dec_ax0 = Axon(n, label="decoders")
         dec_ax0.target = dec_syn
-        pre_cx.add_axons(dec_ax0)
+        pre_cx.add_axon(dec_ax0)
         model.objs[conn]['decode_axons'] = dec_ax0
 
         if conn.learning_rule_type is not None:
@@ -287,7 +287,7 @@ def build_connection(model, conn):
 
         ax = Axon(mid_cx.n_neurons, label="neuron_weights")
         ax.target = syn
-        mid_cx.add_axons(ax)
+        mid_cx.add_axon(ax)
 
         post_cx.compartments.configure_filter(post_tau, dt=model.dt)
 
@@ -309,7 +309,7 @@ def build_connection(model, conn):
 
         ax = Axon(n1, label="decoder_weights")
         ax.target = syn
-        mid_cx.add_axons(ax)
+        mid_cx.add_axon(ax)
 
         post_cx.compartments.configure_filter(post_tau, dt=model.dt)
 
@@ -324,7 +324,7 @@ def build_connection(model, conn):
         mid_ax = Axon(mid_cx.n_neurons, label="encoders")
         mid_ax.target = post_cx.named_synapses[target_encoders]
         mid_ax.set_axon_map(mid_axon_inds)
-        mid_cx.add_axons(mid_ax)
+        mid_cx.add_axon(mid_ax)
         model.objs[conn]['mid_axons'] = mid_ax
 
         post_cx.compartments.configure_filter(post_tau, dt=model.dt)

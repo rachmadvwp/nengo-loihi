@@ -54,11 +54,11 @@ class LoihiBlock(object):
             assert name not in self.named_synapses
             self.named_synapses[name] = synapses
 
-    def add_axons(self, axons, name=None):
-        self.axons.append(axons)
+    def add_axon(self, axon, name=None):
+        self.axons.append(axon)
         if name is not None:
             assert name not in self.named_axons
-            self.named_axons[name] = axons
+            self.named_axons[name] = axon
 
     def add_probe(self, probe):
         self.probes.append(probe)

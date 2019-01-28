@@ -178,7 +178,7 @@ class Core(object):
         s1 = s0 + synapses.size()
         self.synapse_entries[synapses] = (s0, s1)
 
-    def add_axons(self, axons):
+    def add_axon(self, axons):
         pass
 
     def get_synapse_fmt(self, synapses):
@@ -227,13 +227,13 @@ class LoihiSpikeInput(object):
     def set_axons(self, board, n2board, cx_spike_input):
         assert len(self.axon_map) == 0
         cx_idxs = np.arange(cx_spike_input.n_neurons)
-        for axons in cx_spike_input.axons:
-            assert (axons.cx_atoms is None or np.all(axons.cx_atoms == 0)), (
+        for axon in cx_spike_input.axons:
+            assert (axon.cx_atoms is None or np.all(axon.cx_atoms == 0)), (
                 "Cannot send pop spikes to board")
-            tchip_idx, tcore_idx, tsyn_ids = board.find_synapses(axons.target)
+            tchip_idx, tcore_idx, tsyn_ids = board.find_synapses(axon.target)
             tchip = n2board.n2Chips[tchip_idx]
             tcore = tchip.n2Cores[tcore_idx]
-            spikes = axons.map_cx_spikes(cx_idxs)
+            spikes = axon.map_cx_spikes(cx_idxs)
             for cx_idx, spike in zip(cx_idxs, spikes):
                 if spike is not None:
                     taxon_idx = int(spike.axon_id)

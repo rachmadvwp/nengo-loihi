@@ -103,7 +103,7 @@ def test_pop_tiny(
 
     inp_ax = Axon(nij, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
-    inp.add_axons(inp_ax)
+    inp.add_axon(inp_ax)
 
     model.add_block(inp)
 
@@ -245,7 +245,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     inp_ax = Axon(inp_shape.n_pixels, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
-    inp.add_axons(inp_ax)
+    inp.add_axon(inp_ax)
 
     model.add_block(inp)
 

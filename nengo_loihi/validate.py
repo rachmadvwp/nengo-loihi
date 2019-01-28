@@ -24,8 +24,8 @@ def validate_block(block):
         raise BuildError("Output axons (%d) exceeded max (%d)" % (
             n_axons, OUT_AXONS_MAX))
 
-    for axons in block.axons:
-        validate_axons(axons)
+    for axon in block.axons:
+        validate_axon(axon)
 
     # -- Synapses
     IN_AXONS_MAX = 4096
@@ -55,13 +55,13 @@ def validate_compartments(comp):
                          (comp.n_compartments, N_CX_MAX))
 
 
-def validate_axons(axons):
-    if isinstance(axons.target, Synapses):
-        if axons.cx_atoms is not None:
-            cx_idxs = np.arange(len(axons.cx_atoms))
-            axon_ids = axons.map_cx_axons(cx_idxs)
-            for atom, axon_id in zip(axons.cx_atoms, axon_ids):
-                n_populations = axons.target.axon_populations(axon_id)
+def validate_axon(axon):
+    if isinstance(axon.target, Synapses):
+        if axon.cx_atoms is not None:
+            cx_idxs = np.arange(len(axon.cx_atoms))
+            axon_ids = axon.map_cx_axon(cx_idxs)
+            for atom, axon_id in zip(axon.cx_atoms, axon_ids):
+                n_populations = axon.target.axon_populations(axon_id)
                 assert 0 <= atom < n_populations
 
 
