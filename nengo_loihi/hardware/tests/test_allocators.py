@@ -3,9 +3,9 @@ from nengo.exceptions import BuildError
 import numpy as np
 import pytest
 
+from nengo_loihi.block import Synapses
 from nengo_loihi.hardware.allocators import core_stdp_pre_cfgs
 from nengo_loihi.hardware.nxsdk_objects import Board
-from nengo_loihi.segment import Synapses
 
 
 def test_core_stdp_pre_cfgs():
@@ -33,7 +33,7 @@ def test_core_stdp_pre_cfgs():
     assert ret_idxs == profile_idxs
 
 
-def test_segment_size(Simulator):
+def test_block_size(Simulator):
     with nengo.Network() as net:
         nengo.Ensemble(1024, 1)
 

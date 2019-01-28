@@ -4,7 +4,7 @@ import collections
 
 import numpy as np
 
-from nengo_loihi.segment import Profile
+from nengo_loihi.block import Profile
 
 
 CX_PROFILES_MAX = 32
@@ -89,7 +89,7 @@ class Chip(object):
 class Core(object):
     def __init__(self, chip):
         self.chip = chip
-        self.segments = []
+        self.blocks = []
         self.inputs = []
 
         self.cxProfiles = []
@@ -111,15 +111,15 @@ class Core(object):
     def synapses(self):
         return list(self.synapse_axons)
 
-    def iterate_segments(self):
+    def iterate_blocks(self):
         i0 = 0
         a0 = 0
-        for segment in self.segments:
-            i1 = i0 + segment.compartments.n_compartments
-            a1 = a0 + sum(ax.n_axons for ax in segment.axons)
+        for block in self.blocks:
+            i1 = i0 + block.compartments.n_compartments
+            a1 = a0 + sum(ax.n_axons for ax in block.axons)
             cx_idxs = list(range(i0, i1))
             ax_range = (a0, a1)
-            yield segment, cx_idxs, ax_range
+            yield block, cx_idxs, ax_range
             i0 = i1
             a0 = a1
 
@@ -132,12 +132,12 @@ class Core(object):
             i0 = i1
 
     def iterate_synapses(self):
-        for segment in self.segments:
-            for synapses in segment.synapses:
+        for block in self.blocks:
+            for synapses in block.synapses:
                 yield synapses
 
-    def add_segment(self, segment):
-        self.segments.append(segment)
+    def add_block(self, block):
+        self.blocks.append(block)
 
     def add_input(self, input):
         self.inputs.append(input)
@@ -155,8 +155,8 @@ class Core(object):
         return len(self.stdpPreCfgs) - 1  # index
 
     def n_synapses(self):
-        return sum(synapses.size() for segment in self.segments
-                   for synapses in segment.synapses)
+        return sum(synapses.size() for block in self.blocks
+                   for synapses in block.synapses)
 
     def add_synapses(self, synapses):
         synapse_fmt_idx = self.get_synapse_fmt_idx(synapses.synapse_fmt)

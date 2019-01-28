@@ -17,8 +17,8 @@ try:
 except ImportError:
     nengo_dl = None
 
+from nengo_loihi.block import Axons, LoihiBlock, Synapses
 from nengo_loihi.inputs import ChipReceiveNeurons, LoihiInput
-from nengo_loihi.segment import Axons, LoihiSegment, Synapses
 
 
 def numpy_conv2d(x, kernel, strides=(1, 1), mode='valid', channels_last=True):
@@ -556,8 +556,8 @@ def build_conv2d_connection(model, conn):
 
     pre_cx = model.objs[conn.pre_obj]['out']
     post_cx = model.objs[conn.post_obj]['in']
-    assert isinstance(pre_cx, (LoihiInput, LoihiSegment))
-    assert isinstance(post_cx, LoihiSegment)
+    assert isinstance(pre_cx, (LoihiInput, LoihiBlock))
+    assert isinstance(post_cx, LoihiBlock)
 
     tau_s = 0.0
     if isinstance(conn.synapse, nengo.synapses.Lowpass):

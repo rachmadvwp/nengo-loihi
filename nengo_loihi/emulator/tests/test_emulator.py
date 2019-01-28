@@ -7,7 +7,7 @@ from nengo_loihi.discretize import discretize_model, VTH_MAX
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.inputs import SpikeInput
-from nengo_loihi.segment import Axons, LoihiSegment, Synapses, Probe
+from nengo_loihi.block import Axons, LoihiBlock, Synapses, Probe
 
 
 @pytest.mark.parametrize("strict", (True, False))
@@ -16,7 +16,7 @@ def test_strict_mode(strict, monkeypatch):
     assert EmulatorInterface.strict
 
     model = Model()
-    model.add_segment(LoihiSegment(1))
+    model.add_block(LoihiBlock(1))
 
     monkeypatch.setattr(EmulatorInterface, "strict", strict)
     emu = EmulatorInterface(model)
@@ -47,30 +47,30 @@ def test_uv_overflow(n_axons, plt, allclose, monkeypatch):
         input.add_spikes(t, np.arange(n_axons))  # send spikes to all axons
     model.add_input(input)
 
-    segment = LoihiSegment(1)
-    segment.compartments.configure_relu()
-    segment.compartments.configure_filter(0.1)
-    segment.compartments.vmin = -2**22
+    block = LoihiBlock(1)
+    block.compartments.configure_relu()
+    block.compartments.configure_filter(0.1)
+    block.compartments.vmin = -2**22
 
     synapses = Synapses(n_axons)
     synapses.set_full_weights(np.ones((n_axons, 1)))
-    segment.add_synapses(synapses)
+    block.add_synapses(synapses)
 
     axons = Axons(n_axons)
     axons.target = synapses
     input.add_axons(axons)
 
-    probe_u = Probe(target=segment, key='current')
-    segment.add_probe(probe_u)
-    probe_v = Probe(target=segment, key='voltage')
-    segment.add_probe(probe_v)
-    probe_s = Probe(target=segment, key='spiked')
-    segment.add_probe(probe_s)
+    probe_u = Probe(target=block, key='current')
+    block.add_probe(probe_u)
+    probe_v = Probe(target=block, key='voltage')
+    block.add_probe(probe_v)
+    probe_s = Probe(target=block, key='spiked')
+    block.add_probe(probe_s)
 
-    model.add_segment(segment)
+    model.add_block(block)
     discretize_model(model)
 
-    segment.compartments.vth[:] = VTH_MAX  # must set after `discretize`
+    block.compartments.vth[:] = VTH_MAX  # must set after `discretize`
 
     assert EmulatorInterface.strict  # Tests should be run in strict mode
     monkeypatch.setattr(EmulatorInterface, "strict", False)

@@ -1,50 +1,50 @@
 from nengo.exceptions import BuildError
 import numpy as np
 
-from nengo_loihi.segment import Synapses
+from nengo_loihi.block import Synapses
 
 
 def validate_model(model):
-    if len(model.segments) == 0:
+    if len(model.blocks) == 0:
         raise BuildError("No neurons marked for execution on-chip. "
                          "Please mark some ensembles as on-chip.")
 
-    for segment in model.segments:
-        validate_segment(segment)
+    for block in model.blocks:
+        validate_block(block)
 
 
-def validate_segment(segment):
+def validate_block(block):
     # -- Compartments
-    validate_compartments(segment.compartments)
+    validate_compartments(block.compartments)
 
     # -- Axons
     OUT_AXONS_MAX = 4096
-    n_axons = sum(a.axon_slots() for a in segment.axons)
+    n_axons = sum(a.axon_slots() for a in block.axons)
     if n_axons > OUT_AXONS_MAX:
         raise BuildError("Output axons (%d) exceeded max (%d)" % (
             n_axons, OUT_AXONS_MAX))
 
-    for axons in segment.axons:
+    for axons in block.axons:
         validate_axons(axons)
 
     # -- Synapses
     IN_AXONS_MAX = 4096
-    n_axons = sum(s.n_axons for s in segment.synapses)
+    n_axons = sum(s.n_axons for s in block.synapses)
     if n_axons > IN_AXONS_MAX:
         raise BuildError("Input axons (%d) exceeded max (%d)" % (
             n_axons, IN_AXONS_MAX))
 
     MAX_SYNAPSE_BITS = 16384*64
-    synapse_bits = sum(s.bits() for s in segment.synapses)
+    synapse_bits = sum(s.bits() for s in block.synapses)
     if synapse_bits > MAX_SYNAPSE_BITS:
         raise BuildError("Total synapse bits (%d) exceeded max (%d)" % (
             synapse_bits, MAX_SYNAPSE_BITS))
 
-    for synapses in segment.synapses:
+    for synapses in block.synapses:
         validate_synapses(synapses)
 
     # -- Probes
-    for probe in segment.probes:
+    for probe in block.probes:
         validate_probe(probe)
 
 

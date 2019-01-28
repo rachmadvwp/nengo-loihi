@@ -14,6 +14,7 @@ except ImportError:
     nengo_dl = None
 
 import nengo_loihi
+from nengo_loihi.block import Axons, LoihiBlock, Probe, Synapses
 from nengo_loihi.builder import Model
 from nengo_loihi.conv import (
     Conv2D,
@@ -30,7 +31,6 @@ from nengo_loihi.neurons import (
     LoihiLIF,
     LoihiSpikingRectifiedLinear,
 )
-from nengo_loihi.segment import Axons, LoihiSegment, Probe, Synapses
 
 home_dir = os.path.dirname(nengo_loihi.__file__)
 test_dir = os.path.join(home_dir, 'tests')
@@ -95,8 +95,8 @@ def test_pop_tiny(
 
     model = Model()
 
-    # input segment
-    inp = LoihiSegment(ni * nj * nk, label='inp')
+    # input block
+    inp = LoihiBlock(ni * nj * nk, label='inp')
     assert inp.n_neurons <= 1024
     inp.compartments.configure_relu()
     inp.compartments.bias[:] = inp_biases.ravel()
@@ -105,10 +105,10 @@ def test_pop_tiny(
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
-    model.add_segment(inp)
+    model.add_block(inp)
 
-    # conv segment
-    neurons = LoihiSegment(out_size, label='neurons')
+    # conv block
+    neurons = LoihiBlock(out_size, label='neurons')
     assert neurons.n_neurons <= 1024
     neurons.compartments.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.compartments.configure_filter(tau_s, dt=dt)
@@ -128,7 +128,7 @@ def test_pop_tiny(
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses
-    model.add_segment(neurons)
+    model.add_block(neurons)
 
     # simulation
     discretize_model(model)
@@ -237,8 +237,8 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
 
     model = Model()
 
-    # input segment
-    inp = LoihiSegment(inp_shape.size, label='inp')
+    # input block
+    inp = LoihiBlock(inp_shape.size, label='inp')
     assert inp.n_neurons <= 1024
     inp.compartments.configure_relu()
     inp.compartments.bias[:] = inp_biases.ravel()
@@ -247,10 +247,10 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
-    model.add_segment(inp)
+    model.add_block(inp)
 
-    # conv segment
-    neurons = LoihiSegment(out_size, label='neurons')
+    # conv block
+    neurons = LoihiBlock(out_size, label='neurons')
     assert neurons.n_neurons <= 1024
     neurons.compartments.configure_lif(tau_rc=tau_rc, tau_ref=tau_ref, dt=dt)
     neurons.compartments.configure_filter(tau_s, dt=dt)
@@ -268,7 +268,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     neurons.add_probe(out_probe)
 
     inp_ax.target = synapses
-    model.add_segment(neurons)
+    model.add_block(neurons)
 
     # simulation
     discretize_model(model)

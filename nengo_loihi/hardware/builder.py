@@ -185,29 +185,29 @@ def build_core(n2core, core):  # noqa: C901
         tc.writeToRegister(n2core.stdpPostCfg[0])
 
     # TODO: allocator should be checking that vmin, vmax are the same
-    #   for all segments on a core
+    #   for all blocks on a core
     n_cx = 0
-    if len(core.segments) > 0:
-        segment0 = core.segments[0]
-        vmin, vmax = segment0.compartments.vmin, segment0.compartments.vmax
-        assert all(segment.compartments.vmin == vmin
-                   for segment in core.segments)
-        assert all(segment.compartments.vmax == vmax
-                   for segment in core.segments)
+    if len(core.blocks) > 0:
+        block0 = core.blocks[0]
+        vmin, vmax = block0.compartments.vmin, block0.compartments.vmax
+        assert all(block.compartments.vmin == vmin
+                   for block in core.blocks)
+        assert all(block.compartments.vmax == vmax
+                   for block in core.blocks)
         negVmLimit = np.log2(-vmin + 1)
         posVmLimit = (np.log2(vmax + 1) - 9) * 0.5
         assert int(negVmLimit) == negVmLimit
         assert int(posVmLimit) == posVmLimit
 
-        noiseExp0 = segment0.compartments.noiseExp0
-        noiseMantOffset0 = segment0.compartments.noiseMantOffset0
-        noiseAtDendOrVm = segment0.compartments.noiseAtDendOrVm
-        assert all(segment.compartments.noiseExp0 == noiseExp0
-                   for segment in core.segments)
-        assert all(segment.compartments.noiseMantOffset0 == noiseMantOffset0
-                   for segment in core.segments)
-        assert all(segment.compartments.noiseAtDendOrVm == noiseAtDendOrVm
-                   for segment in core.segments)
+        noiseExp0 = block0.compartments.noiseExp0
+        noiseMantOffset0 = block0.compartments.noiseMantOffset0
+        noiseAtDendOrVm = block0.compartments.noiseAtDendOrVm
+        assert all(block.compartments.noiseExp0 == noiseExp0
+                   for block in core.blocks)
+        assert all(block.compartments.noiseMantOffset0 == noiseMantOffset0
+                   for block in core.blocks)
+        assert all(block.compartments.noiseAtDendOrVm == noiseAtDendOrVm
+                   for block in core.blocks)
 
         n2core.dendriteSharedCfg.configure(
             posVmLimit=int(posVmLimit),
@@ -221,8 +221,8 @@ def build_core(n2core, core):  # noqa: C901
             delayBits=3)
         # ^ DelayBits=3 allows 1024 Cxs per core
 
-        for segment, cx_idxs, ax_range in core.iterate_segments():
-            build_segment(n2core, core, segment, cx_idxs, ax_range)
+        for block, cx_idxs, ax_range in core.iterate_blocks():
+            build_block(n2core, core, block, cx_idxs, ax_range)
             n_cx = max(max(cx_idxs) + 1, n_cx)
 
     for inp, cx_idxs in core.iterate_inputs():
@@ -238,16 +238,16 @@ def build_core(n2core, core):  # noqa: C901
     n2core.timeState[0].tepoch = 2
 
 
-def build_segment(n2core, core, segment, cx_idxs, ax_range):
-    assert segment.compartments.scaleU is False
-    assert segment.compartments.scaleV is False
+def build_block(n2core, core, block, cx_idxs, ax_range):
+    assert block.compartments.scaleU is False
+    assert block.compartments.scaleV is False
 
-    logger.debug("Building %s on core.id=%d", segment, n2core.id)
+    logger.debug("Building %s on core.id=%d", block, n2core.id)
 
-    for i, bias in enumerate(segment.compartments.bias):
+    for i, bias in enumerate(block.compartments.bias):
         bman, bexp = bias_to_manexp(bias)
-        icx = core.cx_profile_idxs[segment][i]
-        ivth = core.vth_profile_idxs[segment][i]
+        icx = core.cx_profile_idxs[block][i]
+        ivth = core.vth_profile_idxs[block][i]
 
         ii = cx_idxs[i]
         n2core.cxCfg[ii].configure(
@@ -256,20 +256,20 @@ def build_segment(n2core, core, segment, cx_idxs, ax_range):
         phasex = 'phase%d' % (ii % 4,)
         n2core.cxMetaState[ii // 4].configure(**{phasex: 2})
 
-    logger.debug("- Building %d synapses", len(segment.synapses))
-    for synapses in segment.synapses:
-        build_synapses(n2core, core, segment, synapses, cx_idxs)
+    logger.debug("- Building %d synapses", len(block.synapses))
+    for synapses in block.synapses:
+        build_synapses(n2core, core, block, synapses, cx_idxs)
 
-    logger.debug("- Building %d axons", len(segment.axons))
+    logger.debug("- Building %d axons", len(block.axons))
     all_axons = []  # (cx, atom, type, tchip_id, tcore_id, taxon_id)
-    for axons in segment.axons:
-        all_axons.extend(collect_axons(n2core, core, segment, axons, cx_idxs))
+    for axons in block.axons:
+        all_axons.extend(collect_axons(n2core, core, block, axons, cx_idxs))
 
-    build_axons(n2core, core, segment, all_axons)
+    build_axons(n2core, core, block, all_axons)
 
-    logger.debug("- Building %d probes", len(segment.probes))
-    for probe in segment.probes:
-        build_probe(n2core, core, segment, probe, cx_idxs)
+    logger.debug("- Building %d probes", len(block.probes))
+    for probe in block.probes:
+        build_probe(n2core, core, block, probe, cx_idxs)
 
 
 def build_input(n2core, core, spike_input, cx_idxs):
@@ -297,7 +297,7 @@ def build_input(n2core, core, spike_input, cx_idxs):
                 coreId=spike.axon.core_id, axonId=spike.axon.axon_id)
 
 
-def build_synapses(n2core, core, segment, synapses, cx_idxs):  # noqa C901
+def build_synapses(n2core, core, block, synapses, cx_idxs):  # noqa C901
     axon_ids = core.synapse_axons[synapses]
 
     synapse_fmt_idx = core.synapse_fmt_idxs[synapses]
@@ -390,7 +390,7 @@ def build_synapses(n2core, core, segment, synapses, cx_idxs):  # noqa C901
             )
 
 
-def collect_axons(n2core, core, segment, axons, cx_ids):
+def collect_axons(n2core, core, block, axons, cx_ids):
     synapses = axons.target
     tchip_idx, tcore_idx, tsyn_idxs = core.board.find_synapses(synapses)
     n2board = n2core.parent.parent
@@ -412,17 +412,17 @@ def collect_axons(n2core, core, segment, axons, cx_ids):
             assert atom == 0
             assert n_populations == 1
         elif synapses.pop_type == 16 or synapses.pop_type == 32:
-            n_segments = len(core.segments)
-            assert (n_segments == 0
-                    or (n_segments == 1 and segment is core.segments[0]))
-            assert len(segment.probes) == 0
+            n_blocks = len(core.blocks)
+            assert (n_blocks == 0
+                    or (n_blocks == 1 and block is core.blocks[0]))
+            assert len(block.probes) == 0
         else:
             raise ValueError("Unrecognized pop_type: %d" % (synapses.pop_type))
 
     return all_axons
 
 
-def build_axons(n2core, core, segment, all_axons):  # noqa C901
+def build_axons(n2core, core, block, all_axons):  # noqa C901
     if len(all_axons) == 0:
         return
 
@@ -484,7 +484,7 @@ def build_axons(n2core, core, segment, all_axons):  # noqa C901
         n2core.axonMap[cx_id].configure(ptr=axon_ptr, len=axon_len, atom=atom)
 
 
-def build_probe(n2core, core, segment, probe, cx_idxs):
+def build_probe(n2core, core, block, probe, cx_idxs):
     key_map = {'current': 'u', 'voltage': 'v', 'spiked': 'spike'}
     assert probe.key in key_map, "probe key not found"
     key = key_map[probe.key]

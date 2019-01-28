@@ -8,8 +8,8 @@ from nengo.exceptions import BuildError
 import nengo.utils.numpy as npext
 import numpy as np
 
+from nengo_loihi.block import LoihiBlock
 from nengo_loihi.builder import Builder
-from nengo_loihi.segment import LoihiSegment
 
 
 def get_gain_bias(ens, rng=np.random, intercept_limit=1.0):
@@ -83,12 +83,12 @@ def build_ensemble(model, ens):
     gain, bias, max_rates, intercepts = get_gain_bias(
         ens, rng, model.intercept_limit)
 
-    segment = LoihiSegment(ens.n_neurons, label='%s' % ens)
-    segment.compartments.bias[:] = bias
-    model.build(ens.neuron_type, ens.neurons, segment)
+    block = LoihiBlock(ens.n_neurons, label='%s' % ens)
+    block.compartments.bias[:] = bias
+    model.build(ens.neuron_type, ens.neurons, block)
 
     # set default filter just in case no other filter gets set
-    segment.compartments.configure_default_filter(
+    block.compartments.configure_default_filter(
         model.decode_tau, dt=model.dt)
 
     if ens.noise is not None:
@@ -103,12 +103,12 @@ def build_ensemble(model, ens):
         # scaled_encoders = encoders * (gain / ens.radius)[:, np.newaxis]
         scaled_encoders = encoders * gain[:, np.newaxis]
 
-    model.add_segment(segment)
+    model.add_block(block)
 
-    model.objs[ens]['in'] = segment
-    model.objs[ens]['out'] = segment
-    model.objs[ens.neurons]['in'] = segment
-    model.objs[ens.neurons]['out'] = segment
+    model.objs[ens]['in'] = block
+    model.objs[ens]['out'] = block
+    model.objs[ens.neurons]['in'] = block
+    model.objs[ens.neurons]['out'] = block
     model.params[ens] = BuiltEnsemble(
         eval_points=eval_points,
         encoders=encoders,
@@ -120,7 +120,7 @@ def build_ensemble(model, ens):
 
 
 @Builder.register(nengo.neurons.NeuronType)
-def build_neurons(model, neurontype, neurons, segment):
+def build_neurons(model, neurontype, neurons, block):
     # If we haven't registered a builder for a specific type, then it cannot
     # be simulated on Loihi.
     raise BuildError(
@@ -132,15 +132,15 @@ def build_neurons(model, neurontype, neurons, segment):
 
 
 @Builder.register(nengo.LIF)
-def build_lif(model, lif, neurons, segment):
-    segment.compartments.configure_lif(
+def build_lif(model, lif, neurons, block):
+    block.compartments.configure_lif(
         tau_rc=lif.tau_rc,
         tau_ref=lif.tau_ref,
         dt=model.dt)
 
 
 @Builder.register(nengo.SpikingRectifiedLinear)
-def build_relu(model, relu, neurons, segment):
-    segment.compartments.configure_relu(
+def build_relu(model, relu, neurons, block):
+    block.compartments.configure_relu(
         vth=1./model.dt,  # so input == 1 -> neuron fires 1/dt steps -> 1 Hz
         dt=model.dt)

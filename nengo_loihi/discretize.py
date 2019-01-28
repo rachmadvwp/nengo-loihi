@@ -6,7 +6,7 @@ from nengo.exceptions import BuildError
 from nengo.utils.compat import is_iterable
 import numpy as np
 
-from nengo_loihi.segment import SynapseFmt
+from nengo_loihi.block import SynapseFmt
 
 VTH_MAN_MAX = 2**17 - 1
 VTH_EXP = 6
@@ -190,17 +190,17 @@ def shift(x, s, **kwargs):
 
 def discretize_model(model):
     """Discretize a `.Model` in-place."""
-    for segment in model.segments:
-        discretize_segment(segment)
+    for block in model.blocks:
+        discretize_block(block)
 
 
-def discretize_segment(segment):
-    w_maxs = [s.max_abs_weight() for s in segment.synapses]
+def discretize_block(block):
+    w_maxs = [s.max_abs_weight() for s in block.synapses]
     w_max = max(w_maxs) if len(w_maxs) > 0 else 0
 
-    p = discretize_compartments(segment.compartments, w_max)
-    discretize_synapses(segment.synapses, w_max, p['w_scale'], p['w_exp'])
-    discretize_probes(segment.probes, p['v_scale'][0])
+    p = discretize_compartments(block.compartments, w_max)
+    discretize_synapses(block.synapses, w_max, p['w_scale'], p['w_exp'])
+    discretize_probes(block.probes, p['v_scale'][0])
 
 
 def discretize_compartments(comp, w_max):

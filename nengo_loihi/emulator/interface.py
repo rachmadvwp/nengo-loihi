@@ -18,7 +18,7 @@ from nengo_loihi.discretize import (
     Q_BITS,
     U_BITS,
 )
-from nengo_loihi.segment import Probe
+from nengo_loihi.block import Probe
 from nengo_loihi.validate import validate_model
 
 logger = logging.getLogger(__name__)
@@ -47,19 +47,19 @@ class EmulatorInterface(object):
         logger.debug("EmulatorInterface seed: %d", seed)
         self.rng = np.random.RandomState(self.seed)
 
-        self.segment_info = SegmentInfo(model.segments)
+        self.block_info = BlockInfo(model.blocks)
         self.inputs = list(model.inputs)
-        logger.debug("EmulatorInterface dtype: %s", self.segment_info.dtype)
+        logger.debug("EmulatorInterface dtype: %s", self.block_info.dtype)
 
         self.compartments = CompartmentState(
-            self.segment_info, strict=self.strict)
+            self.block_info, strict=self.strict)
         self.synapses = SynapseState(
-            self.segment_info,
+            self.block_info,
             pes_error_scale=getattr(model, 'pes_error_scale', 1.),
             strict=self.strict,
         )
-        self.axons = AxonState(self.segment_info)
-        self.probes = ProbeState(self.segment_info, self.inputs, model.dt)
+        self.axons = AxonState(self.block_info)
+        self.probes = ProbeState(self.block_info, self.inputs, model.dt)
 
         self.t = 0
         self._chip2host_sent_steps = 0
@@ -75,7 +75,7 @@ class EmulatorInterface(object):
         self.closed = True
 
         # remove references to states to free memory (except probes)
-        self.segment_info = None
+        self.block_info = None
         self.inputs = None
         self.compartments = None
         self.synapses = None
@@ -126,89 +126,89 @@ class EmulatorInterface(object):
         return self.probes[probe]
 
 
-class SegmentInfo(object):
-    """Provide information about all the LoihiSegments in the model.
+class BlockInfo(object):
+    """Provide information about all the LoihiBlocks in the model.
 
     Attributes
     ----------
     dtype : dtype
-        Datatype of the segments. Either ``np.float32`` if the segments are not
-        discretized or ``np.int32`` if they are. All segments are the same.
-    segments : list of LoihiSegment
-        List of all the segments in the model.
+        Datatype of the blocks. Either ``np.float32`` if the blocks are not
+        discretized or ``np.int32`` if they are. All blocks are the same.
+    blocks : list of LoihiBlock
+        List of all the blocks in the model.
     n_compartments : int
-        Total number of compartments across all segments.
-    slices : dict of {LoihiSegment: slice}
-        Maps each segment to a slice for that segment's compartments with
+        Total number of compartments across all blocks.
+    slices : dict of {LoihiBlock: slice}
+        Maps each block to a slice for that block's compartments with
         respect to all compartments. Used to slice into any array storing
         data across all compartments.
     """
 
-    def __init__(self, segments):
-        self.segments = list(segments)
+    def __init__(self, blocks):
+        self.blocks = list(blocks)
         self.slices = {}
 
         assert self.dtype in (np.float32, np.int32)
 
         start_ix = end_ix = 0
-        for segment in self.segments:
-            end_ix += segment.n_neurons
-            self.slices[segment] = slice(start_ix, end_ix)
-            assert segment.compartments.vth.dtype == self.dtype
-            assert segment.compartments.bias.dtype == self.dtype
+        for block in self.blocks:
+            end_ix += block.n_neurons
+            self.slices[block] = slice(start_ix, end_ix)
+            assert block.compartments.vth.dtype == self.dtype
+            assert block.compartments.bias.dtype == self.dtype
             start_ix = end_ix
 
         self.n_compartments = end_ix
 
     @property
     def dtype(self):
-        return self.segments[0].compartments.vth.dtype
+        return self.blocks[0].compartments.vth.dtype
 
 
 class IterableState(object):
     """Base class for aspects of the emulator state.
 
-    This class takes the name of a LoihiSegment attribute as the
-    ``segment_key`` and maps these objects to their parent segments and slices.
+    This class takes the name of a LoihiBlock attribute as the
+    ``block_key`` and maps these objects to their parent blocks and slices.
 
     Attributes
     ----------
     dtype : dtype
-        Datatype of the state elements (given by the SegmentInfo datatype).
-    segment_map : dict of {item: segment}
-        Maps an item (determined by ``segment_key``) to the segment
+        Datatype of the state elements (given by the BlockInfo datatype).
+    block_map : dict of {item: block}
+        Maps an item (determined by ``block_key``) to the block
         it belongs to.
     n_compartments : int
-        The total number of neuron compartments (given by SegmentInfo).
+        The total number of neuron compartments (given by BlockInfo).
     slices : dict of {item: slice}
-        Maps an item to the ``segment_info.slice`` for the segment
+        Maps an item to the ``block_info.slice`` for the block
         it belongs to.
     strict : bool (Default: True)
         Whether "undesired" chip effects (ex. overflow) raise errors (``True``)
         or whether they only raise warnings (``False``).
     """
 
-    def __init__(self, segment_info, segment_key, strict=True):
-        self.n_compartments = segment_info.n_compartments
-        self.dtype = segment_info.dtype
+    def __init__(self, block_info, block_key, strict=True):
+        self.n_compartments = block_info.n_compartments
+        self.dtype = block_info.dtype
         self.strict = strict
 
-        segments_items = list(
-            self._segments_items(segment_info.segments, segment_key))
-        self.segment_map = {item: segment for segment, item in segments_items}
-        self.slices = {item: segment_info.slices[segment]
-                       for segment, item in segments_items}
+        blocks_items = list(
+            self._blocks_items(block_info.blocks, block_key))
+        self.block_map = {item: block for block, item in blocks_items}
+        self.slices = {item: block_info.slices[block]
+                       for block, item in blocks_items}
 
     @staticmethod
-    def _segments_items(segments, segment_key):
-        for segment in segments:
-            if segment_key == "compartments":
-                # one item per segment
-                yield segment, getattr(segment, segment_key)
+    def _blocks_items(blocks, block_key):
+        for block in blocks:
+            if block_key == "compartments":
+                # one item per block
+                yield block, getattr(block, block_key)
             else:
-                # multiple items per segment (attribute is iterable)
-                for item in getattr(segment, segment_key):
-                    yield segment, item
+                # multiple items per block (attribute is iterable)
+                for item in getattr(block, block_key):
+                    yield block, item
 
     def __contains__(self, item):
         return item in self.slices
@@ -234,13 +234,13 @@ class IterableState(object):
 
 
 class CompartmentState(IterableState):
-    """State representing the Compartments of all segments."""
+    """State representing the Compartments of all blocks."""
 
     MAX_DELAY = 1  # delay not yet implemented
 
-    def __init__(self, segment_info, strict=True):
+    def __init__(self, block_info, strict=True):
         super(CompartmentState, self).__init__(
-            segment_info, "compartments", strict=strict)
+            block_info, "compartments", strict=strict)
 
         # Initialize NumPy arrays to store compartment-related data
         self.input = np.zeros(
@@ -313,7 +313,7 @@ class CompartmentState(IterableState):
 
         self._overflow = overflow
 
-        self.noise = NoiseState(segment_info)
+        self.noise = NoiseState(block_info)
 
     def advance_input(self):
         self.input[:-1] = self.input[1:]
@@ -352,8 +352,8 @@ class CompartmentState(IterableState):
 class NoiseState(IterableState):
     """State representing the noise parameters for all compartments."""
 
-    def __init__(self, segment_info):
-        super(NoiseState, self).__init__(segment_info, "compartments")
+    def __init__(self, block_info):
+        super(NoiseState, self).__init__(block_info, "compartments")
         self.enabled = np.full(self.n_compartments, np.nan, dtype=bool)
         self.exp = np.full(self.n_compartments, np.nan, dtype=self.dtype)
         self.mant_offset = np.full(self.n_compartments, np.nan,
@@ -417,12 +417,12 @@ class SynapseState(IterableState):
         synapses traces.
     """
 
-    def __init__(self, segment_info,  # noqa: C901
+    def __init__(self, block_info,  # noqa: C901
                  pes_error_scale=1.,
                  strict=True
              ):
         super(SynapseState, self).__init__(
-            segment_info, "synapses", strict=strict)
+            block_info, "synapses", strict=strict)
 
         self.pes_error_scale = pes_error_scale
 
@@ -438,7 +438,7 @@ class SynapseState(IterableState):
                 self.traces[synapses] = np.zeros(n, dtype=self.dtype)
                 self.trace_spikes[synapses] = set()
                 self.pes_errors[synapses] = np.zeros(
-                    self.segment_map[synapses].n_neurons // 2,
+                    self.block_map[synapses].n_neurons // 2,
                     dtype=self.dtype,
                 )
                 # ^ Currently, PES learning only happens on Nodes, where we
@@ -566,8 +566,8 @@ class SynapseState(IterableState):
 class AxonState(IterableState):
     """State representing all (output) Axons."""
 
-    def __init__(self, segment_info):
-        super(AxonState, self).__init__(segment_info, "axons")
+    def __init__(self, block_info):
+        super(AxonState, self).__init__(block_info, "axons")
 
 
 class ProbeState(object):
@@ -581,13 +581,13 @@ class ProbeState(object):
         Maps Probes to the filtering function for that probe.
     filter_pos : {nengo_loihi.Probe: int}
         Maps Probes to the position of their filter in the data.
-    segment_probes : {nengo_loihi.Probe: slice}
-        Maps Probes to the SegmentInfo slice for the segment they are probing.
+    block_probes : {nengo_loihi.Probe: slice}
+        Maps Probes to the BlockInfo slice for the block they are probing.
     input_probes : {nengo_loihi.Probe: SpikeInput}
         Maps Probes to the SpikeInput that they are probing.
     """
 
-    def __init__(self, segment_info, inputs, dt):
+    def __init__(self, block_info, inputs, dt):
         self.dt = dt
         self.input_probes = {}
         for spike_input in inputs:
@@ -595,9 +595,9 @@ class ProbeState(object):
                 assert probe.key == 'spiked'
                 self.input_probes[probe] = spike_input
         self.other_probes = {}
-        for segment in segment_info.segments:
-            for probe in segment.probes:
-                self.other_probes[probe] = segment_info.slices[segment]
+        for block in block_info.blocks:
+            for probe in block.probes:
+                self.other_probes[probe] = block_info.slices[block]
 
         self.filters = {}
         self.filter_pos = {}

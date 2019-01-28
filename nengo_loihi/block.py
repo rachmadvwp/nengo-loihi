@@ -5,25 +5,25 @@ from nengo.exceptions import BuildError
 import numpy as np
 
 
-class LoihiSegment(object):
+class LoihiBlock(object):
     """Class holding Loihi objects that can be placed on the chip.
 
-    This class represents a segment of the Loihi board, and is how Nengo
+    This class represents a block of the Loihi board, and is how Nengo
     Loihi keeps track of how Loihi Neuron cores will be configured.
     Generally, the job of the build process is to convert Nengo objects
-    (ensembles, connections, nodes, and probes) to LoihiSegments, which
+    (ensembles, connections, nodes, and probes) to LoihiBlocks, which
     will then be used by the `.EmulatorInterface` or `.HardwareInterface`.
 
-    Initially, parameters in a LoihiSegment are floating point values.
+    Initially, parameters in a LoihiBlock are floating point values.
     Calling ``discretize`` converts them to integer values inplace
     for use on Loihi.
 
     Attributes
     ----------
     n_neurons : int
-        The number of neurons in the segment.
+        The number of neurons in the block.
     label : string
-        A label for the segment (for debugging purposes).
+        A label for the block (for debugging purposes).
     axons : list of Axons
         Axons objects outputting from these neurons.
     compartments : Compartmens
@@ -86,9 +86,9 @@ class Compartments(object):
     Attributes
     ----------
     n_compartments : int
-        The number of compartments in the segment.
+        The number of compartments in the block.
     label : string
-        A label for the segment (for debugging purposes).
+        A label for the block (for debugging purposes).
     decayU : (n,) ndarray
         Input (synapse) decay constant for each compartment.
     decayV : (n,) ndarray
@@ -128,7 +128,7 @@ class Compartments(object):
         self.n_compartments = n_compartments
         self.label = label
 
-        # parameters specific to compartments/segment
+        # parameters specific to compartments/block
         self.decayU = np.ones(n_compartments, dtype=np.float32)
         # ^ default to no filter
         self.decayV = np.zeros(n_compartments, dtype=np.float32)
@@ -230,10 +230,10 @@ class Axons(object):
 
     Attributes
     ----------
-    cx_atoms : list of length ``segment.n``
-        Atom (weight index) associated with each segment compartment.
-    cx_to_axon_map : list of length ``segment.n``
-        Index of the axon in `target` targeted by each segment compartment.
+    cx_atoms : list of length ``block.n``
+        Atom (weight index) associated with each block compartment.
+    cx_to_axon_map : list of length ``block.n``
+        Index of the axon in `target` targeted by each block compartment.
     n_axons : int
         The number of outgoing axons.
     target : Synapses
@@ -390,9 +390,9 @@ class SynapseFmt(Profile):
         SYNAPSE_FMT_IDX_BITS = 4
         N_SYNAPSES_BITS = 6
         bits = 0
-        synapses_per_segment = self.numSynapses + 1
-        for i in range(0, n_weights, synapses_per_segment):
-            n = min(n_weights - i, synapses_per_segment)
+        synapses_per_block = self.numSynapses + 1
+        for i in range(0, n_weights, synapses_per_block):
+            n = min(n_weights - i, synapses_per_block)
             bits_i = n*bits_per_weight + SYNAPSE_FMT_IDX_BITS + N_SYNAPSES_BITS
             bits_i = -64 * (-bits_i // 64)
             # ^ round up to nearest 64 (size of one int64 memory unit)

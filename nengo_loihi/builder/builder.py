@@ -6,12 +6,12 @@ from nengo.builder.builder import Builder as NengoBuilder
 from nengo.builder.network import build_network
 from nengo.cache import NoDecoderCache
 
+from nengo_loihi.block import LoihiBlock
 from nengo_loihi.decode_neurons import (
     Preset10DecodeNeurons,
     OnOffDecodeNeurons,
 )
 from nengo_loihi.inputs import LoihiInput
-from nengo_loihi.segment import LoihiSegment
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ Builder.register(Network)(build_network)
 class Model(object):
     """The data structure for the emulator/hardware simulator.
 
-    Defines methods for adding inputs and segments. Also handles build
+    Defines methods for adding inputs and blocks. Also handles build
     functions, and information associated with building the Nengo model.
 
     Parameters
@@ -60,8 +60,8 @@ class Model(object):
         Type of neurons used to facilitate decoded (NEF-style) connections.
     decode_tau : float
         Time constant of lowpass synaptic filter used with decode neurons.
-    segments : list of LoihiSegment
-        List of Loihi segments simulated by this model.
+    blocks : list of LoihiBlock
+        List of Loihi blocks simulated by this model.
     inputs : list of LoihiInput
         List of inputs to this model.
     intercept_limit : float
@@ -106,7 +106,7 @@ class Model(object):
 
         # Objects created by the model for simulation on Loihi
         self.inputs = OrderedDict()
-        self.segments = OrderedDict()
+        self.blocks = OrderedDict()
 
         # Will be filled in by the network builder
         self.toplevel = None
@@ -160,10 +160,10 @@ class Model(object):
         assert input not in self.inputs
         self.inputs[input] = len(self.inputs)
 
-    def add_segment(self, segment):
-        assert isinstance(segment, LoihiSegment)
-        assert segment not in self.segments
-        self.segments[segment] = len(self.segments)
+    def add_block(self, block):
+        assert isinstance(block, LoihiBlock)
+        assert block not in self.blocks
+        self.blocks[block] = len(self.blocks)
 
     def build(self, obj, *args, **kwargs):
         built = self.builder.build(self, obj, *args, **kwargs)

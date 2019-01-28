@@ -5,8 +5,8 @@ from nengo.ensemble import Neurons
 from nengo.exceptions import BuildError
 import numpy as np
 
+from nengo_loihi.block import Probe
 from nengo_loihi.builder import Builder
-from nengo_loihi.segment import Probe
 
 
 def conn_probe(model, probe):

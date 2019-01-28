@@ -1,11 +1,11 @@
 import nengo
 import numpy as np
 
+from nengo_loihi.block import LoihiBlock, Synapses
 from nengo_loihi.neurons import (
     LoihiSpikingRectifiedLinear,
     NIF,
 )
-from nengo_loihi.segment import LoihiSegment, Synapses
 
 
 class DecodeNeurons(object):
@@ -28,8 +28,8 @@ class DecodeNeurons(object):
     def __str__(self):
         return "%s(dt=%0.3g)" % (type(self).__name__, self.dt)
 
-    def get_segment(self, weights, segment_label=None, syn_label=None):
-        """Get a LoihiSegment for implementing neurons on the chip.
+    def get_block(self, weights, block_label=None, syn_label=None):
+        """Get a LoihiBlock for implementing neurons on the chip.
 
         Parameters
         ----------
@@ -37,14 +37,14 @@ class DecodeNeurons(object):
             Weights that project the ``n`` inputs to the ``d`` dimensions
             represented by these neurons. Typically, the inputs will be neurons
             belonging to an Ensemble, and these weights will be decoders.
-        segment_label : string (Default: None)
-            Optional label for the LoihiSegment.
+        block_label : string (Default: None)
+            Optional label for the LoihiBlock.
         syn_label : string (Default: None)
             Optional label for the Synapses.
 
         Returns
         -------
-        segment : LoihiSegment
+        block : LoihiBlock
             The neurons on the chip.
         syn : Synapses
             The synapses connecting into the chip neurons.
@@ -80,7 +80,7 @@ class DecodeNeurons(object):
         decode_neuron_encoders : (?, n) ndarray
             Encoders for mapping these neurons to the post-ensemble's neurons.
             The number of rows depends on how ``get_post_inds`` is being used
-            (i.e. there could be one row per neuron in this segment, or there
+            (i.e. there could be one row per neuron in this block, or there
             could be fewer rows with ``get_post_inds`` mapping multiple neurons
             to each row).
         """
@@ -145,15 +145,15 @@ class OnOffDecodeNeurons(DecodeNeurons):
         return "%s(pairs_per_dim=%d, dt=%0.3g, rate=%0.3g)" % (
             type(self).__name__, self.pairs_per_dim, self.dt, self.rate)
 
-    def get_segment(self, weights, segment_label=None, syn_label=None):
+    def get_block(self, weights, block_label=None, syn_label=None):
         gain = self.gain * self.dt
         bias = self.bias * self.dt
 
         d, n = weights.shape
         n_neurons = 2 * d * self.pairs_per_dim
-        segment = LoihiSegment(n_neurons, label=segment_label)
-        segment.compartments.configure_relu(dt=self.dt)
-        segment.compartments.bias[:] = bias.repeat(d)
+        block = LoihiBlock(n_neurons, label=block_label)
+        block.compartments.configure_relu(dt=self.dt)
+        block.compartments.bias[:] = bias.repeat(d)
 
         syn = Synapses(n, label=syn_label)
         weights2 = []
@@ -161,9 +161,9 @@ class OnOffDecodeNeurons(DecodeNeurons):
             weights2.extend([ga*weights.T, -gb*weights.T])
         weights2 = np.hstack(weights2)
         syn.set_full_weights(weights2)
-        segment.add_synapses(syn)
+        block.add_synapses(syn)
 
-        return segment, syn
+        return block, syn
 
     def get_ensemble(self, dim):
         if self.pairs_per_dim != 1:
@@ -234,16 +234,16 @@ class NoisyDecodeNeurons(OnOffDecodeNeurons):
             )
         )
 
-    def get_segment(self, weights, segment_label=None, syn_label=None):
-        segment, syn = super(NoisyDecodeNeurons, self).get_segment(
-            weights, segment_label=segment_label, syn_label=syn_label)
+    def get_block(self, weights, block_label=None, syn_label=None):
+        block, syn = super(NoisyDecodeNeurons, self).get_block(
+            weights, block_label=block_label, syn_label=syn_label)
 
         if self.noise_exp > -30:
-            segment.compartments.enableNoise[:] = 1
-            segment.compartments.noiseExp0 = self.noise_exp
-            segment.compartments.noiseAtDendOrVm = 1
+            block.compartments.enableNoise[:] = 1
+            block.compartments.noiseExp0 = self.noise_exp
+            block.compartments.noiseAtDendOrVm = 1
 
-        return segment, syn
+        return block, syn
 
 
 class Preset5DecodeNeurons(OnOffDecodeNeurons):
