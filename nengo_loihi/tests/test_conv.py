@@ -14,7 +14,7 @@ except ImportError:
     nengo_dl = None
 
 import nengo_loihi
-from nengo_loihi.block import Axons, LoihiBlock, Probe, Synapses
+from nengo_loihi.block import Axon, LoihiBlock, Probe, Synapses
 from nengo_loihi.builder import Model
 from nengo_loihi.conv import (
     Conv2D,
@@ -101,7 +101,7 @@ def test_pop_tiny(
     inp.compartments.configure_relu()
     inp.compartments.bias[:] = inp_biases.ravel()
 
-    inp_ax = Axons(nij, label='inp_ax')
+    inp_ax = Axon(nij, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 
@@ -243,7 +243,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     inp.compartments.configure_relu()
     inp.compartments.bias[:] = inp_biases.ravel()
 
-    inp_ax = Axons(inp_shape.n_pixels, label='inp_ax')
+    inp_ax = Axon(inp_shape.n_pixels, label='inp_ax')
     inp_ax.set_axon_map(inp_shape.pixel_idxs(), inp_shape.channel_idxs())
     inp.add_axons(inp_ax)
 

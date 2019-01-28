@@ -14,7 +14,7 @@ from nengo.solvers import NoSolver, Solver
 import numpy as np
 
 from nengo_loihi import conv
-from nengo_loihi.block import Axons, LoihiBlock, Probe, Synapses
+from nengo_loihi.block import Axon, LoihiBlock, Probe, Synapses
 from nengo_loihi.builder import Builder
 from nengo_loihi.neurons import loihi_rates
 from nengo_loihi.inputs import ChipReceiveNeurons, LoihiInput
@@ -218,7 +218,7 @@ def build_connection(model, conn):
         dec_cx.compartments.configure_filter(tau_s, dt=model.dt)
         post_tau = model.decode_tau
 
-        dec_ax0 = Axons(n, label="decoders")
+        dec_ax0 = Axon(n, label="decoders")
         dec_ax0.target = dec_syn
         pre_cx.add_axons(dec_ax0)
         model.objs[conn]['decode_axons'] = dec_ax0
@@ -285,7 +285,7 @@ def build_connection(model, conn):
             post_cx.add_synapses(syn)
             model.objs[conn]['weights'] = syn
 
-        ax = Axons(mid_cx.n_neurons, label="neuron_weights")
+        ax = Axon(mid_cx.n_neurons, label="neuron_weights")
         ax.target = syn
         mid_cx.add_axons(ax)
 
@@ -307,7 +307,7 @@ def build_connection(model, conn):
         post_cx.add_synapses(syn)
         model.objs[conn]['weights'] = syn
 
-        ax = Axons(n1, label="decoder_weights")
+        ax = Axon(n1, label="decoder_weights")
         ax.target = syn
         mid_cx.add_axons(ax)
 
@@ -321,7 +321,7 @@ def build_connection(model, conn):
             build_decode_neuron_encoders(
                 model, conn.post_obj, kind=target_encoders)
 
-        mid_ax = Axons(mid_cx.n_neurons, label="encoders")
+        mid_ax = Axon(mid_cx.n_neurons, label="encoders")
         mid_ax.target = post_cx.named_synapses[target_encoders]
         mid_ax.set_axon_map(mid_axon_inds)
         mid_cx.add_axons(mid_ax)

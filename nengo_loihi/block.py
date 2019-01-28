@@ -24,8 +24,8 @@ class LoihiBlock(object):
         The number of neurons in the block.
     label : string
         A label for the block (for debugging purposes).
-    axons : list of Axons
-        Axons objects outputting from these neurons.
+    axons : list of Axon
+        Axon objects outputting from these neurons.
     compartments : Compartmens
         Compartments object representing all compartments for these neurons.
     synapses : list of Synapses
@@ -225,7 +225,7 @@ class Compartments(object):
         self.scaleV = False
 
 
-class Axons(object):
+class Axon(object):
     """A group of axons, targeting a specific Synapses object.
 
     Attributes
@@ -243,7 +243,7 @@ class Axons(object):
     class Spike(object):
         """A spike, targeting a particular axon within a Synapses object.
 
-        The Synapses target is implicit, given by the Axons object that
+        The Synapses target is implicit, given by the Axon object that
         creates this Spike.
 
         Parameters

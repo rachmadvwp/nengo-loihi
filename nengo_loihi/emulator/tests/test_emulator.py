@@ -7,7 +7,7 @@ from nengo_loihi.discretize import discretize_model, VTH_MAX
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.inputs import SpikeInput
-from nengo_loihi.block import Axons, LoihiBlock, Synapses, Probe
+from nengo_loihi.block import Axon, LoihiBlock, Synapses, Probe
 
 
 @pytest.mark.parametrize("strict", (True, False))
@@ -56,7 +56,7 @@ def test_uv_overflow(n_axons, plt, allclose, monkeypatch):
     synapses.set_full_weights(np.ones((n_axons, 1)))
     block.add_synapses(synapses)
 
-    axons = Axons(n_axons)
+    axons = Axon(n_axons)
     axons.target = synapses
     input.add_axons(axons)
 
