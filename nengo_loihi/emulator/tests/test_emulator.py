@@ -2,12 +2,12 @@ from nengo.exceptions import SimulationError
 import numpy as np
 import pytest
 
+from nengo_loihi.block import Axon, LoihiBlock, Synapse, Probe
 from nengo_loihi.builder import Model
 from nengo_loihi.discretize import discretize_model, VTH_MAX
 from nengo_loihi.emulator import EmulatorInterface
 from nengo_loihi.hardware import HardwareInterface
 from nengo_loihi.inputs import SpikeInput
-from nengo_loihi.block import Axon, LoihiBlock, Synapse, Probe
 
 
 @pytest.mark.parametrize("strict", (True, False))
