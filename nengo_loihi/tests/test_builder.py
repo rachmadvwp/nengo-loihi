@@ -3,13 +3,6 @@ import numpy as np
 import pytest
 
 from nengo_loihi.builder import Model
-from nengo_loihi.decode_neurons import (
-    DecodeNeurons,
-    NoisyDecodeNeurons,
-    OnOffDecodeNeurons,
-    Preset5DecodeNeurons,
-    Preset10DecodeNeurons,
-)
 from nengo_loihi.ensemble_builders import get_gain_bias
 
 
@@ -26,15 +19,3 @@ def test_intercept_limit(passed_intercepts, rng):
     with pytest.warns(UserWarning):
         _, _, _, intercepts = get_gain_bias(ens, rng, model.intercept_limit)
     assert np.all(intercepts <= model.intercept_limit)
-
-
-def test_decode_neuron_str():
-    assert str(DecodeNeurons(dt=0.005)) == "DecodeNeurons(dt=0.005)"
-    assert str(OnOffDecodeNeurons(pairs_per_dim=2, dt=0.002, rate=None)) == (
-        "OnOffDecodeNeurons(pairs_per_dim=2, dt=0.002, rate=250)")
-    assert str(NoisyDecodeNeurons(1, rate=20)) == (
-        "NoisyDecodeNeurons(pairs_per_dim=1, dt=0.001, rate=20, noise_exp=-2)")
-    assert str(Preset5DecodeNeurons()) == (
-        "Preset5DecodeNeurons(dt=0.001, rate=200)")
-    assert str(Preset10DecodeNeurons(dt=0.0001, rate=0.5)) == (
-        "Preset10DecodeNeurons(dt=0.0001, rate=0.5)")
