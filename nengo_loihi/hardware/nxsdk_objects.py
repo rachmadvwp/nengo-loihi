@@ -97,7 +97,7 @@ class Core(object):
         self.synapseFmts = [None]  # keep index 0 unused
         self.stdpPreCfgs = []
 
-        self.synapse_fmt_idxs = {}  # one synfmt per Synapses, for now
+        self.synapse_fmt_idxs = {}  # one synfmt per Synapse, for now
         self.synapse_axons = collections.OrderedDict()
         self.synapse_entries = collections.OrderedDict()
 

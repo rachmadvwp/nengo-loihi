@@ -28,8 +28,8 @@ class LoihiBlock(object):
         Axon objects outputting from these neurons.
     compartments : Compartmens
         Compartments object representing all compartments for these neurons.
-    synapses : list of Synapses
-        Synapses objects projecting to these neurons.
+    synapses : list of Synapse
+        Synapse objects projecting to these neurons.
     probes : list of Probe
         Probes recording information from these neurons.
     """
@@ -226,7 +226,7 @@ class Compartments(object):
 
 
 class Axon(object):
-    """A group of axons, targeting a specific Synapses object.
+    """A group of axons, targeting a specific Synapse object.
 
     Attributes
     ----------
@@ -236,22 +236,22 @@ class Axon(object):
         Index of the axon in `target` targeted by each block compartment.
     n_axons : int
         The number of outgoing axons.
-    target : Synapses
+    target : Synapse
         Target synapses for these axons.
     """
 
     class Spike(object):
-        """A spike, targeting a particular axon within a Synapses object.
+        """A spike, targeting a particular axon within a Synapse object.
 
-        The Synapses target is implicit, given by the Axon object that
+        The Synapse target is implicit, given by the Axon object that
         creates this Spike.
 
         Parameters
         ----------
         axon_id : int
-            The index of the axon within the targeted Synapses object.
+            The index of the axon within the targeted Synapse object.
         atom : int, optional (Default: 0)
-            An index into the target Synapses weights. This allows spikes
+            An index into the target Synapse weights. This allows spikes
             targeting a particular axon to use different weights.
         """
 
@@ -406,7 +406,7 @@ class SynapseFmt(Profile):
             setattr(self, key, value)
 
 
-class Synapses(object):
+class Synapse(object):
     """A group of Loihi synapses that share some properties.
 
     Attributes

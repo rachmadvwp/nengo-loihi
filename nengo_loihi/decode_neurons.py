@@ -1,7 +1,7 @@
 import nengo
 import numpy as np
 
-from nengo_loihi.block import LoihiBlock, Synapses
+from nengo_loihi.block import LoihiBlock, Synapse
 from nengo_loihi.neurons import (
     LoihiSpikingRectifiedLinear,
     NIF,
@@ -40,13 +40,13 @@ class DecodeNeurons(object):
         block_label : string (Default: None)
             Optional label for the LoihiBlock.
         syn_label : string (Default: None)
-            Optional label for the Synapses.
+            Optional label for the Synapse.
 
         Returns
         -------
         block : LoihiBlock
             The neurons on the chip.
-        syn : Synapses
+        syn : Synapse
             The synapses connecting into the chip neurons.
         """
         raise NotImplementedError()
@@ -155,7 +155,7 @@ class OnOffDecodeNeurons(DecodeNeurons):
         block.compartments.configure_relu(dt=self.dt)
         block.compartments.bias[:] = bias.repeat(d)
 
-        syn = Synapses(n, label=syn_label)
+        syn = Synapse(n, label=syn_label)
         weights2 = []
         for ga, gb in gain.reshape(self.pairs_per_dim, 2):
             weights2.extend([ga*weights.T, -gb*weights.T])

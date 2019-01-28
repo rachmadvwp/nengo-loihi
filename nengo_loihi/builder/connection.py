@@ -14,7 +14,7 @@ from nengo.solvers import NoSolver, Solver
 import numpy as np
 
 from nengo_loihi import conv
-from nengo_loihi.block import Axon, LoihiBlock, Probe, Synapses
+from nengo_loihi.block import Axon, LoihiBlock, Probe, Synapse
 from nengo_loihi.builder import Builder
 from nengo_loihi.neurons import loihi_rates
 from nengo_loihi.inputs import ChipReceiveNeurons, LoihiInput
@@ -72,7 +72,7 @@ def build_decode_neuron_encoders(model, ens, kind='decode_neuron_encoders'):
     elif kind == 'decode_neuron_encoders':
         encoders = model.decode_neurons.get_post_encoders(scaled_encoders)
 
-    synapses = Synapses(encoders.shape[0], label=kind)
+    synapses = Synapse(encoders.shape[0], label=kind)
     synapses.set_full_weights(encoders)
     block.add_synapses(synapses, name=kind)
 
@@ -188,7 +188,7 @@ def build_connection(model, conn):
             model.add_block(dec_cx)
             model.objs[conn]['decoded'] = dec_cx
 
-            dec_syn = Synapses(n, label="probe_decoders")
+            dec_syn = Synapse(n, label="probe_decoders")
             weights2 = gain * np.vstack([weights, -weights]).T
 
             dec_syn.set_full_weights(weights2)
@@ -279,7 +279,7 @@ def build_connection(model, conn):
             n2, n1 = weights.shape
             assert post_cx.n_neurons == n2
 
-            syn = Synapses(n1, label="neuron_weights")
+            syn = Synapse(n1, label="neuron_weights")
             gain = model.params[conn.post_obj.ensemble].gain
             syn.set_full_weights(weights.T * gain)
             post_cx.add_synapses(syn)
@@ -302,7 +302,7 @@ def build_connection(model, conn):
         # loihi encoders don't include radius, so handle scaling here
         weights = weights / conn.post_obj.radius
 
-        syn = Synapses(n1, label="%s::decoder_weights" % conn)
+        syn = Synapse(n1, label="%s::decoder_weights" % conn)
         syn.set_full_weights(weights.T)
         post_cx.add_synapses(syn)
         model.objs[conn]['weights'] = syn

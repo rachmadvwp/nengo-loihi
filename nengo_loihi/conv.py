@@ -17,7 +17,7 @@ try:
 except ImportError:
     nengo_dl = None
 
-from nengo_loihi.block import Axon, LoihiBlock, Synapses
+from nengo_loihi.block import Axon, LoihiBlock, Synapse
 from nengo_loihi.inputs import ChipReceiveNeurons, LoihiInput
 
 
@@ -597,7 +597,7 @@ def build_conv2d_connection(model, conn):
     weights, indices, axon_to_weight_map, cx_bases = conv2d_loihi_weights(
         conn.transform.copy(weights))
 
-    synapses = Synapses(input_shape.n_pixels, label="conv2d_weights")
+    synapses = Synapse(input_shape.n_pixels, label="conv2d_weights")
     synapses.set_population_weights(
         weights, indices, axon_to_weight_map, cx_bases, pop_type=pop_type)
     post_cx.add_synapses(synapses)

@@ -406,13 +406,13 @@ class SynapseState(IterableState):
     ----------
     pes_error_scale : float
         Scaling for the errors of PES learning rules.
-    pes_errors : {Synapses: ndarray(n_neurons / 2)}
+    pes_errors : {Synapse: ndarray(n_neurons / 2)}
         Maps synapses to PES learning rule errors for those synapses.
-    spikes_in : {Synapses: list}
+    spikes_in : {Synapse: list}
         Maps synapses to a queue of input spikes targeting those synapses.
-    traces : {Synapses: ndarray(Synapses.n_axons)}
+    traces : {Synapse: ndarray(Synapses.n_axons)}
         Maps synapses to trace values for each of their axons.
-    trace_spikes : {Synapses: set}
+    trace_spikes : {Synapse: set}
         Maps synapses to a queue of input spikes waiting to be added to those
         synapses traces.
     """
@@ -527,7 +527,7 @@ class SynapseState(IterableState):
 
     def update_pes_errors(self, errors):
         # TODO: these are sent every timestep, but learning only happens every
-        # `tepoch * 2**learn_k` timesteps (see Synapses). Need to average.
+        # `tepoch * 2**learn_k` timesteps (see Synapse). Need to average.
         for pes_errors in self.pes_errors.values():
             pes_errors[:] = 0
 

@@ -1,7 +1,7 @@
 from nengo.exceptions import BuildError
 import numpy as np
 
-from nengo_loihi.block import Synapses
+from nengo_loihi.block import Synapse
 
 
 def validate_model(model):
@@ -56,7 +56,7 @@ def validate_compartments(comp):
 
 
 def validate_axon(axon):
-    if isinstance(axon.target, Synapses):
+    if isinstance(axon.target, Synapse):
         if axon.cx_atoms is not None:
             cx_idxs = np.arange(len(axon.cx_atoms))
             axon_ids = axon.map_cx_axon(cx_idxs)

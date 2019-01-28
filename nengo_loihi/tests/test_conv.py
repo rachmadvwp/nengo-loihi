@@ -14,7 +14,7 @@ except ImportError:
     nengo_dl = None
 
 import nengo_loihi
-from nengo_loihi.block import Axon, LoihiBlock, Probe, Synapses
+from nengo_loihi.block import Axon, LoihiBlock, Probe, Synapse
 from nengo_loihi.builder import Model
 from nengo_loihi.conv import (
     Conv2D,
@@ -114,7 +114,7 @@ def test_pop_tiny(
     neurons.compartments.configure_filter(tau_s, dt=dt)
     neurons.compartments.bias[:] = neuron_bias
 
-    synapses = Synapses(inp_shape.n_pixels, label='synapses')
+    synapses = Synapse(inp_shape.n_pixels, label='synapses')
     conv2d_transform = Conv2D.from_kernel(
         filters, inp_shape, strides=(sti, stj),
         output_channels_last=out_channels_last)
@@ -256,7 +256,7 @@ def test_conv2d_weights(request, plt, seed, rng, allclose):
     neurons.compartments.configure_filter(tau_s, dt=dt)
     neurons.compartments.bias[:] = neuron_bias
 
-    synapses = Synapses(inp_shape.n_pixels, label='synapses')
+    synapses = Synapse(inp_shape.n_pixels, label='synapses')
     weights, indices, axon_to_weight_map, cx_bases = conv2d_loihi_weights(
         conv2d_transform)
     synapses.set_population_weights(
