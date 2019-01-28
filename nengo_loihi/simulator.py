@@ -23,54 +23,6 @@ import nengo_loihi.config as config
 logger = logging.getLogger(__name__)
 
 
-class ProbeDict(NengoProbeDict):
-    """Map from Probe -> ndarray
-
-    This is more like a view on the dict that the simulator manipulates.
-    However, for speed reasons, the simulator uses Python lists,
-    and we want to return NumPy arrays. Additionally, this mapping
-    is readonly, which is more appropriate for its purpose.
-    """
-
-    def __init__(self, raw):
-        super(ProbeDict, self).__init__(raw=raw)
-        self.fallbacks = []
-
-    def add_fallback(self, fallback):
-        assert isinstance(fallback, NengoProbeDict)
-        self.fallbacks.append(fallback)
-
-    def __getitem__(self, key):
-        target = self.raw
-        if key not in target:
-            for fallback in self.fallbacks:
-                if key in fallback:
-                    target = fallback.raw
-                    break
-        assert key in target, "probed object not found"
-
-        if (key not in self._cache
-                or len(self._cache[key]) != len(target[key])):
-            rval = target[key]
-            if isinstance(rval, list):
-                rval = np.asarray(rval)
-                rval.setflags(write=False)
-            self._cache[key] = rval
-        return self._cache[key]
-
-    def __iter__(self):
-        for k in self.raw:
-            yield k
-        for fallback in self.fallbacks:
-            for k in fallback:
-                yield k
-
-    def __len__(self):
-        return len(self.raw) + sum(len(d) for d in self.fallbacks)
-
-    # TODO: Should we override __repr__ and __str__?
-
-
 class Simulator(object):
     """Nengo Loihi simulator for Loihi hardware and emulator.
 
@@ -751,3 +703,51 @@ class Simulator(object):
         period = 1 if sample_every is None else sample_every / self.dt
         steps = np.arange(1, self.n_steps + 1)
         return self.dt * steps[steps % period < 1]
+
+
+class ProbeDict(NengoProbeDict):
+    """Map from Probe -> ndarray
+
+    This is more like a view on the dict that the simulator manipulates.
+    However, for speed reasons, the simulator uses Python lists,
+    and we want to return NumPy arrays. Additionally, this mapping
+    is readonly, which is more appropriate for its purpose.
+    """
+
+    def __init__(self, raw):
+        super(ProbeDict, self).__init__(raw=raw)
+        self.fallbacks = []
+
+    def add_fallback(self, fallback):
+        assert isinstance(fallback, NengoProbeDict)
+        self.fallbacks.append(fallback)
+
+    def __getitem__(self, key):
+        target = self.raw
+        if key not in target:
+            for fallback in self.fallbacks:
+                if key in fallback:
+                    target = fallback.raw
+                    break
+        assert key in target, "probed object not found"
+
+        if (key not in self._cache
+                or len(self._cache[key]) != len(target[key])):
+            rval = target[key]
+            if isinstance(rval, list):
+                rval = np.asarray(rval)
+                rval.setflags(write=False)
+            self._cache[key] = rval
+        return self._cache[key]
+
+    def __iter__(self):
+        for k in self.raw:
+            yield k
+        for fallback in self.fallbacks:
+            for k in fallback:
+                yield k
+
+    def __len__(self):
+        return len(self.raw) + sum(len(d) for d in self.fallbacks)
+
+    # TODO: Should we override __repr__ and __str__?
