@@ -408,6 +408,8 @@ def test_consistent_order():
             f = nengo.Ensemble(i+1, 1, label="f%d" % i)
             nengo.Connection(u0, e, label="c0%d" % i)
             nengo.Connection(e, f, label="cf%d" % i)
+            nengo.Probe(e)
+            nengo.Probe(f.neurons)
 
     # Test splitting a number of times, making sure the order of things matches
     # the original network each time
@@ -428,7 +430,7 @@ def test_consistent_order():
             assert ea.n_neurons == eb.n_neurons and ea.label == eb.label
 
         # --- order matches previous split
-        for attr in ('connections', 'ensembles'):
+        for attr in ('connections', 'ensembles', 'nodes', 'probes'):
             for net in ('host_pre', 'host', 'chip'):
                 aa = getattr(getattr(networks0, net), 'all_' + attr)
                 bb = getattr(getattr(networks, net), 'all_' + attr)
